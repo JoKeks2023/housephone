@@ -147,10 +147,19 @@ import Cocoa
         guard let button = statusItem?.button else { return }
         
         if count > 0 {
-            // Add badge indicator
-            button.image?.accessibilityDescription = "Telephone (\(count))"
+            // Update accessibility for VoiceOver
+            button.image?.accessibilityDescription = "Telephone (\(count) unhandled call\(count == 1 ? "" : "s"))"
+            
+            // Add visual badge by modifying the button's attributed title
+            // This displays the count next to the icon
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 12, weight: .medium),
+                .foregroundColor: NSColor.controlAccentColor
+            ]
+            button.attributedTitle = NSAttributedString(string: " \(count)", attributes: attributes)
         } else {
             button.image?.accessibilityDescription = "Telephone"
+            button.attributedTitle = NSAttributedString(string: "")
         }
     }
     

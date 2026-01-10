@@ -137,7 +137,7 @@
 }
 
 - (void)windowDidLoad {
-    // Apply modern window styling for macOS 13+
+    // Apply modern window styling (compatible with macOS 11.0+, optimized for macOS 13+)
     if (@available(macOS 11.0, *)) {
         [WindowStyler applyModernStyleTo:self.window];
     }
