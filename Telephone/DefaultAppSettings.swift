@@ -74,6 +74,7 @@ private func makeDefaults(for localization: String) -> [String: Any] {
         UserDefaultsKeys.useICE: false,
         UserDefaultsKeys.useQoS: true,
         UserDefaultsKeys.voiceActivityDetection: false,
+        UserDefaultsKeys.showMenuBarIcon: true,
 
         SettingsKeys.ringingSound: "Purr",
         SettingsKeys.pauseITunes: true,

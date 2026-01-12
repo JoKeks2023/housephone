@@ -41,7 +41,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface AppController () <AKSIPUserAgentDelegate, NSUserNotificationCenterDelegate, NameServersChangeEventTarget, PreferencesControllerDelegate, ObjCStoreEventTarget>
+@interface AppController () <AKSIPUserAgentDelegate, NSUserNotificationCenterDelegate, NameServersChangeEventTarget, PreferencesControllerDelegate, ObjCStoreEventTarget, MenuBarControllerDelegate>
 
 @property(nonatomic, readonly) AKSIPUserAgent *userAgent;
 @property(nonatomic, readonly) AccountControllers *accountControllers;
@@ -54,6 +54,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, weak) IBOutlet NSMenu *windowMenu;
 @property(nonatomic, weak) IBOutlet NSMenuItem *preferencesMenuItem;
 @property(nonatomic, weak) IBOutlet HelpMenuActionRedirect *helpMenuActionRedirect;
+@property(nonatomic) MenuBarController *menuBarController;
 
 @property(nonatomic, readonly) CompositionRoot *compositionRoot;
 @property(nonatomic, readonly) PreferencesController *preferencesController;
@@ -107,6 +108,14 @@ NS_ASSUME_NONNULL_END
     _userSessionActive = YES;
     _accountControllers = _compositionRoot.accountControllers;
     _nameServers = _compositionRoot.nameServers;
+    
+    // Initialize menu bar controller
+    _menuBarController = [[MenuBarController alloc] init];
+    [_menuBarController setDelegate:self];
+    // Enable menu bar based on user preference (default is YES)
+    BOOL showMenuBar = [[NSUserDefaults standardUserDefaults] boolForKey:UserDefaultsKeys.showMenuBarIcon];
+    [_menuBarController setIsEnabled:showMenuBar];
+    
     NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
 
     [notificationCenter addObserver:self
@@ -242,6 +251,9 @@ NS_ASSUME_NONNULL_END
     }
     
     [[NSApp dockTile] setBadgeLabel:badgeString];
+    
+    // Update menu bar badge as well
+    [self.menuBarController updateBadge:badgeNumber];
 }
 
 - (void)remindAboutPurchasingAfterDelay {
@@ -291,6 +303,7 @@ NS_ASSUME_NONNULL_END
     [self.accountControllers addController:controller];
     [self.accountControllers updateCallsShouldDisplayAccountInfo];
     [self.accountsMenuItems update];
+    [self.menuBarController updateMenu];
     
     [controller showWindowWithoutMakingKey];
 
@@ -312,6 +325,7 @@ NS_ASSUME_NONNULL_END
     [self.accountControllers removeControllerAtIndex:index];
     [self.accountControllers updateCallsShouldDisplayAccountInfo];
     [self.accountsMenuItems update];
+    [self.menuBarController updateMenu];
 }
 
 - (void)preferencesControllerDidChangeAccountEnabled:(NSNotification *)notification {
@@ -346,6 +360,7 @@ NS_ASSUME_NONNULL_END
     
     [self.accountControllers updateCallsShouldDisplayAccountInfo];
     [self.accountsMenuItems update];
+    [self.menuBarController updateMenu];
 }
 
 - (void)preferencesControllerDidSwapAccounts:(NSNotification *)notification {
@@ -365,6 +380,7 @@ NS_ASSUME_NONNULL_END
     }
     
     [self.accountsMenuItems update];
+    [self.menuBarController updateMenu];
 }
 
 - (void)preferencesControllerDidChangeNetworkSettings:(NSNotification *)notification {
@@ -515,6 +531,7 @@ NS_ASSUME_NONNULL_END
     self.helpMenuActionRedirect.target = self.compositionRoot.helpMenuActionTarget;
     [self configureUserAgent];
     self.accountsMenuItems = [[AccountsMenuItems alloc] initWithMenu:self.windowMenu controllers:self.accountControllers];
+    [self.menuBarController setAccountsMenuItems:self.accountsMenuItems];
     NSUserNotificationCenter.defaultUserNotificationCenter.delegate = self;
     NSApp.servicesProvider = self;
     NSArray *accounts = [NSUserDefaults.standardUserDefaults arrayForKey:UserDefaultsKeys.accounts];
@@ -816,6 +833,32 @@ NS_ASSUME_NONNULL_END
 
 - (void)didPurchase {
     [self restartUserAgentAfterDelayOrMarkForRestart];
+}
+
+#pragma mark - MenuBarControllerDelegate
+
+- (void)menuBarControllerDidRequestShowWindow {
+    if (self.userAgent.hasUnansweredIncomingCalls) {
+        [self.accountControllers showIncomingCallWindows];
+    } else if ([NSApp keyWindow] == nil && self.accountControllers.enabled.count > 0) {
+        [self.accountControllers.enabled.firstObject showWindow];
+    }
+    [NSApp activateIgnoringOtherApps:YES];
+}
+
+- (void)menuBarControllerDidRequestShowPreferences {
+    [self showPreferencePanel:nil];
+}
+
+- (void)menuBarControllerDidRequestMakeCall {
+    if ([self canMakeCall]) {
+        [self.accountControllers.enabled.firstObject showWindow];
+        [NSApp activateIgnoringOtherApps:YES];
+    }
+}
+
+- (void)menuBarControllerDidRequestQuit {
+    [NSApp terminate:nil];
 }
 
 @end

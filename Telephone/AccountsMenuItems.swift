@@ -19,7 +19,7 @@
 import Cocoa
 
 final class AccountsMenuItems: NSObject {
-    private var items: [NSMenuItem] = []
+    @objc var items: [NSMenuItem] = []
 
     private let menu: NSMenu
     private let controllers: AccountControllers

@@ -69,6 +69,11 @@
     self.window.title = self.accountDescription;
     self.window.frameAutosaveName = self.SIPAddress;
     self.window.excludedFromWindowsMenu = YES;
+    
+    // Apply modern window styling (compatible with macOS 11.0+, optimized for macOS 13+)
+    if (@available(macOS 11.0, *)) {
+        [WindowStyler applyModernStyleTo:self.window];
+    }
 
     [self.window.contentView addSubview:self.accountViewController.view];
     self.accountViewController.view.translatesAutoresizingMaskIntoConstraints = NO;

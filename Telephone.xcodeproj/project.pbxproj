@@ -329,6 +329,8 @@
 		8A8BC7D11F6C8B68001BBECD /* WeakPurchaseCheckUseCaseOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8BC7D01F6C8B68001BBECD /* WeakPurchaseCheckUseCaseOutput.swift */; };
 		8A8BC7D31F6C8D29001BBECD /* PurchaseCheckUseCaseOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8BC7D21F6C8D29001BBECD /* PurchaseCheckUseCaseOutput.swift */; };
 		8A8EB25D21396DB000288C77 /* AccountsMenuItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8EB25C21396DB000288C77 /* AccountsMenuItems.swift */; };
+		66481A1FAD98486AB4FCD966 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35E4F856B6D430F87BE3EFE /* MenuBarController.swift */; };
+		37B8A95FAFBD46C6B8153F20 /* WindowStyler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C84F88B246544E7B22D6E6D /* WindowStyler.swift */; };
 		8A9084A41EC6101A002B273A /* ContactMatchingSettingsFake.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A9084A31EC6101A002B273A /* ContactMatchingSettingsFake.swift */; };
 		8A9084A61EC6108D002B273A /* ContactMatchingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A9084A51EC6108D002B273A /* ContactMatchingSettings.swift */; };
 		8A9084A81EC61665002B273A /* SimpleContactMatchingIndexFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A9084A71EC61665002B273A /* SimpleContactMatchingIndexFactory.swift */; };
@@ -1240,6 +1242,8 @@
 		8A8BC7D01F6C8B68001BBECD /* WeakPurchaseCheckUseCaseOutput.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WeakPurchaseCheckUseCaseOutput.swift; sourceTree = "<group>"; };
 		8A8BC7D21F6C8D29001BBECD /* PurchaseCheckUseCaseOutput.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PurchaseCheckUseCaseOutput.swift; sourceTree = "<group>"; };
 		8A8EB25C21396DB000288C77 /* AccountsMenuItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsMenuItems.swift; sourceTree = "<group>"; };
+		D35E4F856B6D430F87BE3EFE /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
+		2C84F88B246544E7B22D6E6D /* WindowStyler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowStyler.swift; sourceTree = "<group>"; };
 		8A9084A31EC6101A002B273A /* ContactMatchingSettingsFake.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactMatchingSettingsFake.swift; sourceTree = "<group>"; };
 		8A9084A51EC6108D002B273A /* ContactMatchingSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactMatchingSettings.swift; sourceTree = "<group>"; };
 		8A9084A71EC61665002B273A /* SimpleContactMatchingIndexFactory.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimpleContactMatchingIndexFactory.swift; sourceTree = "<group>"; };
@@ -1863,6 +1867,8 @@
 				8A4C2760213058E700ABE34B /* AccountControllers.h */,
 				8A4C2761213058E700ABE34B /* AccountControllers.m */,
 				8A8EB25C21396DB000288C77 /* AccountsMenuItems.swift */,
+				D35E4F856B6D430F87BE3EFE /* MenuBarController.swift */,
+				2C84F88B246544E7B22D6E6D /* WindowStyler.swift */,
 				AA4BD4D60E07C305005A71B2 /* AppController.h */,
 				AA4BD4D70E07C305005A71B2 /* AppController.m */,
 				8A7DE9BB26A0B89D0011C510 /* AppSettings.swift */,
@@ -4131,6 +4137,8 @@
 				8AA748831D6DEE61000587DC /* SettingsAccount.swift in Sources */,
 				8A4C2762213058E700ABE34B /* AccountControllers.m in Sources */,
 				8A8EB25D21396DB000288C77 /* AccountsMenuItems.swift in Sources */,
+				66481A1FAD98486AB4FCD966 /* MenuBarController.swift in Sources */,
+				37B8A95FAFBD46C6B8153F20 /* WindowStyler.swift in Sources */,
 				8A9175991CA59D5C00354E26 /* PJSUAOnIncomingCall.m in Sources */,
 				8AA689941FFFD7F700BA369B /* HelpMenuActionRedirect.swift in Sources */,
 				AA97B47610D3A2CA00FC65DA /* CallTransferController.m in Sources */,

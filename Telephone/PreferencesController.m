@@ -25,6 +25,8 @@
 #import "NetworkPreferencesViewController.h"
 #import "SoundPreferencesViewController.h"
 
+#import "Telephone-Swift.h"
+
 @implementation PreferencesController
 
 @synthesize generalPreferencesViewController = _generalPreferencesViewController;
@@ -135,6 +137,11 @@
 }
 
 - (void)windowDidLoad {
+    // Apply modern window styling (compatible with macOS 11.0+, optimized for macOS 13+)
+    if (@available(macOS 11.0, *)) {
+        [WindowStyler applyModernStyleTo:self.window];
+    }
+    
     self.toolbar.selectedItemIdentifier = self.generalToolbarItem.itemIdentifier;
     [self.window ak_resizeForContentViewSize:self.generalPreferencesViewController.view.frame.size animate:NO];
     self.contentViewController = self.generalPreferencesViewController;
