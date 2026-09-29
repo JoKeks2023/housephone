@@ -20,6 +20,16 @@ public enum FritzBoxLoadFailure: Equatable, Sendable {
     case unreachable
 }
 
+/// A source other than the bridge (direct TR-064, ADR-0005) could not
+/// deliver; `message` is shown as is.
+public struct FritzBoxUnavailableError: Error, Sendable {
+    public let message: String
+
+    public init(message: String) {
+        self.message = message
+    }
+}
+
 public enum FritzBoxResourceStatus: Equatable, Sendable {
     /// Nothing fetched yet in this app run; a cached value may be shown.
     case idle
@@ -150,6 +160,8 @@ public final class FritzBoxResource<Value: Codable & Sendable & Equatable> {
             .unauthorized
         case SignalingClientError.bridge(let payload) where payload.code == .fritzboxUnavailable:
             .unavailable(message: payload.message)
+        case let error as FritzBoxUnavailableError:
+            .unavailable(message: error.message)
         default:
             .unreachable
         }
