@@ -20,6 +20,9 @@ bridge:
   trustProxyHeaders: true
   # Weitere Proxys (IP oder CIDR), z. B. ein Reverse Proxy auf einem anderen Rechner.
   trustedProxies: []
+  # Höchstens so viele Anrufe gleichzeitig; ein Gerät kann zusätzlich höchstens
+  # 2 eigene ausgehende Anrufe gleichzeitig führen.
+  maxCalls: 8
 
 sip:
   # FRITZ!Box: Telefonie → Telefoniegeräte → Neues Gerät → Telefon → LAN/WLAN (IP-Telefon)

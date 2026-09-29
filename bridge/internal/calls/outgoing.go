@@ -23,6 +23,21 @@ func (c *call) startOutgoing(conn DeviceConn) {
 		return
 	}
 	c.offer(l, c.peerCodecs(), false)
+	c.offerTimer = time.AfterFunc(c.m.opts.OfferAnswerTimeout, func() { c.do(c.onOfferAnswerTimeout) })
+}
+
+// onOfferAnswerTimeout ends an outgoing call whose device never answered
+// the offer, so unanswered dials do not pile up (security review N3).
+func (c *call) onOfferAnswerTimeout() {
+	c.offerTimer = nil
+	if c.phase != phaseRinging || c.dialing || c.sipOut != nil {
+		return
+	}
+	if l := c.owner(); l != nil && l.answered {
+		return
+	}
+	c.log.Info("offer not answered in time, ending call")
+	c.finish(protocol.EndReasonFailed, 0)
 }
 
 func (c *call) owner() *leg {

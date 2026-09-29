@@ -169,6 +169,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		Devices:     b.Devices,
 		Logger:      log,
 		CallerNames: callerNames,
+		MaxCalls:    cfg.Bridge.MaxCalls,
 	})
 	b.sip, err = sipleg.New(sipleg.Config{
 		Registrar:      registrar,

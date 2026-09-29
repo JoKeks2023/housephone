@@ -83,7 +83,7 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`: iPhone-App
 
 ### Fehlercodes in `error`
 
-`unauthorized`, `bad_request`, `pairing_invalid` (Code falsch, abgelaufen oder bereits benutzt), `pairing_rate_limited`, `sip_unavailable` (nicht an der FRITZ!Box registriert), `call_not_found`, `invalid_number`, `fritzbox_unavailable` (v1.2: TR-064 nicht eingerichtet oder FRITZ!Box nicht erreichbar/Anmeldung abgelehnt), `internal`.
+`unauthorized`, `bad_request`, `pairing_invalid` (Code falsch, abgelaufen oder bereits benutzt), `pairing_rate_limited`, `sip_unavailable` (nicht an der FRITZ!Box registriert), `call_not_found`, `invalid_number`, `fritzbox_unavailable` (v1.2: TR-064 nicht eingerichtet oder FRITZ!Box nicht erreichbar/Anmeldung abgelehnt), `too_many_calls` (zu viele gleichzeitige Anrufe, siehe „Ausgehender Anruf“), `internal`.
 
 - `call.answer` und `call.dtmf` für unbekannte Anrufe → `error{call_not_found}`.
 - `call.attach`, `call.accept` und `call.hangup` für unbekannte Anrufe → `call.ended` (siehe „Späte Nachrichten“).
@@ -162,6 +162,9 @@ Gerät                           Bridge                        FRITZ!Box
 - Fehlerantworten der FRITZ!Box werden gemappt: 486/600 → `busy`, 603 → `rejected`, 404/484 → `invalid_number`-Fehler plus `call.ended{failed}`, sonst `failed` mit `sipCode`.
 - Eine ungültige `number` (nicht `^\+?[0-9*#]{1,32}$`) → `error{invalid_number}` plus `call.ended{failed}`, ohne dass gewählt wird.
 - Ist die Bridge nicht an der FRITZ!Box registriert → `error{sip_unavailable, callId}` plus `call.ended{failed}`.
+- Grenzen: Ein Gerät darf höchstens **2** eigene ausgehende Anrufe gleichzeitig führen, die Bridge insgesamt höchstens `bridge.maxCalls` (Standard 8) Anrufe. Darüber → `error{too_many_calls, callId}` plus `call.ended{failed}`.
+- Beantwortet ein WebRTC-Gerät das `call.offer` eines ausgehenden Anrufs nicht innerhalb von **15 s**, endet der Anruf mit `call.ended{failed}`.
+- `call.dtmf` wird pro Anruf der Reihe nach gesendet; sind mehr als 8 Nachrichten offen, antwortet die Bridge mit `error{bad_request}`.
 
 ### Auflegen
 

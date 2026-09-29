@@ -82,6 +82,8 @@ type Bridge struct {
 	// TrustedProxies are extra proxy addresses or CIDRs (e.g. a reverse
 	// proxy on another host) whose proxy headers are believed.
 	TrustedProxies []string `yaml:"trustedProxies"`
+	// MaxCalls bounds concurrent calls; devices cannot dial beyond it.
+	MaxCalls int `yaml:"maxCalls"`
 }
 
 // TrustedProxyNets parses TrustedProxies (IP addresses or CIDRs).
@@ -173,9 +175,11 @@ type Log struct {
 func Default() Config {
 	return Config{
 		Bridge: Bridge{
-			Name:    "Zuhause",
-			Listen:  ":8080",
-			DataDir: "data",
+			Name: "Zuhause",
+			// Only reachable locally (cloudflared runs on the same host).
+			Listen:   "127.0.0.1:8080",
+			DataDir:  "data",
+			MaxCalls: 8,
 		},
 		SIP: SIP{
 			Registrar:             "fritz.box",
@@ -276,6 +280,9 @@ func (c Config) ValidateServe() error {
 	}
 	if _, err := c.Bridge.TrustedProxyNets(); err != nil {
 		errs = append(errs, err)
+	}
+	if c.Bridge.MaxCalls < 1 || c.Bridge.MaxCalls > 100 {
+		errs = append(errs, fmt.Errorf("bridge.maxCalls must be between 1 and 100, got %d", c.Bridge.MaxCalls))
 	}
 	if c.SIP.Username == "" {
 		errs = append(errs, errors.New("sip.username is required"))

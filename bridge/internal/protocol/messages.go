@@ -114,7 +114,10 @@ const (
 	// ErrorFritzBoxUnavailable (v1.2): TR-064 is not configured, the
 	// FRITZ!Box does not answer or rejects the login.
 	ErrorFritzBoxUnavailable = "fritzbox_unavailable"
-	ErrorInternal            = "internal"
+	// ErrorTooManyCalls: call.dial refused because the device (2) or the
+	// bridge (bridge.maxCalls) already has as many calls as allowed.
+	ErrorTooManyCalls = "too_many_calls"
+	ErrorInternal     = "internal"
 )
 
 // WebSocket close codes beyond RFC 6455.

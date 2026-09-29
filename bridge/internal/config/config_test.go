@@ -47,7 +47,7 @@ media:
 	if cfg.Bridge.Name != "Ferienhaus" || cfg.SIP.Username != "621" || cfg.Media.UDPPort != 51000 {
 		t.Fatalf("yaml not applied: %+v", cfg)
 	}
-	if cfg.SIP.Registrar != "fritz.box" || cfg.SIP.BindPort != 5062 || cfg.Bridge.Listen != ":8080" {
+	if cfg.SIP.Registrar != "fritz.box" || cfg.SIP.BindPort != 5062 || cfg.Bridge.Listen != "127.0.0.1:8080" || cfg.Bridge.MaxCalls != 8 {
 		t.Fatalf("defaults not applied: %+v", cfg)
 	}
 }
