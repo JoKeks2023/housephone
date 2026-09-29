@@ -22,7 +22,9 @@ import (
 	"github.com/JoKeks2023/housephone/bridge/internal/sipleg"
 )
 
-const timeout = 5 * time.Second
+// Upper bound for waits; generous because -race runs of all packages in
+// parallel on a busy machine delayed registration past 5 s once.
+const timeout = 15 * time.Second
 
 func quiet() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
