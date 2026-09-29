@@ -38,6 +38,8 @@ extension PairingLinkError {
         case .notAPairingLink: "Das ist kein Housephone-Kopplungslink."
         case .missingBridgeURL, .invalidBridgeURL: "Der Link enthält keine gültige Bridge-Adresse."
         case .missingCode, .invalidCode: "Der Kopplungscode im Link ist ungültig."
+        case .outdatedLink: "Dieser Link stammt von einer älteren Bridge. Aktualisiere die Bridge und erzeuge einen neuen Code."
+        case .invalidFingerprint: "Dem Link fehlt die Kennung der Bridge. Erzeuge einen neuen Code."
         }
     }
 }

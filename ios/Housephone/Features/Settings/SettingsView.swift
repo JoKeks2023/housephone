@@ -21,6 +21,16 @@ struct SettingsView: View {
                                 .font(.callout.monospaced())
                                 .textSelection(.enabled)
                         }
+                        // The key pinned at pairing, as `fp` in the pairing link.
+                        VStack(alignment: .leading, spacing: Theme.Space.s1) {
+                            Text("Fingerabdruck")
+                            Text(credentials.bridgeFingerprint)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                                .speechSpellsOutCharacters()
+                        }
+                        .accessibilityElement(children: .combine)
                     }
                     if let version = bridge.welcome?.bridgeVersion {
                         LabeledContent("Version") {
@@ -106,7 +116,14 @@ struct SettingsView: View {
             case .connecting:
                 StatusIndicator(tone: .neutral, label: "Verbinde …", isBusy: true)
             case .offline:
-                StatusIndicator(tone: .negative, label: "Nicht erreichbar")
+                switch bridge.problem {
+                case .untrustedBridge:
+                    StatusIndicator(tone: .negative, label: "Bridge nicht vertrauenswürdig")
+                case .clockSkew:
+                    StatusIndicator(tone: .warning, label: "Uhrzeit des iPhones prüfen")
+                case nil:
+                    StatusIndicator(tone: .negative, label: "Nicht erreichbar")
+                }
             case .rejected:
                 StatusIndicator(tone: .negative, label: "Kopplung ungültig")
             case .unpaired:

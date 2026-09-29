@@ -246,6 +246,11 @@ final class WatchCallCenter: NSObject {
                 if let call = activeCall, call.isActive {
                     apply(.bridgeEnded(.failed), to: call.id)
                 }
+            case .untrustedBridge, .clockSkew:
+                // No retry without the bridge check; the call can't go on.
+                if let call = activeCall, call.isActive {
+                    apply(.bridgeEnded(.failed), to: call.id)
+                }
             }
         case .message(let message):
             handle(message)

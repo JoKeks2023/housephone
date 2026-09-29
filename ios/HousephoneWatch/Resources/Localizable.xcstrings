@@ -242,6 +242,16 @@
         }
       }
     },
+    "Diese Bridge ist nicht die, mit der das iPhone gekoppelt ist.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This bridge is not the one the iPhone is paired with."
+          }
+        }
+      }
+    },
     "Diese Nummer kann nicht gewählt werden.": {
       "localizations": {
         "en": {

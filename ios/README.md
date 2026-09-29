@@ -21,7 +21,7 @@ open Housephone.xcodeproj
 
 | Pfad | Inhalt |
 |---|---|
-| `Packages/HousephoneKit` | Plattformneutral und lokal testbar (`swift test`): Protokoll-Nachrichten, `SignalingClient` (WebSocket inkl. Binär-Audio, Reconnect, Kopplung), `BridgeHTTPClient` (HTTPS-Kopplung der Watch, FRITZ!Box-Telefonbuch mit ETag, Anrufliste), `FritzBoxResource` (Cache auf der Platte), `PhonebookNameIndex` (Anrufername), `CallSession` (Zustandsmaschine eines Anrufs), G.711 A-law, Audio-Rahmen, Jitter-Puffer, WatchConnectivity-Nachrichten, Kopplungslink, Schlüsselbund, Push-Payload, Freiton |
+| `Packages/HousephoneKit` | Plattformneutral und lokal testbar (`swift test`): Protokoll-Nachrichten, HP2 (Anmeldung v2, ADR-0004: signierte Anfragen, gepinnter Bridge-Schlüssel, verschlüsselte Rahmen), `DeviceKey` (Secure Enclave), `SignalingClient` (WebSocket inkl. Binär-Audio, Reconnect), `BridgeHTTPClient` (Kopplung, FRITZ!Box-Telefonbuch mit ETag, Anrufliste), `FritzBoxResource` (Cache auf der Platte), `PhonebookNameIndex` (Anrufername), `CallSession` (Zustandsmaschine eines Anrufs), G.711 A-law, Audio-Rahmen, Jitter-Puffer, WatchConnectivity-Nachrichten, Kopplungslink, Schlüsselbund, Push-Payload, Freiton |
 | `Housephone/Calling` | `CallCenter` (CallKit + PushKit + Ablaufsteuerung), `MediaEngine` (WebRTC), `RingbackPlayer` |
 | `Housephone/Bridge` | `BridgeConnection`: Kopplung, Verbindungsstatus, Push-Token, Kopplungscode für die Watch; `WatchLink`: WatchConnectivity |
 | `Housephone/Features` | Tastenfeld, Anrufe (Housephone/FRITZ!Box), Kontakte (FRITZ!Box/iPhone), Einstellungen, Onboarding/Kopplung, Anrufbildschirm |
@@ -35,7 +35,7 @@ open Housephone.xcodeproj
 
 watchOS erlaubt WebSocket, Network.framework und UDP nur während eines CallKit-Anrufs (Apple TN3135), und WebRTC gibt es für watchOS nicht. Deshalb:
 
-- Kopplung und Push-Token laufen außerhalb von Anrufen über HTTPS (`POST /v1/pair`, `PUT /v1/device`).
+- Kopplung und Push-Token laufen außerhalb von Anrufen über HTTPS (`POST /v1/pair`, `PUT /v1/device`). iPhone und Watch haben je einen eigenen Geräteschlüssel; es gibt kein Geheimnis im Schlüsselbund, nur den gepinnten Bridge-Schlüssel.
 - Jeder Anruf öffnet eine eigene WebSocket-Verbindung und schließt sie danach wieder.
 - Der Ton läuft als binäre WebSocket-Nachrichten (G.711 A-law, 20-ms-Rahmen, `websocket-pcma`).
 

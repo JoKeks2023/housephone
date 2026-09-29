@@ -14,10 +14,15 @@ struct PairingView: View {
         case pairing
         case microphone
         case failed(PairingFailure)
+
+        var isFailed: Bool {
+            if case .failed = self { true } else { false }
+        }
     }
 
     @State private var phase: Phase = .confirm
     @State private var successTrigger = 0
+    @State private var errorTrigger = 0
 
     private var bridgeName: String {
         link.bridgeName ?? link.bridgeURL.host() ?? link.bridgeURL.absoluteString
@@ -44,7 +49,12 @@ struct PairingView: View {
             }
             .padding(Theme.Space.s6)
             .toolbar {
-                if phase != .pairing {
+                if phase == .microphone {
+                    // Already paired: nothing left to cancel.
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Später") { dismiss() }
+                    }
+                } else if phase != .pairing {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Abbrechen", role: .cancel) { dismiss() }
                     }
@@ -54,6 +64,7 @@ struct PairingView: View {
         .presentationDetents([.medium, .large])
         .interactiveDismissDisabled(phase == .pairing)
         .sensoryFeedback(.success, trigger: successTrigger)
+        .sensoryFeedback(.error, trigger: errorTrigger)
     }
 
     @ViewBuilder
@@ -75,6 +86,9 @@ struct PairingView: View {
                 }
                 Text(link.bridgeURL.host() ?? "")
                     .font(.callout.monospaced())
+                // Compare with the code on the server.
+                Text("Code \(Text(link.groupedCode).monospaced().speechSpellsOutCharacters())")
+                    .font(.callout)
                 if !link.isEncrypted {
                     Label("Unverschlüsselte Verbindung – nur fürs Heimnetz gedacht", systemImage: "exclamationmark.triangle")
                         .font(.footnote)
@@ -91,22 +105,26 @@ struct PairingView: View {
     @ViewBuilder
     private var actions: some View {
         switch phase {
-        case .confirm, .failed:
+        case .confirm, .pairing, .failed:
             Button {
                 Task { await pair() }
             } label: {
-                Text(phase == .confirm ? "Koppeln" : "Erneut versuchen")
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Theme.Space.s2)
+                ZStack {
+                    // Keeps the button's size while the spinner shows.
+                    Text(phase.isFailed ? "Erneut versuchen" : "Koppeln")
+                        .opacity(phase == .pairing ? 0 : 1)
+                    if phase == .pairing {
+                        ProgressView()
+                            .accessibilityLabel(Text("Kopplung läuft"))
+                    }
+                }
+                .font(.body.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Theme.Space.s2)
             }
             .buttonStyle(.glassProminent)
             .controlSize(.large)
-        case .pairing:
-            ProgressView()
-                .controlSize(.large)
-                .frame(height: 52)
-                .accessibilityLabel(Text("Kopplung läuft"))
+            .disabled(phase == .pairing)
         case .microphone:
             Button {
                 Task {
@@ -136,6 +154,7 @@ struct PairingView: View {
             }
         } catch {
             phase = .failed(PairingFailure(error))
+            errorTrigger += 1
         }
     }
 }
@@ -144,11 +163,21 @@ private enum PairingFailure: Equatable {
     case codeInvalid
     case rateLimited
     case unreachable
+    /// The bridge doesn't hold the key from the QR code's fingerprint.
+    case bridgeMismatch
+    case untrusted
+    case clockSkew
     case storage
     case other(String)
 
     init(_ error: any Error) {
         switch error {
+        case HP2Error.bridgeIdentityMismatch:
+            self = .bridgeMismatch
+        case is HP2Error, SignalingClientError.untrustedBridge:
+            self = .untrusted
+        case SignalingClientError.clockSkew:
+            self = .clockSkew
         case SignalingClientError.bridge(let payload) where payload.code == .pairingInvalid:
             self = .codeInvalid
         case SignalingClientError.bridge(let payload) where payload.code == .pairingRateLimited:
@@ -169,6 +198,9 @@ private enum PairingFailure: Equatable {
         case .codeInvalid: "Der Code ist abgelaufen oder wurde schon benutzt. Erzeuge auf dem Server mit „housephone-bridge pair“ einen neuen."
         case .rateLimited: "Zu viele Versuche. Warte eine Minute und versuche es dann erneut."
         case .unreachable: "Die Bridge ist nicht erreichbar. Prüfe die Adresse und deine Internetverbindung."
+        case .bridgeMismatch: "Diese Bridge ist nicht die aus dem QR-Code. Die Kopplung wurde abgebrochen."
+        case .untrusted: "Bridge nicht vertrauenswürdig. Die Kopplung wurde abgebrochen."
+        case .clockSkew: "Uhrzeit des iPhones prüfen: Sie weicht zu stark von der Bridge ab."
         case .storage: "Die Zugangsdaten konnten nicht sicher gespeichert werden."
         case .other(let message): "Die Bridge meldet: \(message)"
         }
