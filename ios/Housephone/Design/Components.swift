@@ -118,7 +118,7 @@ struct CallControlButton: View {
                 Image(systemName: symbol)
                     .font(.title2.weight(.medium))
                     .symbolVariant(isOn ? .fill : .none)
-                    .contentTransition(.symbolEffect(.replace))
+                    .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
                     .frame(width: 72, height: 72)
                     .foregroundStyle(isOn ? Color.black : Color.white)
                     .background {

@@ -97,7 +97,7 @@ struct WatchInCallView: View {
                 .foregroundStyle(isOn ? Color.black : Color.white)
                 .frame(width: WatchTheme.minTarget, height: WatchTheme.minTarget)
                 .background(Circle().fill(isOn ? Color.white : Color.white.opacity(0.16)))
-                .contentTransition(.symbolEffect(.replace))
+                .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
         }
         .buttonStyle(WatchPressStyle())
         .motion(WatchTheme.Motion.snappy, value: isOn)

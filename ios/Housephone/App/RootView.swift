@@ -92,7 +92,7 @@ private struct CallPill: View {
                     Image(systemName: "phone.fill")
                         .foregroundStyle(Theme.call)
                         .accessibilityHidden(true)
-                    Text(contacts.name(for: call.remoteNumber) ?? call.remoteName ?? call.remoteNumber)
+                    Text(contacts.name(for: call.remoteNumber) ?? call.remoteName ?? (call.remoteNumber.isEmpty ? String(localized: "Unbekannt") : call.remoteNumber))
                         .font(.subheadline.weight(.medium))
                         .lineLimit(1)
                     Spacer(minLength: Theme.Space.s2)
