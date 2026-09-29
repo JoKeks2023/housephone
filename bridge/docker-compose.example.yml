@@ -40,10 +40,17 @@ services:
         max-file: "3"
 
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    # Feste Version statt :latest: Updates bewusst einspielen
+    # (https://github.com/cloudflare/cloudflared/releases).
+    image: cloudflare/cloudflared:2026.9.3
     container_name: housephone-cloudflared
     restart: unless-stopped
     network_mode: host
     command: tunnel --no-autoupdate run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
