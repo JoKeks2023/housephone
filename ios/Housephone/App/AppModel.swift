@@ -15,6 +15,14 @@ final class AppModel {
 
     var selectedTab: Tab = .keypad
     var keypadNumber = ""
+    /// The call screen is minimized to the pill above the tab bar, e.g.
+    /// to look up a number during a call. Resets with every new call.
+    var isCallMinimized = false
+
+    /// Minimizing needs the tab bar accessory to bring the call back.
+    static var canMinimizeCall: Bool {
+        if #available(iOS 26.1, *) { true } else { false }
+    }
     /// A pairing link opened via `housephone://pair?…` or scanned.
     var pairingLink: PairingLink?
     var pairingLinkError: PairingLinkError?
