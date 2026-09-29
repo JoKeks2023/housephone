@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+<timestamp>1759161845</timestamp>
+<Call>
+<Id>2514</Id>
+<Type>1</Type>
+<Caller>0301111</Caller>
+<Called>SIP: 56789</Called>
+<CalledNumber>56789</CalledNumber>
+<Name></Name>
+<Numbertype>sip</Numbertype>
+<Device>Faxempfang</Device>
+<Port>5</Port>
+<Date>29.09.26 18:20</Date>
+<Duration>0:01</Duration>
+<Count></Count>
+<Path>/download.lua?path=/var/media/ftp/FRITZ/faxbox/fax.pdf</Path>
+</Call>
+<Call>
+<Id>2513</Id>
+<Type>3</Type>
+<Caller>SIP: 56789</Caller>
+<Called>030 1234567</Called>
+<CallerNumber>56789</CallerNumber>
+<Name>Praxis Dr. Weber</Name>
+<Numbertype>sip</Numbertype>
+<Device>Housephone</Device>
+<Port>620</Port>
+<Date>29.09.26 18:10</Date>
+<Duration>0:02</Duration>
+<Count></Count>
+<Path />
+</Call>
+<Call>
+<Id>2512</Id>
+<Type>1</Type>
+<Caller>030123456</Caller>
+<Called>SIP: 56789</Called>
+<CalledNumber>56789</CalledNumber>
+<Name>Oma</Name>
+<Numbertype>sip</Numbertype>
+<Device>Mobilteil 1</Device>
+<Port>10</Port>
+<Date>29.09.26 18:04</Date>
+<Duration>0:05</Duration>
+<Count></Count>
+<Path />
+</Call>
+<Call>
+<Id>2511</Id>
+<Type>2</Type>
+<Caller></Caller>
+<Called>SIP: 56789</Called>
+<CalledNumber>56789</CalledNumber>
+<Name></Name>
+<Numbertype>sip</Numbertype>
+<Device></Device>
+<Port>-1</Port>
+<Date>29.09.26 10:30</Date>
+<Duration>0:00</Duration>
+<Count></Count>
+<Path />
+</Call>
+<Call>
+<Id>2510</Id>
+<Type>1</Type>
+<Caller>+491701234567</Caller>
+<Called>SIP: 56789</Called>
+<CalledNumber>56789</CalledNumber>
+<Name>Oma</Name>
+<Numbertype>sip</Numbertype>
+<Device>Anrufbeantworter 1</Device>
+<Port>40</Port>
+<Date>28.09.26 21:45</Date>
+<Duration>0:01</Duration>
+<Count></Count>
+<Path>/download.lua?path=/var/media/ftp/USB/FRITZ/voicebox/rec/rec.0.000</Path>
+</Call>
+</root>

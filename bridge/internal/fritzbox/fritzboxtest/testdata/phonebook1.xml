@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<phonebooks>
+<phonebook owner="2" name="Geschäftlich">
+<timestamp>1759100000</timestamp>
+<contact>
+<category>0</category>
+<person><realName>Büro-Fax</realName></person>
+<telephony><number type="fax_work" prio="1" id="0">040 777 88</number></telephony>
+<uniqueid>7</uniqueid>
+</contact>
+</phonebook>
+</phonebooks>
