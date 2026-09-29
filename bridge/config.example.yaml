@@ -13,7 +13,8 @@ bridge:
   listen: "127.0.0.1:8080"
   # Öffentliche WebSocket-URL für die App (landet im Kopplungs-QR-Code).
   publicUrl: "wss://phone.example.com/v1/ws"
-  # Geräte, Kopplungscodes und Bridge-ID.
+  # Geräte (öffentliche Schlüssel), Kopplungscodes, Bridge-ID und der
+  # Bridge-Schlüssel identity.key (sichern!).
   dataDir: "/data"
   # CF-Connecting-IP / X-Forwarded-For als Client-IP verwenden (nur hinter Tunnel/Proxy).
   # Die Header gelten nur für Anfragen von localhost und von trustedProxies.

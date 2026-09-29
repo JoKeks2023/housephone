@@ -10,6 +10,9 @@
 #    Dateien und data/ müssen dem Benutzer aus "user:" gehören (id -u / id -g).
 # 3. CLOUDFLARE_TUNNEL_TOKEN=... docker compose up -d
 # 4. docker compose exec housephone-bridge housephone-bridge pair -name "iPhone"
+#    (zeigt QR-Code, Code und Bridge-Fingerabdruck und wartet auf das Gerät)
+# 5. data/identity.key sichern: ohne diesen Schlüssel müssen alle Geräte neu
+#    gekoppelt werden.
 
 services:
   housephone-bridge:
@@ -21,6 +24,16 @@ services:
     # zusätzliches Docker-NAT. Die Bridge erkennt so die richtige LAN-IP.
     network_mode: host
     user: "1000:1000"
+    # Härtung: Dateisystem nur lesbar (beschreibbar ist allein /data mit
+    # Geräten, Codes und dem Bridge-Schlüssel), keine Linux-Capabilities,
+    # keine Rechteausweitung. Die Bridge braucht nur Ports über 1024.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     environment:
       HOUSEPHONE_CONFIG: /config/config.yaml
       HOUSEPHONE_DATA_DIR: /data
