@@ -57,7 +57,7 @@ struct FritzBoxFixtureTests {
         #expect(withheld.isMissed)
         #expect(withheld.number.isEmpty)
         #expect(withheld.name == nil)
-        #expect(withheld.device == "")
+        #expect(withheld.device == nil)
 
         let machine = history.calls[3]
         #expect(machine.isAnsweringMachine)
