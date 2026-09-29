@@ -80,7 +80,12 @@ type call struct {
 	// informed: connections that received call.incoming without attaching.
 	informed map[string]DeviceConn
 	// endedSent: devices that already received call.ended.
-	endedSent  map[string]bool
+	endedSent map[string]bool
+	// participants: every device pushed, informed, attached or dialing.
+	participants map[string]bool
+	// deviceEnds: the end reason each device got (or would have got if it
+	// was connected), for GET /v1/calls/{callId}.
+	deviceEnds map[string]deviceEnd
 	acceptedBy string
 
 	sipIn    IncomingSIPCall
@@ -115,7 +120,15 @@ func newCall(m *Manager, id string, dir direction) *call {
 		notified:  map[string]bool{},
 		informed:  map[string]DeviceConn{},
 		endedSent: map[string]bool{},
+
+		participants: map[string]bool{},
+		deviceEnds:   map[string]deviceEnd{},
 	}
+}
+
+type deviceEnd struct {
+	reason  string
+	sipCode int
 }
 
 // do schedules op on the actor. It returns false if the call already ended.
@@ -180,11 +193,47 @@ func (c *call) finish(reason string, sipCode int) {
 }
 
 func (c *call) sendEnded(deviceID string, conn DeviceConn, reason string, sipCode int) {
+	if _, recorded := c.deviceEnds[deviceID]; !recorded {
+		c.deviceEnds[deviceID] = deviceEnd{reason: reason, sipCode: sipCode}
+	}
 	if c.endedSent[deviceID] || conn == nil {
 		return
 	}
 	c.endedSent[deviceID] = true
 	conn.Send(protocol.MustEnvelope(protocol.TypeCallEnded, protocol.CallEnded{CallID: c.id, Reason: reason, SIPCode: sipCode}))
+}
+
+// statusFor reports the call from one device's point of view for GET
+// /v1/calls/{callId}. It runs on the actor, or after the actor stopped when
+// the state is final. ok is false if the device did not take part.
+func (c *call) statusFor(deviceID string) (st protocol.CallStatus, ok bool) {
+	if !c.participants[deviceID] {
+		return protocol.CallStatus{}, false
+	}
+	st.CallID = c.id
+	ended := func(reason string, sipCode int) (protocol.CallStatus, bool) {
+		st.State, st.Reason, st.SIPCode = protocol.CallStatusEnded, reason, sipCode
+		return st, true
+	}
+	if e, recorded := c.deviceEnds[deviceID]; recorded {
+		return ended(e.reason, e.sipCode)
+	}
+	if c.dir == directionIncoming && c.acceptedBy != "" && deviceID != c.acceptedBy {
+		return ended(protocol.EndReasonAnsweredElsewhere, 0)
+	}
+	switch c.phase {
+	case phaseRinging:
+		st.State = protocol.CallStatusRinging
+	case phaseAnswering, phaseConnected:
+		st.State = protocol.CallStatusConnected
+	default:
+		reason := c.endReason
+		if reason == "" {
+			reason = protocol.EndReasonFailed
+		}
+		return ended(reason, c.endSIPCode)
+	}
+	return st, true
 }
 
 func (c *call) send(conn DeviceConn, msgType string, payload any) {

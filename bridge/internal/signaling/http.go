@@ -75,6 +75,22 @@ func (s *Server) httpDeleteDevice(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// httpCallStatus handles GET /v1/calls/{callId} (Bearer): the call from this
+// device's point of view. A ringing watch polls it because watchOS does not
+// let it open a WebSocket before the call is answered.
+func (s *Server) httpCallStatus(w http.ResponseWriter, r *http.Request) {
+	dev, ok := s.httpAuthenticate(w, r)
+	if !ok {
+		return
+	}
+	status, found := s.cfg.Hub.CallStatus(dev.ID, r.PathValue("callId"))
+	if !found {
+		writeJSON(w, http.StatusNotFound, protocol.Error{Code: protocol.ErrorCallNotFound, Message: "unknown call"})
+		return
+	}
+	writeJSON(w, http.StatusOK, status)
+}
+
 func (s *Server) httpAuthenticate(w http.ResponseWriter, r *http.Request) (store.Device, bool) {
 	dev, ok := s.authenticate(r.Header.Get("Authorization"))
 	if !ok {

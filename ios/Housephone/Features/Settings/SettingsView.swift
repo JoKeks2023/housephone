@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(BridgeConnection.self) private var bridge
+    @Environment(WatchLink.self) private var watch
     @Environment(\.openURL) private var openURL
     @State private var confirmsUnpair = false
     @State private var microphone = AVAudioApplication.shared.recordPermission
@@ -48,7 +49,11 @@ struct SettingsView: View {
                         confirmsUnpair = true
                     }
                 } footer: {
-                    Text("Danach klingelt dieses iPhone nicht mehr. Du kannst es jederzeit neu koppeln.")
+                    if watch.isPairedWithBridge {
+                        Text("Danach klingeln dieses iPhone und deine Apple Watch nicht mehr. Du kannst beide jederzeit neu koppeln.")
+                    } else {
+                        Text("Danach klingelt dieses iPhone nicht mehr. Du kannst es jederzeit neu koppeln.")
+                    }
                 }
 
                 Section("Über") {
@@ -60,10 +65,16 @@ struct SettingsView: View {
             .navigationTitle("Einstellungen")
             .confirmationDialog("Kopplung aufheben?", isPresented: $confirmsUnpair, titleVisibility: .visible) {
                 Button("Kopplung aufheben", role: .destructive) {
+                    // The watch was paired through this iPhone; it follows.
+                    watch.unpairWatch()
                     Task { await bridge.unpair() }
                 }
             } message: {
-                Text("Die Zugangsdaten werden von diesem iPhone gelöscht.")
+                if watch.isPairedWithBridge {
+                    Text("Die Zugangsdaten werden von diesem iPhone gelöscht. Deine Apple Watch wird ebenfalls entkoppelt.")
+                } else {
+                    Text("Die Zugangsdaten werden von diesem iPhone gelöscht.")
+                }
             }
             .onAppear {
                 microphone = AVAudioApplication.shared.recordPermission

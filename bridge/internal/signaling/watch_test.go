@@ -365,3 +365,35 @@ func TestBinaryAudioFrames(t *testing.T) {
 		t.Fatalf("read %v %v (%d bytes)", typ, err, len(data))
 	}
 }
+
+func TestHTTPCallStatus(t *testing.T) {
+	ts := newTestServer(t)
+	ok := ts.pairDevice(t)
+	callID := "3f0c2b4e-8a1d-4c6e-9b7a-2d5e8f1a0c93"
+	want := protocol.CallStatus{CallID: callID, State: protocol.CallStatusEnded, Reason: protocol.EndReasonAnsweredElsewhere}
+	ts.hub.mu.Lock()
+	ts.hub.statuses = map[string]protocol.CallStatus{ok.DeviceID + "/" + callID: want}
+	ts.hub.mu.Unlock()
+
+	res, body := ts.request(t, http.MethodGet, "/v1/calls/"+callID, nil, nil)
+	if res.StatusCode != http.StatusUnauthorized || decodeError(t, body).Code != protocol.ErrorUnauthorized {
+		t.Fatalf("without auth: %d %s", res.StatusCode, body)
+	}
+
+	res, body = ts.request(t, http.MethodGet, "/v1/calls/"+callID, bearer(ok), nil)
+	if res.StatusCode != http.StatusOK || res.Header.Get("Cache-Control") != "no-store" {
+		t.Fatalf("status: %d %v %s", res.StatusCode, res.Header, body)
+	}
+	var got protocol.CallStatus
+	if err := json.Unmarshal(body, &got); err != nil || got != want {
+		t.Fatalf("status body %s (%v), want %+v", body, err, want)
+	}
+	if !strings.Contains(string(body), `"state":"ended"`) || strings.Contains(string(body), "sipCode") {
+		t.Fatalf("status JSON %s", body)
+	}
+
+	res, body = ts.request(t, http.MethodGet, "/v1/calls/9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d", bearer(ok), nil)
+	if res.StatusCode != http.StatusNotFound || decodeError(t, body).Code != protocol.ErrorCallNotFound {
+		t.Fatalf("unknown call: %d %s", res.StatusCode, body)
+	}
+}

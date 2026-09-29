@@ -37,6 +37,9 @@ enum WatchCallFailure: Identifiable, Equatable {
 ///   session. A ringing call therefore does not fail when the bridge is not
 ///   reachable yet; it fails only if there is still no connection 10 s
 ///   after the user answered.
+/// - While it rings without a WebSocket, the watch polls the call status
+///   over HTTPS, so it stops ringing when the caller hangs up or someone
+///   else answers.
 /// - Audio is A-law over the WebSocket (`call.media`), not WebRTC.
 @MainActor
 @Observable
@@ -69,6 +72,7 @@ final class WatchCallCenter: NSObject {
     @ObservationIgnored private var outgoingAudio: AsyncStream<Data>.Continuation?
     @ObservationIgnored private var deadline: Task<Void, Never>?
     @ObservationIgnored private var ringingTimeout: Task<Void, Never>?
+    @ObservationIgnored private var statusPoll: Task<Void, Never>?
     @ObservationIgnored private var clearTask: Task<Void, Never>?
     @ObservationIgnored private var pendingOutgoingNames: [UUID: String] = [:]
     @ObservationIgnored private var callsNotRecorded: Set<CallID> = []
@@ -80,6 +84,8 @@ final class WatchCallCenter: NSObject {
     /// A confirmed call normally ends via CANCEL; this is the safety net
     /// should the connection drop while it rings.
     static let confirmedRingingTimeout: Duration = .seconds(180)
+    /// How often a ringing call asks the bridge whether it is still ringing.
+    static let statusPollInterval: Duration = .seconds(2)
 
     init(bridge: WatchBridge, recents: RecentCalls) {
         self.bridge = bridge
@@ -94,7 +100,14 @@ final class WatchCallCenter: NSObject {
 
         provider.setDelegate(self, queue: nil)
         pushRegistry.delegate = self
-        pushRegistry.desiredPushTypes = [.voIP]
+        updatePushRegistration(paired: bridge.isPaired)
+        bridge.onPairedChange = { [weak self] paired in self?.updatePushRegistration(paired: paired) }
+    }
+
+    /// Only a paired watch asks for VoIP pushes. Unpairing drops the token,
+    /// so APNs answers the bridge with 410 should it still try.
+    private func updatePushRegistration(paired: Bool) {
+        pushRegistry.desiredPushTypes = paired ? [.voIP] : []
     }
 
     var hasActiveCall: Bool { activeCall?.isActive == true }
@@ -334,6 +347,7 @@ final class WatchCallCenter: NSObject {
     private func finish(_ call: CallSession) {
         deadline?.cancel()
         ringingTimeout?.cancel()
+        stopStatusPolling()
         closeConnection(after: .milliseconds(500))
         isMuted = false
         if callsNotRecorded.remove(call.id) == nil, let record = RecentCall(session: call) {
@@ -370,6 +384,50 @@ final class WatchCallCenter: NSObject {
                   call.isActive, !call.userAnswered
             else { return }
             self.apply(.bridgeEnded(.remoteCancelled), to: callId)
+        }
+    }
+
+    // MARK: - Call status while ringing
+
+    /// Asks the bridge every 2 s whether the call still rings, as long as
+    /// it rings here and has no WebSocket (watchOS may not allow one before
+    /// the call is answered). Network errors are ignored; the ringing
+    /// timeouts stay the safety net.
+    private func startStatusPolling(for callId: CallID) {
+        statusPoll?.cancel()
+        statusPoll = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.statusPollInterval)
+                guard !Task.isCancelled, let self else { return }
+                guard let call = self.activeCall, call.id == callId, call.isActive, !call.userAnswered else { return }
+                if self.connection == .connected, self.attachedGeneration != nil {
+                    // Attached: call.ended arrives over the WebSocket.
+                    continue
+                }
+                let status = await self.bridge.callStatus(callId)
+                guard !Task.isCancelled else { return }
+                if let status {
+                    self.applyPolledStatus(status, to: callId)
+                } else if self.bridge.isRejected {
+                    self.apply(.bridgeEnded(.failed), to: callId)
+                }
+            }
+        }
+    }
+
+    private func stopStatusPolling() {
+        statusPoll?.cancel()
+        statusPoll = nil
+    }
+
+    private func applyPolledStatus(_ status: BridgeCallStatus, to callId: CallID) {
+        guard let call = activeCall, call.id == callId, call.isActive, !call.userAnswered else { return }
+        switch status.state {
+        case .ended(let reason, _):
+            logger.info("Call ended while ringing: \(reason.rawValue, privacy: .public)")
+            apply(.bridgeEnded(reason), to: callId)
+        case .ringing, .connected:
+            break
         }
     }
 
@@ -477,6 +535,7 @@ extension WatchCallCenter: @preconcurrency PKPushRegistryDelegate {
         begin(session)
         reportIncoming(session) { done.call() }
         startRingingTimeout(for: session.id, after: Self.unconfirmedRingingTimeout)
+        startStatusPolling(for: session.id)
         perform(effects, for: session.id)
     }
 }
@@ -499,6 +558,7 @@ struct UncheckedCompletion: @unchecked Sendable {
 extension WatchCallCenter: @preconcurrency CXProviderDelegate {
     func providerDidReset(_ provider: CXProvider) {
         logger.info("Provider reset")
+        stopStatusPolling()
         audio.stop()
         if let call = activeCall, call.isActive {
             send(.callHangup(Hangup(callId: call.id, reason: .failed)))
@@ -532,6 +592,7 @@ extension WatchCallCenter: @preconcurrency CXProviderDelegate {
         }
         CallAudio.configureSession()
         ringingTimeout?.cancel()
+        stopStatusPolling()
         apply(.userAnswered, to: call.id)
         openConnection()
         startConnectDeadline(for: call.id)

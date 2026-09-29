@@ -298,6 +298,23 @@ type CallEnded struct {
 	SIPCode int    `json:"sipCode,omitempty"`
 }
 
+// Call status states in GET /v1/calls/{callId} (v1.1).
+const (
+	CallStatusRinging   = "ringing"
+	CallStatusConnected = "connected"
+	CallStatusEnded     = "ended"
+)
+
+// CallStatus answers GET /v1/calls/{callId} from the requesting device's
+// point of view (v1.1). A ringing watch may not open a WebSocket, so it
+// polls this to learn about CANCEL or an answer elsewhere.
+type CallStatus struct {
+	CallID  string `json:"callId"`
+	State   string `json:"state"`
+	Reason  string `json:"reason,omitempty"`
+	SIPCode int    `json:"sipCode,omitempty"`
+}
+
 // PairCompanion carries a fresh pairing code for a companion device (v1.1).
 type PairCompanion struct {
 	Code      string    `json:"code"`

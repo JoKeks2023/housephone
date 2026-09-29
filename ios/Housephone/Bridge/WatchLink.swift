@@ -5,7 +5,8 @@ import os
 import WatchConnectivity
 
 /// The iPhone side of the Apple Watch: WatchConnectivity status, the
-/// watch's pairing state, and "Apple Watch koppeln".
+/// watch's pairing state, "Apple Watch koppeln", and unpairing the watch
+/// together with the iPhone.
 ///
 /// Pairing: the bridge issues a companion code (`pair.companion`), the
 /// iPhone hands it to the watch, and the watch pairs itself over HTTPS.
@@ -57,7 +58,42 @@ final class WatchLink: NSObject {
             pairing = .failed(String(localized: "Die Bridge hat keinen Kopplungscode geliefert. Prüfe, ob sie erreichbar ist."))
             return
         }
+        // A queued unpair from earlier must not undo this pairing.
+        cancelQueuedTransfers(ofType: CompanionUnpairInstruction.messageType)
         deliver(instruction)
+    }
+
+    /// The iPhone unpairs, so the watch unpairs too: right away if its app
+    /// is reachable, otherwise through the transfer queue the next time it
+    /// runs (e.g. woken by a push).
+    func unpairWatch() {
+        guard isSupported, isActivated, isWatchPaired, isAppInstalled else { return }
+        cancelQueuedTransfers(ofType: CompanionPairingInstruction.messageType)
+        pairing = .idle
+        let instruction = CompanionUnpairInstruction()
+        let session = WCSession.default
+        guard session.isReachable else {
+            session.transferUserInfo(instruction.dictionary)
+            return
+        }
+        session.sendMessage(instruction.dictionary, replyHandler: { [weak self] reply in
+            let state = WatchPairingState(dictionary: reply)
+            Task { @MainActor in
+                if let state { self?.apply(state) }
+            }
+        }, errorHandler: { [weak self] error in
+            let description = error.localizedDescription
+            Task { @MainActor in
+                self?.logger.info("Direct unpair failed (\(description, privacy: .public)); queuing for the watch")
+                WCSession.default.transferUserInfo(instruction.dictionary)
+            }
+        })
+    }
+
+    private func cancelQueuedTransfers(ofType type: String) {
+        for transfer in WCSession.default.outstandingUserInfoTransfers where companionMessageType(of: transfer.userInfo) == type {
+            transfer.cancel()
+        }
     }
 
     func cancelPairing() {

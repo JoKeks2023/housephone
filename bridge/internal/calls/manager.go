@@ -56,6 +56,8 @@ type tombstone struct {
 	reason  string
 	sipCode int
 	at      time.Time
+	// statuses: the final status per participating device.
+	statuses map[string]protocol.CallStatus
 }
 
 // Manager routes device messages and SIP events to per-call actors.
@@ -265,6 +267,46 @@ func (m *Manager) withCall(conn DeviceConn, id string, endedIfMissing bool, fn f
 	conn.Send(protocol.MustEnvelope(protocol.TypeCallEnded, protocol.CallEnded{CallID: id, Reason: reason, SIPCode: code}))
 }
 
+// CallStatus reports a call from one device's point of view for GET
+// /v1/calls/{callId} (v1.1). ok is false if the call is unknown (also once
+// its tombstone expired) or the device did not take part in it.
+func (m *Manager) CallStatus(deviceID, rawCallID string) (protocol.CallStatus, bool) {
+	id, valid := normalizeCallID(rawCallID)
+	if !valid {
+		return protocol.CallStatus{}, false
+	}
+	m.mu.Lock()
+	c := m.calls[id]
+	tomb, hasTomb := m.tombs[id]
+	m.mu.Unlock()
+
+	if c != nil {
+		type result struct {
+			st protocol.CallStatus
+			ok bool
+		}
+		answer := make(chan result, 1)
+		if c.do(func() {
+			st, ok := c.statusFor(deviceID)
+			answer <- result{st, ok}
+		}) {
+			select {
+			case r := <-answer:
+				return r.st, r.ok
+			case <-c.done:
+			}
+		}
+		// The actor stopped before answering; its state is final now.
+		<-c.done
+		return c.statusFor(deviceID)
+	}
+	if hasTomb && m.opts.Now().Sub(tomb.at) <= m.opts.TombstoneTTL {
+		st, ok := tomb.statuses[deviceID]
+		return st, ok
+	}
+	return protocol.CallStatus{}, false
+}
+
 func (m *Manager) addCall(c *call) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -294,7 +336,15 @@ func (m *Manager) removeCall(c *call) {
 			delete(m.tombs, id)
 		}
 	}
-	m.tombs[c.id] = tombstone{reason: c.endReason, sipCode: c.endSIPCode, at: now}
+	// The actor has stopped (removeCall runs after c.run returned), so its
+	// state is final and safe to read here.
+	statuses := make(map[string]protocol.CallStatus, len(c.participants))
+	for id := range c.participants {
+		if st, ok := c.statusFor(id); ok {
+			statuses[id] = st
+		}
+	}
+	m.tombs[c.id] = tombstone{reason: c.endReason, sipCode: c.endSIPCode, at: now, statuses: statuses}
 	m.wg.Done()
 }
 
@@ -346,6 +396,7 @@ func (m *Manager) HandleIncoming(ctx context.Context, sip IncomingSIPCall) {
 		}
 		reachable++
 		c.notified[dev.ID] = true
+		c.participants[dev.ID] = true
 		if canPush {
 			m.push(c, dev)
 		}
@@ -414,6 +465,7 @@ func (m *Manager) startOutgoing(conn DeviceConn, id, number string) {
 	}
 	c := newCall(m, id, directionOutgoing)
 	c.number, c.caller = number, number
+	c.participants[conn.DeviceID()] = true
 	if !m.addCall(c) {
 		sendError(conn, protocol.ErrorBadRequest, "callId already used", id)
 		return

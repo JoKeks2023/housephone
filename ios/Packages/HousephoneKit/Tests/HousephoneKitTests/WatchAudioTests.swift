@@ -254,4 +254,24 @@ struct CompanionLinkTests {
         #expect(WatchPairingState(dictionary: dictionary) == state)
         #expect(WatchPairingState(dictionary: [:]) == nil)
     }
+
+    @Test func unpairInstructionRoundTrips() throws {
+        let instruction = CompanionUnpairInstruction(issuedAt: Date(timeIntervalSince1970: 1_800_000_000))
+        let dictionary = instruction.dictionary
+        #expect(PropertyListSerialization.propertyList(dictionary, isValidFor: .binary))
+        #expect(CompanionUnpairInstruction(dictionary: dictionary) == instruction)
+        #expect(companionMessageType(of: dictionary) == CompanionUnpairInstruction.messageType)
+        // Pairing and unpairing messages never mix up.
+        #expect(CompanionUnpairInstruction(dictionary: ["type": CompanionPairingInstruction.messageType, "issuedAt": 0.0]) == nil)
+        #expect(CompanionPairingInstruction(dictionary: dictionary) == nil)
+    }
+
+    @Test func lateUnpairInstructionKeepsANewerPairing() {
+        let issued = Date(timeIntervalSince1970: 1_800_000_000)
+        let instruction = CompanionUnpairInstruction(issuedAt: issued)
+        #expect(instruction.applies(toPairingAt: nil))
+        #expect(instruction.applies(toPairingAt: issued.addingTimeInterval(-60)))
+        #expect(instruction.applies(toPairingAt: issued))
+        #expect(!instruction.applies(toPairingAt: issued.addingTimeInterval(60)))
+    }
 }

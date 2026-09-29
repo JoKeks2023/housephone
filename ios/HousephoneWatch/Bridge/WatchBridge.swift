@@ -31,6 +31,9 @@ final class WatchBridge {
 
     /// Called whenever the state the iPhone should see changes.
     @ObservationIgnored var onStateChange: ((WatchPairingState) -> Void)?
+    /// Called when the watch gets paired or unpaired, e.g. to switch VoIP
+    /// pushes on or off.
+    @ObservationIgnored var onPairedChange: ((Bool) -> Void)?
 
     @ObservationIgnored private let store: any CredentialStore
     @ObservationIgnored private let http: BridgeHTTPClient
@@ -38,6 +41,23 @@ final class WatchBridge {
     @ObservationIgnored private let logger = Logger(subsystem: "com.jorisconrad.housephone.watch", category: "bridge")
 
     static let voipPushTopic = "com.jorisconrad.housephone.watchkitapp.voip"
+    private static let pairedAtKey = "housephone.pairedAt"
+
+    /// When this watch paired, to ignore an unpair instruction from the
+    /// iPhone that was queued before a newer pairing.
+    private var pairedAt: Date? {
+        get {
+            let seconds = UserDefaults.standard.double(forKey: Self.pairedAtKey)
+            return seconds > 0 ? Date(timeIntervalSince1970: seconds) : nil
+        }
+        set {
+            if let newValue {
+                UserDefaults.standard.set(newValue.timeIntervalSince1970, forKey: Self.pairedAtKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.pairedAtKey)
+            }
+        }
+    }
 
     init(store: any CredentialStore, http: BridgeHTTPClient = BridgeHTTPClient()) {
         self.store = store
@@ -78,10 +98,12 @@ final class WatchBridge {
             )
             try store.save(paired)
             credentials = paired
+            pairedAt = .now
             isRejected = false
             lastFailure = nil
             registration = .none
             logger.info("Paired with \(paired.bridgeName, privacy: .public)")
+            onPairedChange?(true)
         } catch {
             logger.error("Pairing failed: \(String(describing: error), privacy: .public)")
             return failed(Self.message(for: error))
@@ -93,16 +115,43 @@ final class WatchBridge {
         return state
     }
 
+    /// Tells the bridge (best effort) and forgets the credentials. The
+    /// watch stops receiving VoIP pushes.
     func unpair() async {
         retryTask?.cancel()
         if let credentials {
-            try? await http.deleteDevice(credentials: credentials)
+            do {
+                try await http.deleteDevice(credentials: credentials)
+            } catch {
+                // Offline or already removed: the bridge drops the push token
+                // once APNs reports it as unregistered.
+                logger.info("Bridge not told about unpairing: \(String(describing: error), privacy: .public)")
+            }
         }
         try? store.delete()
         credentials = nil
+        pairedAt = nil
         registration = .none
         isRejected = false
+        lastFailure = nil
+        logger.info("Unpaired")
+        onPairedChange?(false)
         publish()
+    }
+
+    /// The iPhone was unpaired. Follows unless the watch paired again after
+    /// the iPhone sent this (a late delivery from the transfer queue).
+    func unpair(following instruction: CompanionUnpairInstruction) async {
+        guard credentials != nil else {
+            publish()
+            return
+        }
+        guard instruction.applies(toPairingAt: pairedAt) else {
+            logger.info("Ignoring unpair instruction older than the current pairing")
+            publish()
+            return
+        }
+        await unpair()
     }
 
     // MARK: - Push token
@@ -166,6 +215,21 @@ final class WatchBridge {
         configuration.initialBackoff = .milliseconds(300)
         configuration.maximumBackoff = .seconds(3)
         return SignalingClient(credentials: credentials, hello: hello, configuration: configuration)
+    }
+
+    /// The call as the bridge sees it for this watch (`GET /v1/calls/{id}`),
+    /// or nil if the bridge can't be asked right now.
+    func callStatus(_ callId: CallID) async -> BridgeCallStatus? {
+        guard let credentials, !isRejected else { return nil }
+        do {
+            return try await http.callStatus(callId, credentials: credentials)
+        } catch SignalingClientError.unauthorized {
+            markRejected()
+            return nil
+        } catch {
+            logger.info("Call status unavailable: \(String(describing: error), privacy: .public)")
+            return nil
+        }
     }
 
     /// The bridge answered 401 on a call connection.
