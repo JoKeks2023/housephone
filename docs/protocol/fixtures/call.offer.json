@@ -1,0 +1,1 @@
+{"type":"call.offer","payload":{"callId":"3f0c2b4e-8a1d-4c6e-9b7a-2d5e8f1a0c93","sdp":"v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n","iceServers":[{"urls":["stun:stun.cloudflare.com:3478"]},{"urls":["turn:turn.example.com:3478?transport=udp"],"username":"u","credential":"p"}]}}

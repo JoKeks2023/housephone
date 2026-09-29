@@ -1,0 +1,41 @@
+# Housephone Bridge + Cloudflare Tunnel
+#
+# 1. cp docker-compose.example.yml docker-compose.yml
+#    cp config.example.yaml config.yaml   (anpassen)
+# 2. mkdir -p data secrets
+#    printf '%s' 'SIP-PASSWORT' > secrets/sip_password
+#    cp ~/Downloads/AuthKey_XXXXXXXXXX.p8 secrets/apns_key.p8
+#    chmod 600 secrets/*
+#    Dateien und data/ müssen dem Benutzer aus "user:" gehören (id -u / id -g).
+# 3. CLOUDFLARE_TUNNEL_TOKEN=... docker compose up -d
+# 4. docker compose exec housephone-bridge housephone-bridge pair -name "iPhone"
+
+services:
+  housephone-bridge:
+    build: .
+    image: housephone-bridge:local
+    container_name: housephone-bridge
+    restart: unless-stopped
+    # Host-Netzwerk: SIP/RTP zur FRITZ!Box und der WebRTC-Port 50000 ohne
+    # zusätzliches Docker-NAT. Die Bridge erkennt so die richtige LAN-IP.
+    network_mode: host
+    user: "1000:1000"
+    environment:
+      HOUSEPHONE_CONFIG: /config/config.yaml
+      HOUSEPHONE_DATA_DIR: /data
+      HOUSEPHONE_SIP_PASSWORD_FILE: /secrets/sip_password
+      HOUSEPHONE_APNS_KEY_FILE: /secrets/apns_key.p8
+      HOUSEPHONE_APNS_KEY_ID: "XXXXXXXXXX"
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - ./data:/data
+      - ./secrets:/secrets:ro
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: housephone-cloudflared
+    restart: unless-stopped
+    network_mode: host
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}

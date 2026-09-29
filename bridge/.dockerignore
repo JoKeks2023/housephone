@@ -1,0 +1,6 @@
+bin/
+data/
+secrets/
+*.p8
+config.yaml
+docker-compose*.yml
