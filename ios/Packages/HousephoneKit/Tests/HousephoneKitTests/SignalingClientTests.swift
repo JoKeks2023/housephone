@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Testing
 @testable import HousephoneKit
@@ -24,6 +25,9 @@ actor Mailbox {
         return try await withCheckedThrowingContinuation { waiter = $0 }
     }
 
+    /// What arrived so far, without waiting.
+    func pending() -> [WebSocketMessage] { buffer }
+
     func close() {
         closed = true
         waiter?.resume(throwing: WebSocketTransportError.closed)
@@ -31,11 +35,26 @@ actor Mailbox {
     }
 }
 
-final class FakeTransport: WebSocketTransport {
+/// One WebSocket connection. The bridge end seals with the session the
+/// `FakeFactory` negotiated for it.
+final class FakeTransport: WebSocketTransport, @unchecked Sendable {
     /// What the bridge sends to the device.
     let inbox = Mailbox()
     /// What the device sent to the bridge.
     let outbox = Mailbox()
+
+    private let lock = NSLock()
+    private var headers: [String: String] = [:]
+    private var bridgeSession: BridgeSession?
+
+    func accept(upgradeHeaders: [String: String], session: BridgeSession?) {
+        lock.withLock {
+            headers = upgradeHeaders
+            bridgeSession = session
+        }
+    }
+
+    var session: BridgeSession? { lock.withLock { bridgeSession } }
 
     func send(_ text: String) async throws {
         await outbox.push(.text(text))
@@ -55,48 +74,103 @@ final class FakeTransport: WebSocketTransport {
         Task { await inbox.close() }
     }
 
+    func upgradeHeader(_ name: String) -> String? {
+        lock.withLock { headers.first { $0.key.caseInsensitiveCompare(name) == .orderedSame }?.value }
+    }
+
+    /// The bridge sends a sealed signaling message.
     func bridgeSends(_ message: SignalingMessage) async throws {
-        await inbox.push(.text(try SignalingCoding.encode(message)))
+        let session = try #require(session)
+        await inbox.push(.binary(session.seal(HP2FrameCipher.jsonPlaintext(try SignalingCoding.encode(message)))))
     }
 
-    func bridgeSendsBinary(_ data: Data) async {
-        await inbox.push(.binary(data))
+    /// The bridge sends a sealed audio message (`AudioFrame` layout).
+    func bridgeSendsAudio(_ frame: Data) async throws {
+        let session = try #require(session)
+        await inbox.push(.binary(session.seal(frame)))
     }
 
-    /// The next JSON message the device sent; skips binary audio.
+    /// The bridge sends raw bytes, e.g. a tampered frame.
+    func bridgeSendsRaw(_ message: WebSocketMessage) async {
+        await inbox.push(message)
+    }
+
+    /// The next JSON message the device sent, opened with the bridge's
+    /// session; skips audio. Fails on anything unsealed.
     func nextSent() async throws -> SignalingMessage {
         while true {
-            if case .text(let text) = try await outbox.next() {
-                return try SignalingCoding.decode(text)
+            let plaintext = try await nextPlaintext()
+            if plaintext.first == HP2FrameType.json.rawValue {
+                return try SignalingCoding.decode(String(decoding: plaintext.dropFirst(), as: UTF8.self))
             }
         }
     }
 
-    /// The next binary message the device sent; skips JSON.
-    func nextSentBinary() async throws -> Data {
+    /// The next audio message the device sent; skips JSON.
+    func nextSentAudio() async throws -> Data {
         while true {
-            if case .binary(let data) = try await outbox.next() { return data }
+            let plaintext = try await nextPlaintext()
+            if plaintext.first == HP2FrameType.audio.rawValue { return plaintext }
         }
+    }
+
+    private func nextPlaintext() async throws -> Data {
+        guard case .binary(let frame) = try await outbox.next() else {
+            Issue.record("device sent an unsealed text frame")
+            throw HP2Error.invalidFrame
+        }
+        return try #require(session).open(frame)
     }
 }
 
+/// Hands out transports and plays the bridge's side of the upgrade: checks
+/// the device's signature and answers with a signed `101`.
 final class FakeFactory: WebSocketTransportFactory, @unchecked Sendable {
+    enum Upgrade {
+        case valid
+        /// No `HP2-Bridge` header.
+        case unsigned
+        /// Signed by another key than the one the device pinned.
+        case signedByImpostor
+        case rejectAsUnauthorized
+        case rejectAsClockSkew
+    }
+
     private let lock = NSLock()
     private var transports: [FakeTransport]
-    private var rejectAsUnauthorized: Bool
-    private(set) var connections: [(url: URL, headers: [String: String])] = []
+    private let bridge: TestBridge
+    private let devicePublicKey: Data?
+    private let upgrade: Upgrade
+    private(set) var connections: [(url: URL, headers: [String: String], signatureValid: Bool)] = []
 
-    init(transports: [FakeTransport], rejectAsUnauthorized: Bool = false) {
+    init(transports: [FakeTransport], bridge: TestBridge, devicePublicKey: Data? = nil, upgrade: Upgrade = .valid) {
         self.transports = transports
-        self.rejectAsUnauthorized = rejectAsUnauthorized
+        self.bridge = bridge
+        self.devicePublicKey = devicePublicKey
+        self.upgrade = upgrade
     }
 
     func connect(to url: URL, headers: [String: String]) async throws -> any WebSocketTransport {
         try lock.withLock {
-            connections.append((url, headers))
-            if rejectAsUnauthorized { throw WebSocketTransportError.unauthorized }
+            let authorization = headers["Authorization"] ?? ""
+            let valid = devicePublicKey.map {
+                bridge.verifiesDevice(authorization: authorization, method: "GET", pathAndQuery: HP2Signer.pathAndQuery(of: url), body: Data(), devicePublicKey: $0)
+            } ?? true
+            connections.append((url, headers, valid))
+            switch upgrade {
+            case .rejectAsUnauthorized: throw WebSocketTransportError.unauthorized
+            case .rejectAsClockSkew: throw WebSocketTransportError.clockSkew
+            default: break
+            }
             guard !transports.isEmpty else { throw WebSocketTransportError.closed }
-            return transports.removeFirst()
+            let transport = transports.removeFirst()
+            let impostor = upgrade == .signedByImpostor ? Curve25519.Signing.PrivateKey() : nil
+            guard let answer = bridge.answer(authorization: authorization, status: 101, plaintext: nil, signWith: impostor) else {
+                throw WebSocketTransportError.httpStatus(400)
+            }
+            let upgradeHeaders = upgrade == .unsigned ? [:] : [HP2.bridgeHeaderName: answer.header]
+            transport.accept(upgradeHeaders: upgradeHeaders, session: answer.session)
+            return transport
         }
     }
 
@@ -106,15 +180,14 @@ final class FakeFactory: WebSocketTransportFactory, @unchecked Sendable {
 // MARK: - Tests
 
 struct SignalingClientTests {
-    let credentials = BridgeCredentials(
-        bridgeURL: URL(string: "wss://bridge.example/v1/ws")!,
-        deviceId: DeviceID(UUID(uuidString: "9B1D4C2A-5E6F-4A7B-8C9D-0E1F2A3B4C5D")!),
-        deviceSecret: "secret",
-        bridgeId: "b",
-        bridgeName: "Zuhause"
-    )
+    let bridge = TestBridge()
+    let device: TestDevice
     let hello = Hello(appVersion: "0.1.0 (1)", platform: .ios, pushToken: "abcd", pushEnvironment: .development)
-    let welcome = Welcome(bridgeId: "b", bridgeName: "Zuhause", bridgeVersion: "0.1.0", sipRegistered: true)
+    let welcome = Welcome(bridgeId: "e7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e", bridgeName: "Zuhause", bridgeVersion: "0.4.0", sipRegistered: true)
+
+    init() {
+        device = TestDevice(bridge: bridge)
+    }
 
     var fastConfiguration: SignalingClient.Configuration {
         var configuration = SignalingClient.Configuration()
@@ -124,53 +197,67 @@ struct SignalingClientTests {
         return configuration
     }
 
-    @Test func connectsWithBearerTokenAndHello() async throws {
+    func makeClient(_ factory: FakeFactory, keyStore: (any DeviceKeyStore)? = nil) -> SignalingClient {
+        SignalingClient(credentials: device.credentials, hello: hello, keyStore: keyStore ?? device.keyStore, factory: factory, configuration: fastConfiguration)
+    }
+
+    func connect(_ client: SignalingClient, _ transport: FakeTransport) async throws {
+        await client.start()
+        #expect(try await transport.nextSent() == .hello(hello))
+        try await transport.bridgeSends(.welcome(welcome))
+        _ = try await client.waitUntilConnected(timeout: .seconds(2))
+    }
+
+    @Test func connectsWithSignedUpgradeAndSealedHello() async throws {
         let transport = FakeTransport()
-        let factory = FakeFactory(transports: [transport])
-        let client = SignalingClient(credentials: credentials, hello: hello, factory: factory, configuration: fastConfiguration)
+        let factory = FakeFactory(transports: [transport], bridge: bridge, devicePublicKey: device.key.publicKeyX963)
+        let client = makeClient(factory)
         await client.start()
 
         #expect(try await transport.nextSent() == .hello(hello))
         try await transport.bridgeSends(.welcome(welcome))
         #expect(try await client.waitUntilConnected(timeout: .seconds(2)) == welcome)
 
-        let headers = try #require(factory.connections.first?.headers)
-        #expect(headers["Authorization"] == "Bearer 9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d.secret")
+        let connection = try #require(factory.connections.first)
+        #expect(connection.signatureValid)
+        let header = try #require(connection.headers["Authorization"])
+        let authorization = try #require(HP2Authorization(headerValue: header))
+        #expect(authorization.deviceId == "9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d")
+        #expect(connection.headers.values.allSatisfy { !$0.contains("Bearer") })
         await client.stop()
     }
 
     @Test func deliversMessagesAndTracksStatus() async throws {
         let transport = FakeTransport()
-        let client = SignalingClient(credentials: credentials, hello: hello, factory: FakeFactory(transports: [transport]), configuration: fastConfiguration)
-        await client.start()
-        _ = try await transport.nextSent()
-        try await transport.bridgeSends(.welcome(welcome))
-        _ = try await client.waitUntilConnected(timeout: .seconds(2))
+        let client = makeClient(FakeFactory(transports: [transport], bridge: bridge))
+        try await connect(client, transport)
 
         let ended = CallEnded(callId: CallID(), reason: .busy, sipCode: 486)
+        let paired = DevicePaired(deviceName: "Apple Watch", platform: .watchos, pairedAt: Date(timeIntervalSince1970: 1_800_000_000))
         try await transport.bridgeSends(.status(BridgeStatus(sipRegistered: false)))
         try await transport.bridgeSends(.callEnded(ended))
+        try await transport.bridgeSends(.devicePaired(paired))
 
         var received: [SignalingMessage] = []
         for await event in client.events {
             if case .message(let message) = event { received.append(message) }
-            if received.count == 2 { break }
+            if received.count == 3 { break }
         }
-        #expect(received == [.status(BridgeStatus(sipRegistered: false)), .callEnded(ended)])
+        #expect(received == [.status(BridgeStatus(sipRegistered: false)), .callEnded(ended), .devicePaired(paired)])
         #expect(await client.state.welcome?.sipRegistered == false)
         await client.stop()
     }
 
     @Test func sendingWhileDisconnectedFails() async {
-        let client = SignalingClient(credentials: credentials, hello: hello, factory: FakeFactory(transports: []), configuration: fastConfiguration)
+        let client = makeClient(FakeFactory(transports: [], bridge: bridge))
         await #expect(throws: SignalingClientError.notConnected) {
             try await client.send(.callAttach(CallReference(callId: CallID())))
         }
     }
 
     @Test func unauthorizedStopsReconnecting() async throws {
-        let factory = FakeFactory(transports: [], rejectAsUnauthorized: true)
-        let client = SignalingClient(credentials: credentials, hello: hello, factory: factory, configuration: fastConfiguration)
+        let factory = FakeFactory(transports: [], bridge: bridge, upgrade: .rejectAsUnauthorized)
+        let client = makeClient(factory)
         await #expect(throws: SignalingClientError.unauthorized) {
             try await client.waitUntilConnected(timeout: .seconds(2))
         }
@@ -179,16 +266,106 @@ struct SignalingClientTests {
         #expect(factory.connectionCount == 1)
     }
 
+    @Test func missingDeviceKeyIsUnauthorized() async throws {
+        let factory = FakeFactory(transports: [FakeTransport()], bridge: bridge)
+        let client = makeClient(factory, keyStore: InMemoryDeviceKeyStore())
+        await #expect(throws: SignalingClientError.unauthorized) {
+            try await client.waitUntilConnected(timeout: .seconds(2))
+        }
+        #expect(factory.connectionCount == 0)
+    }
+
+    @Test func clockSkewStopsUntilRefresh() async throws {
+        let factory = FakeFactory(transports: [], bridge: bridge, upgrade: .rejectAsClockSkew)
+        let client = makeClient(factory)
+        await #expect(throws: SignalingClientError.clockSkew) {
+            try await client.waitUntilConnected(timeout: .seconds(2))
+        }
+        #expect(await client.state == .clockSkew)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(factory.connectionCount == 1)
+    }
+
+    @Test(arguments: [FakeFactory.Upgrade.unsigned, .signedByImpostor])
+    func untrustedBridgeGetsNothing(upgrade: FakeFactory.Upgrade) async throws {
+        let transport = FakeTransport()
+        let factory = FakeFactory(transports: [transport, FakeTransport()], bridge: bridge, upgrade: upgrade)
+        let client = makeClient(factory)
+        await #expect(throws: SignalingClientError.untrustedBridge) {
+            try await client.waitUntilConnected(timeout: .seconds(2))
+        }
+        #expect(await client.state == .untrustedBridge)
+        // Not even hello went out, and no automatic retry.
+        #expect(await transport.outbox.pending().isEmpty)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(factory.connectionCount == 1)
+    }
+
+    @Test func tamperedFrameDropsTheConnection() async throws {
+        let first = FakeTransport()
+        let second = FakeTransport()
+        let factory = FakeFactory(transports: [first, second], bridge: bridge)
+        let client = makeClient(factory)
+        try await connect(client, first)
+
+        // A frame sealed for this session, then flipped: never delivered.
+        let session = try #require(first.session)
+        var frame = session.seal(HP2FrameCipher.jsonPlaintext(try SignalingCoding.encode(.status(BridgeStatus(sipRegistered: false)))))
+        frame[frame.startIndex] ^= 0x01
+        await first.bridgeSendsRaw(.binary(frame))
+
+        // The client reconnects on a fresh session.
+        #expect(try await second.nextSent() == .hello(hello))
+        try await second.bridgeSends(.welcome(welcome))
+        var sawReconnect = false
+        for await event in client.events {
+            if case .message(.status) = event { Issue.record("tampered message was delivered") }
+            if case .state(.waitingToReconnect) = event { sawReconnect = true }
+            if case .state(.connected) = event, sawReconnect { break }
+        }
+        #expect(factory.connectionCount == 2)
+        await client.stop()
+    }
+
+    @Test(arguments: [
+        WebSocketMessage.text(#"{"type":"status","payload":{"sipRegistered":false}}"#),
+        .binary(Data(repeating: 0, count: 40)),
+    ])
+    func unsealedOrForeignFramesDropTheConnection(message: WebSocketMessage) async throws {
+        let first = FakeTransport()
+        let second = FakeTransport()
+        let factory = FakeFactory(transports: [first, second], bridge: bridge)
+        let client = makeClient(factory)
+        try await connect(client, first)
+
+        await first.bridgeSendsRaw(message)
+        #expect(try await second.nextSent() == .hello(hello))
+        #expect(factory.connectionCount == 2)
+        await client.stop()
+    }
+
+    @Test func replayedFrameDropsTheConnection() async throws {
+        let first = FakeTransport()
+        let second = FakeTransport()
+        let factory = FakeFactory(transports: [first, second], bridge: bridge)
+        let client = makeClient(factory)
+        try await connect(client, first)
+
+        let session = try #require(first.session)
+        let frame = session.seal(HP2FrameCipher.jsonPlaintext(try SignalingCoding.encode(.status(BridgeStatus(sipRegistered: false)))))
+        await first.bridgeSendsRaw(.binary(frame))
+        await first.bridgeSendsRaw(.binary(frame))
+
+        #expect(try await second.nextSent() == .hello(hello))
+        await client.stop()
+    }
+
     @Test func reconnectsAfterDrop() async throws {
         let first = FakeTransport()
         let second = FakeTransport()
-        let factory = FakeFactory(transports: [first, second])
-        let client = SignalingClient(credentials: credentials, hello: hello, factory: factory, configuration: fastConfiguration)
-        await client.start()
-
-        _ = try await first.nextSent()
-        try await first.bridgeSends(.welcome(welcome))
-        _ = try await client.waitUntilConnected(timeout: .seconds(2))
+        let factory = FakeFactory(transports: [first, second], bridge: bridge)
+        let client = makeClient(factory)
+        try await connect(client, first)
 
         first.close()
         #expect(try await second.nextSent() == .hello(hello))
@@ -200,12 +377,15 @@ struct SignalingClientTests {
             if case .state(.connected) = event, sawReconnect { break }
         }
         #expect(factory.connectionCount == 2)
+        // Each connection signs anew.
+        let nonces = factory.connections.compactMap { $0.headers["Authorization"].flatMap(HP2Authorization.init(headerValue:))?.nonce }
+        #expect(Set(nonces).count == 2)
         await client.stop()
     }
 
     @Test func waitTimesOutWithoutWelcome() async {
         let transport = FakeTransport()
-        let client = SignalingClient(credentials: credentials, hello: hello, factory: FakeFactory(transports: [transport]), configuration: fastConfiguration)
+        let client = makeClient(FakeFactory(transports: [transport], bridge: bridge))
         await #expect(throws: SignalingClientError.timeout) {
             try await client.waitUntilConnected(timeout: .milliseconds(200))
         }
@@ -214,11 +394,8 @@ struct SignalingClientTests {
 
     @Test func pushTokenChangeSendsDeviceUpdate() async throws {
         let transport = FakeTransport()
-        let client = SignalingClient(credentials: credentials, hello: hello, factory: FakeFactory(transports: [transport]), configuration: fastConfiguration)
-        await client.start()
-        _ = try await transport.nextSent()
-        try await transport.bridgeSends(.welcome(welcome))
-        _ = try await client.waitUntilConnected(timeout: .seconds(2))
+        let client = makeClient(FakeFactory(transports: [transport], bridge: bridge))
+        try await connect(client, transport)
 
         var newHello = hello
         newHello.pushToken = "ffff"
@@ -227,16 +404,13 @@ struct SignalingClientTests {
         await client.stop()
     }
 
-    @Test func audioTravelsBothWaysAsBinaryMessages() async throws {
+    @Test func audioTravelsBothWaysSealed() async throws {
         let transport = FakeTransport()
-        let client = SignalingClient(credentials: credentials, hello: hello, factory: FakeFactory(transports: [transport]), configuration: fastConfiguration)
-        await client.start()
-        _ = try await transport.nextSent()
-        try await transport.bridgeSends(.welcome(welcome))
-        _ = try await client.waitUntilConnected(timeout: .seconds(2))
+        let client = makeClient(FakeFactory(transports: [transport], bridge: bridge))
+        try await connect(client, transport)
 
         let fromBridge = try #require(AudioFrame.encode(aLaw: Data(repeating: 0x2A, count: 160)))
-        await transport.bridgeSendsBinary(fromBridge)
+        try await transport.bridgeSendsAudio(fromBridge)
         // JSON keeps flowing on its own stream while audio arrives.
         try await transport.bridgeSends(.status(BridgeStatus(sipRegistered: true)))
 
@@ -246,12 +420,12 @@ struct SignalingClientTests {
 
         let toBridge = try #require(AudioFrame.encode(aLaw: AudioFrame.silence))
         try await client.sendAudio(toBridge)
-        #expect(try await transport.nextSentBinary() == toBridge)
+        #expect(try await transport.nextSentAudio() == toBridge)
         await client.stop()
     }
 
     @Test func sendingAudioWhileDisconnectedFails() async {
-        let client = SignalingClient(credentials: credentials, hello: hello, factory: FakeFactory(transports: []), configuration: fastConfiguration)
+        let client = makeClient(FakeFactory(transports: [], bridge: bridge))
         await #expect(throws: SignalingClientError.notConnected) {
             try await client.sendAudio(Data([0x01]))
         }
@@ -259,11 +433,8 @@ struct SignalingClientTests {
 
     @Test func capabilityChangeSendsDeviceUpdate() async throws {
         let transport = FakeTransport()
-        let client = SignalingClient(credentials: credentials, hello: hello, factory: FakeFactory(transports: [transport]), configuration: fastConfiguration)
-        await client.start()
-        _ = try await transport.nextSent()
-        try await transport.bridgeSends(.welcome(welcome))
-        _ = try await client.waitUntilConnected(timeout: .seconds(2))
+        let client = makeClient(FakeFactory(transports: [transport], bridge: bridge))
+        try await connect(client, transport)
 
         var newHello = hello
         newHello.mediaCapabilities = [.webRTC]
@@ -278,34 +449,17 @@ struct SignalingClientTests {
         await client.stop()
     }
 
-    // MARK: Pairing
-
-    @Test func pairingReturnsCredentials() async throws {
-        let transport = FakeTransport()
-        let factory = FakeFactory(transports: [transport])
-        let link = try PairingLink(string: "housephone://pair?url=wss://bridge.example/v1/ws&code=K7P2XH9QRM")
-        let result = PairingResult(deviceId: DeviceID(), deviceSecret: "s3cret", bridgeId: "b", bridgeName: "Zuhause")
-
-        async let credentials = SignalingClient.pair(link: link, deviceName: "iPhone", platform: .ios, model: "iPhone17,1", factory: factory)
-        #expect(try await transport.nextSent() == .pair(PairRequest(code: "K7P2XH9QRM", deviceName: "iPhone", platform: .ios, model: "iPhone17,1")))
-        try await transport.bridgeSends(.pairOK(result))
-
-        let paired = try await credentials
-        #expect(paired.bridgeURL == link.bridgeURL)
-        #expect(paired.deviceSecret == "s3cret")
-        #expect(factory.connections.first?.headers.isEmpty == true)
-    }
-
-    @Test func pairingSurfacesBridgeError() async throws {
-        let transport = FakeTransport()
-        let link = try PairingLink(string: "housephone://pair?url=wss://bridge.example/v1/ws&code=K7P2XH9QRM")
-        let error = SignalingErrorPayload(code: .pairingInvalid, message: "Code abgelaufen")
-
-        let pairing = Task {
-            try await SignalingClient.pair(link: link, deviceName: "iPhone", platform: .ios, model: nil, factory: FakeFactory(transports: [transport]))
-        }
-        _ = try await transport.nextSent()
-        try await transport.bridgeSends(.error(error))
-        await #expect(throws: SignalingClientError.bridge(error)) { try await pairing.value }
+    @Test func clockSkewIsDetectedFromTheDateHeader() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        #expect(!URLSessionWebSocketFactory.isClockSkewed(serverDate: "Fri, 15 Jan 2027 08:00:00 GMT", now: now))
+        #expect(URLSessionWebSocketFactory.isClockSkewed(serverDate: "Fri, 15 Jan 2027 08:05:00 GMT", now: now))
+        let close = DateFormatter()
+        close.locale = Locale(identifier: "en_US_POSIX")
+        close.timeZone = TimeZone(identifier: "GMT")
+        close.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+        #expect(!URLSessionWebSocketFactory.isClockSkewed(serverDate: close.string(from: now.addingTimeInterval(30)), now: now))
+        #expect(URLSessionWebSocketFactory.isClockSkewed(serverDate: close.string(from: now.addingTimeInterval(-90)), now: now))
+        #expect(!URLSessionWebSocketFactory.isClockSkewed(serverDate: nil, now: now))
+        #expect(!URLSessionWebSocketFactory.isClockSkewed(serverDate: "garbage", now: now))
     }
 }

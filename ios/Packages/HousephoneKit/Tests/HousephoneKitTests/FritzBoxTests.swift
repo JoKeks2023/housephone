@@ -148,22 +148,27 @@ struct PhonebookNameIndexTests {
 }
 
 struct FritzBoxHTTPTests {
-    let credentials = BridgeCredentials(
-        bridgeURL: URL(string: "wss://phone.example.com/v1/ws")!,
-        deviceId: DeviceID(UUID(uuidString: "9B1D4C2A-5E6F-4A7B-8C9D-0E1F2A3B4C5D")!),
-        deviceSecret: "secret",
-        bridgeId: "b",
-        bridgeName: "Zuhause"
-    )
+    let bridge = TestBridge()
+    let device: TestDevice
+
+    init() {
+        device = TestDevice(bridge: bridge)
+    }
+
+    var credentials: BridgeCredentials { device.credentials }
+
+    func client(_ handler: @escaping StubURLProtocol.Handler) -> BridgeHTTPClient {
+        BridgeHTTPClient(session: StubURLProtocol.session(handler), keyStore: device.keyStore)
+    }
 
     @Test func fetchesPhonebookWithETag() async throws {
         let log = RequestLog()
         let body = try FritzBoxFixtureTests.data("phonebook.json")
-        let session = StubURLProtocol.session { request, requestBody in
+        let client = client { [bridge] request, requestBody in
             log.record(request, requestBody)
-            return .init(status: 200, body: body, headers: ["ETag": #""pb-7""#])
+            return bridge.stubResponse(for: request, status: 200, json: body, extraHeaders: ["ETag": #""pb-7""#])
         }
-        let result = try await BridgeHTTPClient(session: session).phonebook(ifNoneMatch: nil, credentials: credentials)
+        let result = try await client.phonebook(ifNoneMatch: nil, credentials: credentials)
 
         guard case .updated(let phonebook, let etag) = result else {
             Issue.record("expected an updated phonebook")
@@ -174,19 +179,19 @@ struct FritzBoxHTTPTests {
         let request = try #require(log.last)
         #expect(request.method == "GET")
         #expect(request.url.absoluteString == "https://phone.example.com/v1/phonebook")
-        #expect(request.headers["Authorization"] == credentials.authorizationHeader)
+        #expect(request.headers["Authorization"]?.hasPrefix("HP2 ") == true)
         #expect(request.headers["If-None-Match"] == nil)
     }
 
     @Test func notModifiedWhenETagMatches() async throws {
         let log = RequestLog()
-        let session = StubURLProtocol.session { request, body in
+        let client = client { [bridge] request, body in
             log.record(request, body)
             return request.value(forHTTPHeaderField: "If-None-Match") == #""pb-7""#
-                ? .init(status: 304, body: Data())
-                : .init(status: 500, body: Data())
+                ? bridge.stubResponse(for: request, status: 304)
+                : bridge.stubResponse(for: request, status: 500)
         }
-        let result = try await BridgeHTTPClient(session: session).phonebook(ifNoneMatch: #""pb-7""#, credentials: credentials)
+        let result = try await client.phonebook(ifNoneMatch: #""pb-7""#, credentials: credentials)
         guard case .notModified = result else {
             Issue.record("expected notModified")
             return
@@ -194,12 +199,19 @@ struct FritzBoxHTTPTests {
         #expect(log.last?.headers["If-None-Match"] == #""pb-7""#)
     }
 
+    @Test func unsignedNotModifiedIsUntrusted() async {
+        let client = client { _, _ in .init(status: 304, body: Data()) }
+        await #expect(throws: SignalingClientError.untrustedBridge) {
+            try await client.phonebook(ifNoneMatch: #""pb-7""#, credentials: credentials)
+        }
+    }
+
     @Test func fritzBoxUnavailableCarriesMessage() async {
-        let session = StubURLProtocol.session { _, _ in
-            .init(status: 503, body: Data(#"{"code":"fritzbox_unavailable","message":"TR-064 ist nicht eingerichtet"}"#.utf8))
+        let client = client { [bridge] request, _ in
+            bridge.stubResponse(for: request, status: 503, json: Data(#"{"code":"fritzbox_unavailable","message":"TR-064 ist nicht eingerichtet"}"#.utf8))
         }
         do {
-            _ = try await BridgeHTTPClient(session: session).phonebook(ifNoneMatch: nil, credentials: credentials)
+            _ = try await client.phonebook(ifNoneMatch: nil, credentials: credentials)
             Issue.record("expected an error")
         } catch SignalingClientError.bridge(let payload) {
             #expect(payload.code == .fritzboxUnavailable)
@@ -212,17 +224,25 @@ struct FritzBoxHTTPTests {
     @Test(arguments: [(100, "100"), (0, "1"), (9_999, "500")])
     func fetchesHistoryWithClampedLimit(limit: Int, expected: String) async throws {
         let log = RequestLog()
+        let verified = RequestLog()
         let body = try FritzBoxFixtureTests.data("history.json")
-        let session = StubURLProtocol.session { request, requestBody in
+        let client = client { [bridge, device] request, requestBody in
             log.record(request, requestBody)
-            return .init(status: 200, body: body)
+            // The signature covers the query as sent.
+            if bridge.verifiesDevice(
+                authorization: request.value(forHTTPHeaderField: "Authorization") ?? "",
+                method: "GET", pathAndQuery: "/v1/history?limit=\(expected)", body: Data(), devicePublicKey: device.key.publicKeyX963
+            ) {
+                verified.record(request, requestBody)
+            }
+            return bridge.stubResponse(for: request, status: 200, json: body)
         }
-        let history = try await BridgeHTTPClient(session: session).history(limit: limit, credentials: credentials)
+        let history = try await client.history(limit: limit, credentials: credentials)
         #expect(history.calls.count == 4)
         let url = try #require(log.last?.url)
         #expect(url.path() == "/v1/history")
         #expect(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems == [URLQueryItem(name: "limit", value: expected)])
-        #expect(log.last?.headers["Authorization"] == credentials.authorizationHeader)
+        #expect(verified.last != nil)
     }
 }
 

@@ -24,7 +24,7 @@ struct FixtureRoundTripTests {
     }
 
     @Test func fixturesExist() {
-        #expect(Self.messageFixtures.count == 21)
+        #expect(Self.messageFixtures.count == 20)
     }
 
     @Test(arguments: messageFixtures)
@@ -49,11 +49,33 @@ struct FixtureRoundTripTests {
             try SignalingCoding.makeDecoder().decode(SignalingMessage.self, from: Self.data($0)).type
         })
         let expected: Set = [
-            "pair", "hello", "device.update", "device.unpair", "pair.companion.request", "pair.companion", "call.media", "call.attach", "call.dial", "call.answer", "call.accept",
-            "call.hangup", "call.dtmf", "pair.ok", "welcome", "status", "call.incoming", "call.offer",
+            "hello", "device.update", "device.unpair", "pair.companion.request", "pair.companion", "call.media", "call.attach", "call.dial", "call.answer", "call.accept",
+            "call.hangup", "call.dtmf", "device.paired", "welcome", "status", "call.incoming", "call.offer",
             "call.state", "call.ended", "error",
         ]
         #expect(types == expected)
+    }
+
+    @Test func pairingFixturesDecode() throws {
+        let request = try SignalingCoding.makeDecoder().decode(PairRequest.self, from: Self.data("http/pair.request.json"))
+        #expect(request.code == "K7P2XH9QRMW4DZT8")
+        #expect(request.platform == .ios)
+        #expect(HP2.data(base64URL: request.publicKey)?.count == 65)
+        #expect(HP2.data(base64URL: request.nonce)?.count == HP2.nonceLength)
+
+        let response = try SignalingCoding.makeDecoder().decode(PairingResult.self, from: Self.data("http/pair.response.json"))
+        #expect(response.deviceId.description == "9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d")
+        #expect(HP2.data(base64URL: response.bridgePublicKey)?.count == 32)
+    }
+
+    @Test func devicePairedDecodes() throws {
+        let message = try SignalingCoding.makeDecoder().decode(SignalingMessage.self, from: Self.data("device.paired.json"))
+        guard case .devicePaired(let paired) = message else {
+            Issue.record("expected device.paired")
+            return
+        }
+        #expect(paired.platform == .watchos)
+        #expect(paired.pairedAt == Date(timeIntervalSince1970: 1_790_705_045))
     }
 
     @Test func idsAreEncodedInLowercase() throws {

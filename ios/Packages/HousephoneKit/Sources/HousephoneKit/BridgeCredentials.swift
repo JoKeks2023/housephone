@@ -2,33 +2,32 @@ import Foundation
 import Security
 
 /// What a device keeps after pairing. Lives in the keychain.
+///
+/// There is no secret in here (ADR-0004): the device signs with its own
+/// key (`keyTag` in the `DeviceKeyStore`), and `bridgePublicKey` is the
+/// bridge identity pinned at pairing against the QR code's fingerprint.
 public struct BridgeCredentials: Codable, Equatable, Sendable {
     public var bridgeURL: URL
     public var deviceId: DeviceID
-    public var deviceSecret: String
     public var bridgeId: String
     public var bridgeName: String
+    /// The bridge's Ed25519 public key (32 bytes), pinned at pairing.
+    public var bridgePublicKey: Data
+    /// Tag of this device's signing key in the `DeviceKeyStore`.
+    public var keyTag: String
 
-    public init(bridgeURL: URL, deviceId: DeviceID, deviceSecret: String, bridgeId: String, bridgeName: String) {
+    public init(bridgeURL: URL, deviceId: DeviceID, bridgeId: String, bridgeName: String, bridgePublicKey: Data, keyTag: String) {
         self.bridgeURL = bridgeURL
         self.deviceId = deviceId
-        self.deviceSecret = deviceSecret
         self.bridgeId = bridgeId
         self.bridgeName = bridgeName
+        self.bridgePublicKey = bridgePublicKey
+        self.keyTag = keyTag
     }
 
-    public init(bridgeURL: URL, pairing: PairingResult) {
-        self.init(
-            bridgeURL: bridgeURL,
-            deviceId: pairing.deviceId,
-            deviceSecret: pairing.deviceSecret,
-            bridgeId: pairing.bridgeId,
-            bridgeName: pairing.bridgeName
-        )
-    }
-
-    /// Value of the `Authorization` header for normal connections.
-    public var authorizationHeader: String { "Bearer \(deviceId).\(deviceSecret)" }
+    /// `base64url(SHA-256(bridgePublicKey))`, as in the pairing link
+    /// (`fp`); shown in Settings to compare with the bridge.
+    public var bridgeFingerprint: String { HP2.fingerprint(of: bridgePublicKey) }
 }
 
 public protocol CredentialStore: Sendable {
@@ -49,8 +48,8 @@ public struct KeychainError: Error, Equatable, CustomStringConvertible {
 /// Stores credentials as one generic-password item.
 ///
 /// Uses `AfterFirstUnlockThisDeviceOnly`: a VoIP push can arrive while the
-/// phone is locked, and the secret must never move to another device via
-/// backups.
+/// phone is locked, and a pairing must never move to another device via
+/// backups (the device key can't anyway).
 public struct KeychainCredentialStore: CredentialStore {
     public let service: String
     public let account: String
