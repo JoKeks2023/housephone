@@ -41,6 +41,8 @@ struct SettingsView: View {
                     microphoneRow
                 }
 
+                WatchSection()
+
                 Section {
                     Button("Kopplung aufheben", role: .destructive) {
                         confirmsUnpair = true

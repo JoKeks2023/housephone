@@ -21,15 +21,56 @@ const waitTimeout = 2 * time.Second
 
 // fakeConn records messages sent to a device.
 type fakeConn struct {
-	id  string
-	out chan protocol.Envelope
+	id    string
+	out   chan protocol.Envelope
+	audio chan []byte
+
+	mu   sync.Mutex
+	sink AudioSink
 }
 
 func newFakeConn(id string) *fakeConn {
-	return &fakeConn{id: id, out: make(chan protocol.Envelope, 100)}
+	return &fakeConn{id: id, out: make(chan protocol.Envelope, 100), audio: make(chan []byte, 100)}
 }
 
 func (f *fakeConn) DeviceID() string { return f.id }
+
+func (f *fakeConn) SendAudio(frame []byte) {
+	select {
+	case f.audio <- frame:
+	default:
+	}
+}
+
+func (f *fakeConn) SetAudioSink(s AudioSink) {
+	f.mu.Lock()
+	f.sink = s
+	f.mu.Unlock()
+}
+
+func (f *fakeConn) RemoveAudioSink(s AudioSink) {
+	f.mu.Lock()
+	if f.sink == s {
+		f.sink = nil
+	}
+	f.mu.Unlock()
+}
+
+// deviceAudio simulates a binary frame from the device.
+func (f *fakeConn) deviceAudio(frame []byte) {
+	f.mu.Lock()
+	s := f.sink
+	f.mu.Unlock()
+	if s != nil {
+		s.DeviceAudio(frame)
+	}
+}
+
+func (f *fakeConn) hasSink() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.sink != nil
+}
 func (f *fakeConn) Send(env protocol.Envelope) {
 	select {
 	case f.out <- env:
@@ -111,7 +152,11 @@ func (m *fakeMedia) Close()                       { m.once.Do(func() { close(m.c
 type fakeSIPIn struct {
 	caller string
 	codec  codec.Codec
-	media  *fakeMedia
+	// offered lists the codecs of the INVITE; nil means [codec, PCMA].
+	offered []codec.Codec
+	media   *fakeMedia
+	// answeredWith is the codec of the 200 OK.
+	answeredWith codec.Codec
 
 	// answerGate, if non-nil, blocks Answer until closed.
 	answerGate chan struct{}
@@ -135,6 +180,25 @@ func newFakeSIPIn(caller string, c codec.Codec) *fakeSIPIn {
 func (s *fakeSIPIn) Caller() string     { return s.caller }
 func (s *fakeSIPIn) CallerName() string { return "Oma" }
 func (s *fakeSIPIn) Codec() codec.Codec { return s.codec }
+func (s *fakeSIPIn) Offers(c codec.Codec) bool {
+	offered := s.offered
+	if offered == nil {
+		offered = []codec.Codec{s.codec, codec.PCMA}
+	}
+	for _, o := range offered {
+		if o == c {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *fakeSIPIn) answerCodec() codec.Codec {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.answeredWith
+}
+
 func (s *fakeSIPIn) Ringing() error {
 	s.mu.Lock()
 	s.ringing++
@@ -143,7 +207,7 @@ func (s *fakeSIPIn) Ringing() error {
 	return nil
 }
 
-func (s *fakeSIPIn) Answer(ctx context.Context) (SIPMedia, error) {
+func (s *fakeSIPIn) Answer(ctx context.Context, c codec.Codec) (SIPMedia, error) {
 	if s.answerGate != nil {
 		select {
 		case <-s.answerGate:
@@ -154,8 +218,12 @@ func (s *fakeSIPIn) Answer(ctx context.Context) (SIPMedia, error) {
 	if s.answerErr != nil {
 		return nil, s.answerErr
 	}
+	if !s.Offers(c) {
+		return nil, fmt.Errorf("codec %s not offered", c)
+	}
 	s.mu.Lock()
 	s.answered = true
+	s.answeredWith = c
 	s.mu.Unlock()
 	s.events <- "200"
 	return s.media, nil
@@ -379,6 +447,17 @@ func (d *fakeDirectory) List() ([]store.Device, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return append([]store.Device(nil), d.devices...), nil
+}
+
+func (d *fakeDirectory) Get(id string) (store.Device, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	for _, dev := range d.devices {
+		if dev.ID == id {
+			return dev, nil
+		}
+	}
+	return store.Device{}, store.ErrDeviceNotFound
 }
 
 func (d *fakeDirectory) ClearPushToken(id, token string) error {

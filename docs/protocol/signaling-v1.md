@@ -1,13 +1,13 @@
 # Housephone Signalisierung v1
 
-Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`, später watchOS).
+Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`: iPhone-App und Watch-App).
 Änderungen an diesem Dokument müssen in beiden Implementierungen nachgezogen werden.
 
 ## Transport
 
 - WebSocket: `GET /v1/ws`, von außen immer TLS (`wss://`), z. B. über Cloudflare Tunnel.
 - Health-Check: `GET /v1/health` → `200 {"status":"ok","version":"<bridge-version>","sipRegistered":true}`.
-- Jede WebSocket-Textnachricht ist genau **ein** JSON-Objekt (UTF-8). Binärnachrichten werden nicht verwendet.
+- Jede WebSocket-Textnachricht ist genau **ein** JSON-Objekt (UTF-8). Binärnachrichten gibt es nur für Ton im Medienweg `websocket-pcma` (siehe „Erweiterung v1.1“).
 - Keepalive: WebSocket-Ping/Pong auf Protokollebene. Die Bridge sendet alle 20 s einen Ping; ohne Pong nach 20 s schließt sie die Verbindung.
 - Die erste Nachricht (`pair` bzw. `hello`) muss innerhalb von **10 s** nach dem Upgrade kommen, sonst schließt die Bridge (Close-Code `1008`).
 
@@ -133,7 +133,7 @@ FRITZ!Box        Bridge                         Gerät (App)
    │◄════ RTP ═════►│◄═══════ SRTP (WebRTC) ══════►│
 ```
 
-- Codec-Wahl: erster Codec aus `[G722, PCMA, PCMU]`, den die FRITZ!Box im INVITE anbietet. Das `call.offer` enthält **nur** diesen Codec. Die `200 OK` an die FRITZ!Box enthält denselben Codec.
+- Codec-Wahl: erster Codec aus `[G722, PCMA, PCMU]`, den die FRITZ!Box im INVITE anbietet. Das `call.offer` enthält **nur** diesen Codec. Die `200 OK` an die FRITZ!Box enthält den Codec des **annehmenden** Geräts – bei WebRTC-Geräten ist das dieser Codec, bei `websocket-pcma`-Geräten PCMA (v1.1).
 - Mehrere Geräte: Die Bridge pusht alle gekoppelten Geräte mit Push-Token. Das erste `call.accept` gewinnt, alle anderen bekommen `call.ended{answered_elsewhere}`.
 - Ablehnen (`call.hangup{reason:"declined"}`) beendet den Anruf nur für dieses Gerät. Haben **alle** angehängten Geräte abgelehnt und ist kein weiteres mehr ausstehend, antwortet die Bridge der FRITZ!Box mit `486 Busy Here`. Die FRITZ!Box lässt dann ggf. andere Telefone weiterklingeln.
 - Ist **kein** Gerät erreichbar (keins online, keins mit Push-Token, oder alle Pushes schlugen fehl), antwortet die Bridge mit `480 Temporarily Unavailable` und sendet kein `180 Ringing`.
@@ -197,3 +197,68 @@ Die Bridge merkt sich beendete Anrufe **2 Minuten** lang. Ein Gerät, das sich d
 - Ausgehend bietet die Bridge `G722, PCMA, PCMU` an; der **erste Audio-Codec in der Answer** des Geräts bestimmt, was beide Seiten senden. Eingehend enthält das Offer nur den Codec der FRITZ!Box-Seite.
 - Kein Trickle-ICE in v1: SDP wird erst gesendet, wenn das ICE-Gathering abgeschlossen ist. Das Gerät wartet dafür höchstens 2 s.
 - DTMF läuft nicht über RTP, sondern über `call.dtmf`. Die Bridge sendet RFC 4733 an die FRITZ!Box.
+
+## Erweiterung v1.1: Apple Watch (ADR-0002)
+
+Diese Erweiterung ist rückwärtskompatibel. Ein Gerät ohne die neuen Felder verhält sich wie in v1 (WebRTC).
+
+### Geräte-Fähigkeiten und Push-Topic
+
+`hello` und `device.update` bekommen zwei optionale Felder:
+
+| Feld | Werte | Standard |
+|---|---|---|
+| `mediaCapabilities` | Array aus `"webrtc"`, `"websocket-pcma"` | `["webrtc"]` |
+| `pushTopic` | APNs-Topic dieses Geräts, z. B. `com.jorisconrad.housephone.watchkitapp.voip` | `apns.topic` aus der Bridge-Konfiguration |
+
+- Die Bridge speichert beide Werte pro Gerät.
+- `pushTopic` muss mit dem Bundle-Präfix der Bridge beginnen, also mit `apns.topic` ohne das Suffix `.voip`. Andernfalls antwortet die Bridge mit `error{bad_request}`.
+- Die Watch meldet `["websocket-pcma"]`.
+
+### HTTPS-Endpunkte (für die Watch)
+
+Auf watchOS darf eine App WebSocket nur während eines CallKit-Anrufs öffnen. Deshalb gibt es für Kopplung und Push-Token zusätzlich reines HTTPS unter demselben Host wie `/v1/ws`:
+
+| Methode + Pfad | Auth | Body | Antwort |
+|---|---|---|---|
+| `POST /v1/pair` | keine | Payload von `pair` | `200` + Payload von `pair.ok` bzw. `4xx` + Payload von `error` |
+| `PUT /v1/device` | `Authorization: Bearer <deviceId>.<deviceSecret>` | Payload von `device.update` (inkl. `mediaCapabilities`, `pushTopic`) | `204` bzw. `401`/`400` + `error` |
+| `DELETE /v1/device` | Bearer | – | `204`; wirkt wie `device.unpair` |
+
+- Rate-Limit und Code-Regeln sind dieselben wie bei `pair` über WebSocket.
+- Fehlerantworten: `400 bad_request`, `401 unauthorized`, `403 pairing_invalid`, `429 pairing_rate_limited`.
+
+### Kopplung der Watch über das iPhone
+
+| type | Richtung | payload |
+|---|---|---|
+| `pair.companion.request` | Gerät → Bridge | `{deviceName, platform}`, `platform` ist in der Regel `"watchos"` |
+| `pair.companion` | Bridge → Gerät | `{code, url, expiresAt}` |
+
+- Nur ein bereits gekoppeltes Gerät darf einen Code anfordern.
+- Der Code folgt denselben Regeln wie `housephone-bridge pair`: 10 Minuten gültig, einmalig. `deviceName` wird wie `pair -name` behandelt.
+- Das iPhone gibt `{url, code}` per WatchConnectivity an die Watch weiter. Die Watch koppelt sich per `POST /v1/pair`.
+
+### Medien über WebSocket (`websocket-pcma`)
+
+Für Geräte mit `mediaCapabilities: ["websocket-pcma"]` gilt:
+
+- Nach `call.attach` bzw. `call.dial` sendet die Bridge **statt `call.offer`**:
+
+  | type | payload |
+  |---|---|
+  | `call.media` | `{callId, transport:"websocket", codec:"PCMA", sampleRate:8000, frameMs:20}` |
+
+  Ein `call.answer` gibt es für diese Geräte nicht.
+- **Audio läuft als binäre WebSocket-Nachricht** in beide Richtungen, auf derselben Verbindung:
+  - `byte 0` = `0x01` (Audio), danach genau 160 Byte A-law, also 20 ms bei 8 kHz.
+  - Andere Typ-Bytes sind reserviert und werden ignoriert.
+  - Pro Verbindung ist höchstens ein Anruf mit Ton aktiv.
+- **Wann Ton fließt:**
+  - Bridge → Gerät: ab Early Media bzw. `connected`.
+  - Gerät → Bridge: sobald das Gerät angenommen hat (eingehend) bzw. nach `call.media` (ausgehend). Die Bridge verwirft Ton, solange der Anruf nicht verbunden ist.
+- **Keine Codec-Wandlung:**
+  - Eingehend beantwortet die Bridge das INVITE der FRITZ!Box beim `call.accept` mit dem Codec des annehmenden Geräts (WebRTC: laut Answer, `websocket-pcma`: PCMA).
+  - Ausgehend von einem `websocket-pcma`-Gerät bietet die INVITE nur PCMA an.
+- DTMF weiterhin über `call.dtmf`.
+- Bricht die Verbindung ab, gilt dieselbe 30-s-Reattach-Regel. Nach erneutem `call.attach` sendet die Bridge wieder `call.media`, und der Ton geht auf der neuen Verbindung weiter.

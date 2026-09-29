@@ -5,15 +5,22 @@ public enum WebSocketTransportError: Error, Equatable, Sendable {
     case unauthorized
     /// The upgrade failed with another HTTP status.
     case httpStatus(Int)
-    case unexpectedBinaryMessage
     case closed
 }
 
-/// A text-only WebSocket connection. Abstracted so the signaling client is
-/// testable without a network.
+/// One WebSocket message. Text carries JSON signaling; binary carries call
+/// audio for devices using `websocket-pcma` (signaling v1.1).
+public enum WebSocketMessage: Sendable, Equatable {
+    case text(String)
+    case binary(Data)
+}
+
+/// A WebSocket connection. Abstracted so the signaling client is testable
+/// without a network.
 public protocol WebSocketTransport: Sendable {
     func send(_ text: String) async throws
-    func receive() async throws -> String
+    func send(binary data: Data) async throws
+    func receive() async throws -> WebSocketMessage
     func sendPing() async throws
     func close()
 }
@@ -70,14 +77,18 @@ final class URLSessionWebSocket: WebSocketTransport, @unchecked Sendable {
         try await task.send(.string(text))
     }
 
-    func receive() async throws -> String {
+    func send(binary data: Data) async throws {
+        try await task.send(.data(data))
+    }
+
+    func receive() async throws -> WebSocketMessage {
         switch try await task.receive() {
         case .string(let text):
-            return text
-        case .data:
-            throw WebSocketTransportError.unexpectedBinaryMessage
+            return .text(text)
+        case .data(let data):
+            return .binary(data)
         @unknown default:
-            throw WebSocketTransportError.unexpectedBinaryMessage
+            throw WebSocketTransportError.closed
         }
     }
 

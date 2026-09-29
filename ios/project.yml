@@ -4,9 +4,12 @@ options:
   bundleIdPrefix: com.jorisconrad
   deploymentTarget:
     iOS: "26.0"
+    watchOS: "26.0"
   developmentLanguage: de
   createIntermediateGroups: true
   groupSortPosition: top
+  # Embeds the watch app in PlugIns/ (Xcode 16+); see the script.
+  postGenCommand: scripts/fix-watch-embed.sh
 
 settings:
   base:
@@ -40,6 +43,8 @@ targets:
     dependencies:
       - package: WebRTC
       - package: HousephoneKit
+      # Companion Apple Watch app, embedded in the iPhone app.
+      - target: HousephoneWatch
     entitlements:
       path: Housephone/Housephone.entitlements
       properties:
@@ -86,6 +91,45 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         INFOPLIST_FILE: Housephone/Info.plist
+
+  HousephoneWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: HousephoneWatch
+        excludes:
+          - "Info.plist"
+    dependencies:
+      - package: HousephoneKit
+    entitlements:
+      path: HousephoneWatch/HousephoneWatch.entitlements
+      properties:
+        aps-environment: development
+    info:
+      path: HousephoneWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Housephone
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: de
+        CFBundleAllowMixedLocalizations: true
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.jorisconrad.housephone
+        # Pairing needs the iPhone; calls run on the watch alone afterwards.
+        WKRunsIndependentlyOfCompanionApp: false
+        # VoIP pushes (PushKit) and call audio in the background.
+        UIBackgroundModes:
+          - voip
+          - audio
+        NSMicrophoneUsageDescription: Housephone braucht das Mikrofon, damit dich dein Gegenüber hört, wenn du an der Watch telefonierst.
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jorisconrad.housephone.watchkitapp
+        PRODUCT_NAME: HousephoneWatch
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        INFOPLIST_FILE: HousephoneWatch/Info.plist
 
 schemes:
   Housephone:

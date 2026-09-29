@@ -1,5 +1,6 @@
-// Package protocol defines the Housephone signaling protocol v1
-// (docs/protocol/signaling-v1.md) shared between the bridge and devices.
+// Package protocol defines the Housephone signaling protocol v1 with the
+// v1.1 watch extension (docs/protocol/signaling-v1.md) shared between the
+// bridge and devices.
 package protocol
 
 import (
@@ -20,6 +21,9 @@ const (
 	TypeCallAccept   = "call.accept"
 	TypeCallHangup   = "call.hangup"
 	TypeCallDTMF     = "call.dtmf"
+	// TypePairCompanionRequest asks for a pairing code for a companion
+	// device such as the watch (v1.1).
+	TypePairCompanionRequest = "pair.companion.request"
 )
 
 // Message types sent by the bridge.
@@ -32,6 +36,31 @@ const (
 	TypeCallState    = "call.state"
 	TypeCallEnded    = "call.ended"
 	TypeError        = "error"
+	// TypePairCompanion answers pair.companion.request (v1.1).
+	TypePairCompanion = "pair.companion"
+	// TypeCallMedia replaces call.offer for websocket-pcma devices (v1.1).
+	TypeCallMedia = "call.media"
+)
+
+// Media capabilities in hello/device.update (v1.1).
+const (
+	MediaWebRTC        = "webrtc"
+	MediaWebSocketPCMA = "websocket-pcma"
+)
+
+// Binary audio frames of the websocket-pcma media path (v1.1): one type
+// byte followed by 20 ms of A-law at 8 kHz.
+const (
+	AudioFrameType  byte = 0x01
+	AudioFrameBytes      = 160
+	AudioFrameLen        = 1 + AudioFrameBytes
+)
+
+// Parameters announced in call.media (v1.1).
+const (
+	MediaTransportWebSocket = "websocket"
+	MediaSampleRate         = 8000
+	MediaFrameMs            = 20
 )
 
 // Platforms.
@@ -165,12 +194,27 @@ type Hello struct {
 	Platform        string `json:"platform"`
 	PushToken       string `json:"pushToken,omitempty"`
 	PushEnvironment string `json:"pushEnvironment,omitempty"`
+	// MediaCapabilities (v1.1); absent means ["webrtc"].
+	MediaCapabilities []string `json:"mediaCapabilities,omitempty"`
+	// PushTopic (v1.1); absent means the bridge's configured topic.
+	PushTopic string `json:"pushTopic,omitempty"`
 }
 
 type DeviceUpdate struct {
 	PushToken       *string `json:"pushToken,omitempty"`
 	PushEnvironment *string `json:"pushEnvironment,omitempty"`
 	DeviceName      *string `json:"deviceName,omitempty"`
+	// MediaCapabilities (v1.1); nil leaves the stored value unchanged.
+	MediaCapabilities []string `json:"mediaCapabilities,omitempty"`
+	// PushTopic (v1.1); nil leaves the stored value unchanged.
+	PushTopic *string `json:"pushTopic,omitempty"`
+}
+
+// PairCompanionRequest asks for a pairing code for another device of the
+// same user, such as the watch (v1.1).
+type PairCompanionRequest struct {
+	DeviceName string `json:"deviceName"`
+	Platform   string `json:"platform"`
 }
 
 // DeviceUnpair asks the bridge to forget the device. It has no fields.
@@ -252,6 +296,27 @@ type CallEnded struct {
 	CallID  string `json:"callId"`
 	Reason  string `json:"reason"`
 	SIPCode int    `json:"sipCode,omitempty"`
+}
+
+// PairCompanion carries a fresh pairing code for a companion device (v1.1).
+type PairCompanion struct {
+	Code      string    `json:"code"`
+	URL       string    `json:"url"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+// CallMedia tells a websocket-pcma device how audio flows (v1.1).
+type CallMedia struct {
+	CallID     string `json:"callId"`
+	Transport  string `json:"transport"`
+	Codec      string `json:"codec"`
+	SampleRate int    `json:"sampleRate"`
+	FrameMs    int    `json:"frameMs"`
+}
+
+// NewCallMedia describes the websocket-pcma media path of a call.
+func NewCallMedia(callID string) CallMedia {
+	return CallMedia{CallID: callID, Transport: MediaTransportWebSocket, Codec: "PCMA", SampleRate: MediaSampleRate, FrameMs: MediaFrameMs}
 }
 
 type Error struct {

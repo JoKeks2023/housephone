@@ -12,15 +12,43 @@ var ErrDeviceNotFound = errors.New("device not found")
 
 // Device is a paired phone or watch.
 type Device struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	Platform        string    `json:"platform"`
-	Model           string    `json:"model,omitempty"`
-	SecretHash      string    `json:"secretHash"`
-	PushToken       string    `json:"pushToken,omitempty"`
-	PushEnvironment string    `json:"pushEnvironment,omitempty"`
-	CreatedAt       time.Time `json:"createdAt"`
-	LastSeen        time.Time `json:"lastSeen,omitzero"`
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	Platform        string `json:"platform"`
+	Model           string `json:"model,omitempty"`
+	SecretHash      string `json:"secretHash"`
+	PushToken       string `json:"pushToken,omitempty"`
+	PushEnvironment string `json:"pushEnvironment,omitempty"`
+	// PushTopic overrides the configured APNs topic (e.g. the watch app's).
+	PushTopic string `json:"pushTopic,omitempty"`
+	// MediaCapabilities as reported by the device; empty means ["webrtc"].
+	MediaCapabilities []string  `json:"mediaCapabilities,omitempty"`
+	CreatedAt         time.Time `json:"createdAt"`
+	LastSeen          time.Time `json:"lastSeen,omitzero"`
+}
+
+// MediaWebSocketPCMA is the media capability of devices without WebRTC (the
+// watch). It mirrors protocol.MediaWebSocketPCMA; store must not import
+// protocol.
+const MediaWebSocketPCMA = "websocket-pcma"
+
+// mediaWebRTC mirrors protocol.MediaWebRTC.
+const mediaWebRTC = "webrtc"
+
+// UsesWebSocketAudio reports whether calls reach this device over the
+// websocket-pcma media path. Devices that also support WebRTC (or report
+// nothing) use WebRTC.
+func (d Device) UsesWebSocketAudio() bool {
+	ws, webrtc := false, len(d.MediaCapabilities) == 0
+	for _, c := range d.MediaCapabilities {
+		switch c {
+		case MediaWebSocketPCMA:
+			ws = true
+		case mediaWebRTC:
+			webrtc = true
+		}
+	}
+	return ws && !webrtc
 }
 
 type devicesFile struct {

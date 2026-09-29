@@ -33,11 +33,18 @@ func diagoCodec(c codec.Codec) media.Codec {
 
 // offerChoice is the result of reading an INVITE offer.
 type offerChoice struct {
+	// codec is the preferred pass-through codec.
 	codec codec.Codec
-	// audio and telephoneEvent are the codecs exactly as parsed from the
-	// offer, so diago's negotiation (struct equality) matches them.
-	audio          media.Codec
+	// offered maps every supported codec of the offer to the codec exactly
+	// as parsed, so diago's negotiation (struct equality) matches it.
+	offered        map[codec.Codec]media.Codec
 	telephoneEvent *media.Codec
+}
+
+// has reports whether the offer contains c.
+func (o offerChoice) has(c codec.Codec) bool {
+	_, ok := o.offered[c]
+	return ok
 }
 
 var errNoCommonCodec = errors.New("offer contains none of G722, PCMA, PCMU")
@@ -86,11 +93,13 @@ func chooseFromOffer(body []byte) (offerChoice, error) {
 	if !ok {
 		return offerChoice{}, errNoCommonCodec
 	}
-	return offerChoice{codec: chosen, audio: byName[chosen], telephoneEvent: te}, nil
+	return offerChoice{codec: chosen, offered: byName, telephoneEvent: te}, nil
 }
 
-func (o offerChoice) diagoCodecs() []media.Codec {
-	out := []media.Codec{o.audio}
+// diagoCodecs returns the answer codecs for c (plus telephone-event). c
+// must be offered.
+func (o offerChoice) diagoCodecs(c codec.Codec) []media.Codec {
+	out := []media.Codec{o.offered[c]}
 	if o.telephoneEvent != nil {
 		out = append(out, *o.telephoneEvent)
 	}

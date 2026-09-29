@@ -14,6 +14,7 @@ final class AppServices {
     let contacts: ContactsDirectory
     let bridge: BridgeConnection
     let callCenter: CallCenter
+    let watchLink: WatchLink
     let appModel: AppModel
 
     private init() {
@@ -21,6 +22,7 @@ final class AppServices {
         contacts = ContactsDirectory()
         bridge = BridgeConnection(store: KeychainCredentialStore())
         callCenter = CallCenter(bridge: bridge, contacts: contacts, modelContainer: modelContainer)
+        watchLink = WatchLink(bridge: bridge)
         appModel = AppModel()
         bridge.start()
     }

@@ -27,7 +27,15 @@ func (c *call) onAttach(conn DeviceConn) {
 		delete(c.informed, id)
 		l := c.legs[id]
 		if l == nil {
-			l = &leg{deviceID: id}
+			ws := c.m.usesWebSocketAudio(id)
+			if ws && !c.sipIn.Offers(codec.PCMA) {
+				// The watch only speaks PCMA and the bridge never transcodes.
+				c.log.Info("websocket-pcma device cannot take this call: no PCMA offered", "device", id)
+				c.sendEnded(id, conn, protocol.EndReasonFailed, 488)
+				c.checkAllDeclined()
+				return
+			}
+			l = &leg{deviceID: id, ws: ws}
 			c.legs[id] = l
 		}
 		l.conn = conn
@@ -58,8 +66,12 @@ func (c *call) onAttach(conn DeviceConn) {
 //     (same ICE credentials, so either answer matches),
 //   - an answered PeerConnection is re-offered with an ICE restart (same
 //     DTLS fingerprint).
+//
+// websocket-pcma legs get call.media instead (v1.1).
 func (c *call) reoffer(l *leg) {
 	switch {
+	case l.ws:
+		c.attachWSMedia(l)
 	case l.offerInFlight:
 	case l.peer != nil && !l.answered && l.lastOffer != "":
 		c.sendOffer(l, l.lastOffer)
@@ -85,9 +97,19 @@ func (c *call) onAccept(conn DeviceConn) {
 		// Accepted before attaching (race in the app): attach implicitly.
 		c.onAttach(conn)
 	}
+	accepted := c.legs[id]
+	if accepted == nil {
+		// The implicit attach refused this device (e.g. no PCMA for the watch).
+		return
+	}
+	// The SIP answer uses the codec of the accepting device (v1.1): the
+	// offered codec for WebRTC devices, PCMA for websocket-pcma devices.
+	if accepted.ws {
+		c.codec = codec.PCMA
+	}
 	c.acceptedBy = id
 	c.phase = phaseAnswering
-	c.log.Info("accepted", "device", id)
+	c.log.Info("accepted", "device", id, "codec", c.codec)
 
 	for otherID, other := range c.legs {
 		if otherID == id {
@@ -102,14 +124,14 @@ func (c *call) onAccept(conn DeviceConn) {
 	c.informed = map[string]DeviceConn{}
 	c.notified = map[string]bool{}
 
-	sip := c.sipIn
+	sip, answerCodec := c.sipIn, c.codec
 	answerCtx, cancel := context.WithTimeout(context.Background(), c.m.opts.AnswerTimeout)
 	c.answerDone = make(chan struct{})
 	answerDone := c.answerDone
 	go func() {
 		defer close(answerDone)
 		defer cancel()
-		media, err := sip.Answer(answerCtx)
+		media, err := sip.Answer(answerCtx, answerCodec)
 		c.do(func() { c.onAnswered(media, err) })
 	}()
 }
@@ -135,6 +157,7 @@ func (c *call) onAnswered(media SIPMedia, err error) {
 	if accepted != nil {
 		c.sendState(accepted.conn, protocol.CallStateConnected)
 	}
+	c.markConnectedMedia()
 	c.ensureRelay()
 }
 

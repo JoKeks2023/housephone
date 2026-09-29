@@ -36,6 +36,8 @@ final class BridgeConnection {
     @ObservationIgnored private let store: any CredentialStore
     @ObservationIgnored private var client: SignalingClient?
     @ObservationIgnored private var eventsTask: Task<Void, Never>?
+    @ObservationIgnored private var companionWaiter: CheckedContinuation<CompanionPairing, any Error>?
+    @ObservationIgnored private var companionTimeout: Task<Void, Never>?
     @ObservationIgnored private let logger = Logger(subsystem: "com.jorisconrad.housephone", category: "bridge")
 
     init(store: any CredentialStore) {
@@ -128,6 +130,42 @@ final class BridgeConnection {
         onPairingChanged?(false)
     }
 
+    // MARK: - Companion pairing (Apple Watch)
+
+    enum CompanionPairingError: Error, Equatable {
+        case alreadyInProgress
+    }
+
+    /// Asks the bridge for a one-time pairing code for another device
+    /// (`pair.companion.request` → `pair.companion`), e.g. the Apple Watch.
+    func requestCompanionPairing(deviceName: String, platform: DevicePlatform = .watchos) async throws -> CompanionPairing {
+        _ = try await ensureConnected(timeout: .seconds(10))
+        guard companionWaiter == nil else { throw CompanionPairingError.alreadyInProgress }
+        return try await withCheckedThrowingContinuation { continuation in
+            companionWaiter = continuation
+            companionTimeout = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(10))
+                guard !Task.isCancelled else { return }
+                self?.finishCompanionRequest(.failure(SignalingClientError.timeout))
+            }
+            Task {
+                do {
+                    try await send(.pairCompanionRequest(CompanionPairingRequest(deviceName: deviceName, platform: platform)))
+                } catch {
+                    finishCompanionRequest(.failure(error))
+                }
+            }
+        }
+    }
+
+    private func finishCompanionRequest(_ result: Result<CompanionPairing, any Error>) {
+        companionTimeout?.cancel()
+        companionTimeout = nil
+        guard let waiter = companionWaiter else { return }
+        companionWaiter = nil
+        waiter.resume(with: result)
+    }
+
     // MARK: - Push token
 
     func updatePushToken(_ token: String?) {
@@ -177,13 +215,23 @@ final class BridgeConnection {
                 if !isOnline { status = .connecting }
             case .waitingToReconnect, .disconnected:
                 status = .offline
+                finishCompanionRequest(.failure(SignalingClientError.connectionClosed))
             case .unauthorized:
                 status = .rejected
+                finishCompanionRequest(.failure(SignalingClientError.unauthorized))
             }
         case .message(let message):
-            if case .status(let bridgeStatus) = message {
+            switch message {
+            case .status(let bridgeStatus):
                 welcome?.sipRegistered = bridgeStatus.sipRegistered
                 status = .online(sipRegistered: bridgeStatus.sipRegistered)
+            case .pairCompanion(let pairing):
+                finishCompanionRequest(.success(pairing))
+                return
+            case .error(let error) where error.callId == nil && companionWaiter != nil:
+                finishCompanionRequest(.failure(SignalingClientError.bridge(error)))
+            default:
+                break
             }
             onMessage?(message)
         }
@@ -194,7 +242,9 @@ final class BridgeConnection {
             appVersion: Self.appVersion,
             platform: .ios,
             pushToken: pushToken,
-            pushEnvironment: pushToken == nil ? nil : Self.pushEnvironment
+            pushEnvironment: pushToken == nil ? nil : Self.pushEnvironment,
+            mediaCapabilities: [.webRTC],
+            pushTopic: Self.voipPushTopic
         )
     }
 
@@ -204,6 +254,9 @@ final class BridgeConnection {
         let build = info?["CFBundleVersion"] as? String ?? "0"
         return "\(version) (\(build))"
     }
+
+    /// APNs topic of this app's VoIP pushes.
+    static let voipPushTopic = "com.jorisconrad.housephone.voip"
 
     /// Debug builds get their push tokens from the APNs sandbox.
     static var pushEnvironment: PushEnvironment {

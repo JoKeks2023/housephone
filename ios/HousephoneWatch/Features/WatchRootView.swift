@@ -1,0 +1,189 @@
+import AVFAudio
+import HousephoneKit
+import SwiftUI
+
+/// Call screen while a call runs; otherwise home or the pairing hint.
+struct WatchRootView: View {
+    @Environment(WatchBridge.self) private var bridge
+    @Environment(WatchCallCenter.self) private var callCenter
+
+    var body: some View {
+        Group {
+            if callCenter.activeCall != nil {
+                WatchInCallView()
+                    .transition(.opacity)
+            } else if bridge.isPaired {
+                NavigationStack {
+                    WatchHomeView()
+                }
+                .transition(.opacity)
+            } else {
+                PairingHintView()
+                    .transition(.opacity)
+            }
+        }
+        .animation(WatchTheme.Motion.standard, value: callCenter.activeCall?.id)
+        .animation(WatchTheme.Motion.standard, value: bridge.isPaired)
+        .alert(
+            callCenter.failure.map { Text($0.message) } ?? Text(verbatim: ""),
+            isPresented: Binding(
+                get: { callCenter.failure != nil },
+                set: { if !$0 { callCenter.failure = nil } }
+            )
+        ) {
+            Button("OK") { callCenter.failure = nil }
+        }
+    }
+}
+
+/// Shown until the iPhone has paired the watch with the bridge.
+struct PairingHintView: View {
+    @Environment(WatchBridge.self) private var bridge
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: WatchTheme.Space.s3) {
+                Image(systemName: bridge.isPairing ? "applewatch.radiowaves.left.and.right" : "iphone.and.arrow.forward")
+                    .font(.system(size: 34, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+                    .symbolEffect(.pulse, isActive: bridge.isPairing)
+                    .padding(.top, WatchTheme.Space.s2)
+
+                if bridge.isPairing {
+                    Text("Wird gekoppelt …")
+                        .font(.headline)
+                } else if bridge.isRejected {
+                    Text("Kopplung ungültig")
+                        .font(.headline)
+                    Text("Die Bridge kennt diese Watch nicht mehr. Koppel sie auf dem iPhone neu.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Mit iPhone koppeln")
+                        .font(.headline)
+                    Text("Öffne Housephone auf dem iPhone und tippe in den Einstellungen auf „Apple Watch koppeln“.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                if let failure = bridge.lastFailure, !bridge.isPairing {
+                    Label {
+                        Text(failure)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(WatchTheme.warning)
+                    }
+                    .font(.footnote)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+/// Home: readiness at a glance, dial, recent calls.
+struct WatchHomeView: View {
+    @Environment(WatchBridge.self) private var bridge
+    @Environment(WatchCallCenter.self) private var callCenter
+    @Environment(RecentCalls.self) private var recents
+    @State private var microphone = AVAudioApplication.shared.recordPermission
+
+    var body: some View {
+        List {
+            Section {
+                readiness
+                    .listRowBackground(Color.clear)
+                NavigationLink {
+                    WatchKeypadView()
+                } label: {
+                    Label("Wählen", systemImage: "circle.grid.3x3.fill")
+                        .foregroundStyle(Color.accentColor)
+                }
+                if microphone != .granted {
+                    Button {
+                        Task {
+                            _ = await AVAudioApplication.requestRecordPermission()
+                            microphone = AVAudioApplication.shared.recordPermission
+                        }
+                    } label: {
+                        Label("Mikrofon erlauben", systemImage: "mic.slash")
+                    }
+                }
+            }
+
+            Section("Zuletzt") {
+                if recents.calls.isEmpty {
+                    Text("Noch keine Anrufe")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(recents.calls) { call in
+                        Button {
+                            Task { await callCenter.startCall(to: call.number, name: call.name) }
+                        } label: {
+                            RecentCallRow(call: call)
+                        }
+                        .disabled(call.number.isEmpty)
+                    }
+                }
+            }
+        }
+        .navigationTitle(bridge.bridgeName ?? String(localized: "Housephone"))
+        .onAppear {
+            microphone = AVAudioApplication.shared.recordPermission
+        }
+    }
+
+    @ViewBuilder
+    private var readiness: some View {
+        switch bridge.registration {
+        case .registered:
+            WatchStatus(tone: .positive, label: "Bereit für Anrufe")
+        case .registering:
+            WatchStatus(tone: .neutral, label: "Wird eingerichtet …", isBusy: true)
+        case .failed:
+            WatchStatus(tone: .warning, label: "Bridge nicht erreichbar")
+        case .none:
+            WatchStatus(tone: .neutral, label: "Wartet auf Push-Freigabe")
+        }
+    }
+}
+
+struct RecentCallRow: View {
+    let call: RecentCall
+
+    var body: some View {
+        HStack(spacing: WatchTheme.Space.s2) {
+            Image(systemName: symbol)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(call.isMissed ? WatchTheme.danger : .secondary)
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(call.isMissed ? WatchTheme.danger : .primary)
+                    .lineLimit(1)
+                Text(call.date, format: .relative(presentation: .named))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text("Zurückrufen"))
+    }
+
+    private var title: String {
+        if let name = call.name, !name.isEmpty { return name }
+        return call.number.isEmpty ? String(localized: "Unbekannt") : call.number
+    }
+
+    private var symbol: String {
+        switch (call.direction, call.outcome) {
+        case (.incoming, .missed): "phone.arrow.down.left.fill"
+        case (.incoming, _): "phone.arrow.down.left"
+        case (.outgoing, _): "phone.arrow.up.right"
+        }
+    }
+}

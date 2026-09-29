@@ -1,0 +1,40 @@
+{
+  "sourceLanguage": "de",
+  "version": "1.0",
+  "strings": {
+    "CFBundleDisplayName": {
+      "shouldTranslate": false,
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone"
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "shouldTranslate": true,
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone braucht das Mikrofon, damit dich dein Gegenüber hört, wenn du an der Watch telefonierst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone needs the microphone so the other person can hear you when you talk on your watch."
+          }
+        }
+      }
+    }
+  }
+}
