@@ -16,8 +16,6 @@ const fixturesDir = "../../../docs/protocol/fixtures"
 func payloadFor(t *testing.T, msgType string) any {
 	t.Helper()
 	switch msgType {
-	case TypePair:
-		return &Pair{}
 	case TypeHello:
 		return &Hello{}
 	case TypeDeviceUpdate:
@@ -36,8 +34,8 @@ func payloadFor(t *testing.T, msgType string) any {
 		return &CallHangup{}
 	case TypeCallDTMF:
 		return &CallDTMF{}
-	case TypePairOK:
-		return &PairOK{}
+	case TypeDevicePaired:
+		return &DevicePaired{}
 	case TypeWelcome:
 		return &Welcome{}
 	case TypeStatus:
@@ -80,8 +78,8 @@ func TestFixturesRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) < 22 {
-		t.Fatalf("expected at least 22 fixtures, found %d in %s", len(files), fixturesDir)
+	if len(files) < 21 {
+		t.Fatalf("expected at least 21 fixtures, found %d in %s", len(files), fixturesDir)
 	}
 
 	for _, file := range files {
@@ -191,10 +189,16 @@ func TestTimestampHasNoFractionalSeconds(t *testing.T) {
 	}
 }
 
-// The v1.2 HTTP responses (docs/protocol/fixtures/http) round-trip through
-// the Go types without losing or adding fields.
+// The HTTP bodies (docs/protocol/fixtures/http: v1.2 phonebook and history,
+// v2 pairing) round-trip through the Go types without losing or adding
+// fields.
 func TestHTTPFixturesRoundTrip(t *testing.T) {
-	for file, v := range map[string]any{"phonebook.json": &Phonebook{}, "history.json": &History{}} {
+	for file, v := range map[string]any{
+		"phonebook.json":     &Phonebook{},
+		"history.json":       &History{},
+		"pair.request.json":  &PairRequest{},
+		"pair.response.json": &PairResponse{},
+	} {
 		t.Run(file, func(t *testing.T) {
 			data, err := os.ReadFile(filepath.Join(fixturesDir, "http", file))
 			if err != nil {

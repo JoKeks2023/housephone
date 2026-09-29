@@ -1,6 +1,8 @@
-// Package signaling serves the device WebSocket (/v1/ws), the health
-// endpoint (/v1/health) and the HTTPS device endpoints of v1.1
-// (/v1/pair, /v1/device) of the signaling protocol.
+// Package signaling serves the device endpoints of the signaling protocol:
+// the sealed WebSocket (/v1/ws), pairing (/v1/pair), the HTTPS device
+// endpoints (/v1/device, /v1/calls/{id}, /v1/phonebook, /v1/history) and
+// the health check. Authentication and sealing follow signaling v2
+// (ADR-0004, package hp2).
 package signaling
 
 import (
@@ -20,8 +22,8 @@ import (
 	"github.com/coder/websocket"
 	"github.com/google/uuid"
 
-	"github.com/JoKeks2023/housephone/bridge/internal/auth"
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
+	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
@@ -53,6 +55,8 @@ type Config struct {
 	BridgeID      string
 	BridgeName    string
 	BridgeVersion string
+	// Identity signs pairing answers and every answer to a device (v2).
+	Identity *hp2.Identity
 	// PublicURL is the wss:// URL sent in pair.companion (v1.1).
 	PublicURL string
 	// PushTopic is the configured APNs topic; per-device topics must share
@@ -88,9 +92,6 @@ const (
 	maxPushTokenLength = 200
 	// companionCodesPerHour bounds pair.companion.request per device.
 	companionCodesPerHour = 5
-	// maxPairingConns bounds concurrent unauthenticated WebSocket
-	// connections (each may stay open for FirstMessageWait).
-	maxPairingConns = 32
 	// httpReadTimeout bounds reading a request body of the plain HTTP
 	// endpoints (bodies are at most maxHTTPBody).
 	httpReadTimeout = 15 * time.Second
@@ -108,16 +109,19 @@ type Server struct {
 	companions *rateLimiter
 	// warnings throttles warnings about failed logins per client.
 	warnings *logThrottle
-	// pairingSlots bounds unauthenticated WebSocket connections.
-	pairingSlots chan struct{}
+	// nonces rejects replayed requests (v2).
+	nonces *nonceCache
 
 	mu       sync.Mutex
 	sessions map[string]*session
 	active   sync.WaitGroup
 }
 
-// New creates a server.
+// New creates a server. cfg.Identity is required.
 func New(cfg Config) *Server {
+	if cfg.Identity == nil {
+		panic("signaling: Config.Identity is required")
+	}
 	if cfg.PingInterval == 0 {
 		cfg.PingInterval = 20 * time.Second
 	}
@@ -134,27 +138,27 @@ func New(cfg Config) *Server {
 		cfg.Logger = slog.Default()
 	}
 	return &Server{
-		cfg:          cfg,
-		log:          cfg.Logger.With("component", "signaling"),
-		limiter:      newRateLimiter(5, time.Minute, cfg.Now),
-		companions:   newRateLimiter(companionCodesPerHour, time.Hour, cfg.Now),
-		warnings:     newLogThrottle(time.Minute, cfg.Now),
-		pairingSlots: make(chan struct{}, maxPairingConns),
-		sessions:     map[string]*session{},
+		cfg:        cfg,
+		log:        cfg.Logger.With("component", "signaling"),
+		limiter:    newRateLimiter(5, time.Minute, cfg.Now),
+		companions: newRateLimiter(companionCodesPerHour, time.Hour, cfg.Now),
+		warnings:   newLogThrottle(time.Minute, cfg.Now),
+		nonces:     newNonceCache(),
+		sessions:   map[string]*session{},
 	}
 }
 
 // Handler returns the HTTP routes.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/health", withDeadline(s.health))
+	mux.HandleFunc("GET /v1/health", s.health)
 	mux.HandleFunc("GET /v1/ws", s.websocket)
 	mux.HandleFunc("POST /v1/pair", withDeadline(s.httpPair))
-	mux.HandleFunc("PUT /v1/device", withDeadline(s.httpUpdateDevice))
-	mux.HandleFunc("DELETE /v1/device", withDeadline(s.httpDeleteDevice))
-	mux.HandleFunc("GET /v1/calls/{callId}", withDeadline(s.httpCallStatus))
-	mux.HandleFunc("GET /v1/phonebook", withDeadline(s.httpPhonebook))
-	mux.HandleFunc("GET /v1/history", withDeadline(s.httpHistory))
+	mux.HandleFunc("PUT /v1/device", s.authed(s.httpUpdateDevice))
+	mux.HandleFunc("DELETE /v1/device", s.authed(s.httpDeleteDevice))
+	mux.HandleFunc("GET /v1/calls/{callId}", s.authed(s.httpCallStatus))
+	mux.HandleFunc("GET /v1/phonebook", s.authed(s.httpPhonebook))
+	mux.HandleFunc("GET /v1/history", s.authed(s.httpHistory))
 	return mux
 }
 
@@ -171,63 +175,46 @@ func withDeadline(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"status":        "ok",
-		"version":       s.cfg.BridgeVersion,
-		"sipRegistered": s.cfg.Hub.SIPRegistered(),
-	})
+// health answers {"status":"ok"} to anyone. A paired device that signs the
+// request also gets the version and the FRITZ!Box registration (sealed).
+func (s *Server) health(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Authorization") == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "ok"})
+		return
+	}
+	s.authed(func(w http.ResponseWriter, _ *http.Request, _ store.Device) {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"status":        "ok",
+			"version":       s.cfg.BridgeVersion,
+			"sipRegistered": s.cfg.Hub.SIPRegistered(),
+		})
+	})(w, r)
 }
 
+// websocket upgrades an HP2-authenticated request to the sealed device
+// connection. Without valid authentication there is no upgrade (401).
 func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 	s.active.Add(1)
 	defer s.active.Done()
-	ip := s.clientIP(r)
-	header := r.Header.Get("Authorization")
-	if header == "" {
-		select {
-		case s.pairingSlots <- struct{}{}:
-			defer func() { <-s.pairingSlots }()
-		default:
-			s.warnClient("too many unauthenticated connections", ip)
-			http.Error(w, "too many pairing attempts", http.StatusServiceUnavailable)
-			return
-		}
-		conn, err := websocket.Accept(w, r, nil)
-		if err != nil {
-			return
-		}
-		conn.SetReadLimit(maxMessageBytes)
-		s.runPairing(r.Context(), conn, ip)
+	res := s.checkRequest(r, nil)
+	if res.code != "" {
+		s.rejectAuth(w, r, res)
 		return
 	}
-
-	dev, ok := s.authenticate(header)
-	if !ok {
-		s.warnClient("rejected WebSocket authentication", ip)
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-	conn, err := websocket.Accept(w, r, nil)
+	// The 101 carries the bridge's signature; coder/websocket keeps
+	// headers set before Accept.
+	w.Header().Set(hp2.BridgeHeader, res.sess.SignAnswer(s.cfg.Identity, http.StatusSwitchingProtocols, nil))
+	ws, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		return
 	}
-	conn.SetReadLimit(maxMessageBytes)
-	s.runDevice(r.Context(), conn, dev, ip)
-}
-
-func (s *Server) authenticate(header string) (store.Device, bool) {
-	id, secret, ok := auth.ParseBearer(header)
-	if !ok {
-		return store.Device{}, false
-	}
-	dev, err := s.cfg.Devices.Get(id)
+	ws.SetReadLimit(maxMessageBytes + hp2.FrameOverhead + 1)
+	conn, err := hp2.NewConn(ws, res.sess.Keys.BridgeToDevice, res.sess.Keys.DeviceToBridge)
 	if err != nil {
-		return store.Device{}, false
+		ws.CloseNow()
+		return
 	}
-	return dev, auth.VerifySecret(secret, dev.SecretHash)
+	s.runDevice(r.Context(), conn, res.dev, s.clientIP(r))
 }
 
 // clientIP is the address used for rate limits and logs. Proxy headers are
@@ -283,141 +270,144 @@ func (s *Server) warnClient(msg, ip string, attrs ...any) {
 	s.log.Warn(msg, attrs...)
 }
 
-// readEnvelope reads one text message within timeout.
-func readEnvelope(ctx context.Context, conn *websocket.Conn, timeout time.Duration) (protocol.Envelope, error) {
+// readEnvelope reads one sealed JSON message within timeout. Audio frames
+// before it are an error.
+func readEnvelope(ctx context.Context, conn *hp2.Conn, timeout time.Duration) (protocol.Envelope, error) {
 	if timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}
-	typ, data, err := conn.Read(ctx)
+	typ, plaintext, err := conn.Read(ctx)
 	if err != nil {
 		return protocol.Envelope{}, err
 	}
-	if typ != websocket.MessageText {
-		return protocol.Envelope{}, errors.New("binary messages are not supported")
+	if typ != hp2.FrameJSON {
+		return protocol.Envelope{}, errors.New("JSON message expected")
 	}
-	return protocol.ParseEnvelope(data)
+	return protocol.ParseEnvelope(plaintext[1:])
 }
 
-func writeEnvelope(ctx context.Context, conn *websocket.Conn, env protocol.Envelope) error {
+func writeEnvelope(ctx context.Context, conn *hp2.Conn, env protocol.Envelope) error {
 	data, err := env.Marshal()
 	if err != nil {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(ctx, writeTimeout)
 	defer cancel()
-	return conn.Write(ctx, websocket.MessageText, data)
+	return conn.WriteJSON(ctx, data)
 }
 
-func writeBinary(ctx context.Context, conn *websocket.Conn, data []byte) error {
+func writeAudio(ctx context.Context, conn *hp2.Conn, frame []byte) error {
 	ctx, cancel := context.WithTimeout(ctx, writeTimeout)
 	defer cancel()
-	return conn.Write(ctx, websocket.MessageBinary, data)
+	return conn.WriteAudio(ctx, frame)
 }
 
 func errorEnvelope(code, message string) protocol.Envelope {
 	return protocol.MustEnvelope(protocol.TypeError, protocol.Error{Code: code, Message: message})
 }
 
-// runPairing handles an unauthenticated connection: exactly one pair message.
-func (s *Server) runPairing(ctx context.Context, conn *websocket.Conn, ip string) {
-	defer conn.CloseNow()
-	env, err := readEnvelope(ctx, conn, s.cfg.FirstMessageWait)
-	if err != nil {
-		_ = conn.Close(websocket.StatusPolicyViolation, "pair expected")
-		return
-	}
-	if env.Type != protocol.TypePair {
-		_ = writeEnvelope(ctx, conn, errorEnvelope(protocol.ErrorUnauthorized, "authentication required"))
-		_ = conn.Close(websocket.StatusPolicyViolation, "unauthorized")
-		return
-	}
-	var p protocol.Pair
-	decodeErr := env.Decode(&p)
-	ok, pairErr := s.pair(p, decodeErr, ip)
-	if pairErr != nil {
-		_ = writeEnvelope(ctx, conn, errorEnvelope(pairErr.code, pairErr.message))
-		_ = conn.Close(websocket.StatusPolicyViolation, pairErr.closeReason())
-		return
-	}
-	_ = writeEnvelope(ctx, conn, protocol.MustEnvelope(protocol.TypePairOK, ok))
-	_ = conn.Close(websocket.StatusNormalClosure, "paired")
-}
-
-// pairError is a failed pairing attempt (WebSocket pair or POST /v1/pair).
+// pairError is a failed pairing attempt.
 type pairError struct {
 	code    string
 	message string
 	status  int
 }
 
-func (e *pairError) closeReason() string {
-	switch e.code {
-	case protocol.ErrorPairingRateLimited:
-		return "rate limited"
-	case protocol.ErrorBadRequest:
-		return "bad request"
-	}
-	return "pairing failed"
-}
+var (
+	errPairRateLimited = &pairError{protocol.ErrorPairingRateLimited, "Zu viele Versuche, bitte später erneut probieren", http.StatusTooManyRequests}
+	errPairInvalid     = &pairError{protocol.ErrorPairingInvalid, "Der Kopplungscode ist ungültig oder abgelaufen", http.StatusForbidden}
+	errPairInternal    = &pairError{protocol.ErrorInternal, "internal error", http.StatusInternalServerError}
+)
 
-// pair validates a pairing request, consumes its code and stores the new
-// device. Rate limiting, code rules and naming are the same for WebSocket
-// and HTTPS pairing.
-func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.PairOK, *pairError) {
+// pair validates a pairing request (v2): rate limit, well-formed fields,
+// the device's proof of key possession, then the one-time code. It stores
+// the new device with its public key and answers with the bridge's
+// signature over the pairing.
+func (s *Server) pair(req protocol.PairRequest, decodeErr error, ip string) (protocol.PairResponse, *pairError) {
 	if s.limiter.blocked(ip) {
 		s.warnClient("pairing rate limited", ip)
-		return protocol.PairOK{}, &pairError{protocol.ErrorPairingRateLimited, "Zu viele Versuche, bitte später erneut probieren", http.StatusTooManyRequests}
+		return protocol.PairResponse{}, errPairRateLimited
 	}
-	if decodeErr != nil || strings.TrimSpace(p.Code) == "" || !validPlatform(p.Platform) {
-		return protocol.PairOK{}, &pairError{protocol.ErrorBadRequest, "code, deviceName and platform (ios|watchos) are required", http.StatusBadRequest}
+	// Malformed requests are 400 and do not count towards the rate limit
+	// (a buggy app must not lock itself out); wrong codes and proofs do.
+	if decodeErr != nil || strings.TrimSpace(req.Code) == "" || !validPlatform(req.Platform) {
+		return protocol.PairResponse{}, &pairError{protocol.ErrorBadRequest, "code, deviceName, platform (ios|watchos), publicKey, nonce and proof are required", http.StatusBadRequest}
+	}
+	if _, err := hp2.ParseDevicePublicKey(req.PublicKey); err != nil {
+		return protocol.PairResponse{}, &pairError{protocol.ErrorBadRequest, "publicKey must be an uncompressed P-256 key", http.StatusBadRequest}
+	}
+	// The proof is checked before the code is consumed, so a request with
+	// a forged key cannot burn somebody's code.
+	code, err := hp2.VerifyPairProof(req)
+	if err != nil {
+		s.limiter.fail(ip)
+		s.warnClient("pairing proof rejected", ip)
+		return protocol.PairResponse{}, errPairInvalid
 	}
 	now := s.cfg.Now()
-	pc, err := s.cfg.Pairing.Consume(p.Code, now)
+	pc, err := s.cfg.Pairing.Consume(code, now)
 	if err == nil {
-		err = s.checkCompanionCode(pc, p.Platform)
+		err = s.checkCompanionCode(pc, req.Platform)
 	}
 	if err != nil {
 		s.limiter.fail(ip)
 		s.warnClient("pairing failed", ip, "error", err)
 		if errors.Is(err, store.ErrPairingInvalid) {
-			return protocol.PairOK{}, &pairError{protocol.ErrorPairingInvalid, "Der Kopplungscode ist ungültig oder abgelaufen", http.StatusForbidden}
+			return protocol.PairResponse{}, errPairInvalid
 		}
-		return protocol.PairOK{}, &pairError{protocol.ErrorInternal, "internal error", http.StatusInternalServerError}
+		return protocol.PairResponse{}, errPairInternal
 	}
 
-	secret, err := auth.NewSecret()
-	if err != nil {
-		return protocol.PairOK{}, &pairError{protocol.ErrorInternal, "internal error", http.StatusInternalServerError}
-	}
 	name := sanitizeName(pc.Name)
 	if name == "" {
-		name = sanitizeName(p.DeviceName)
+		name = sanitizeName(req.DeviceName)
 	}
 	if name == "" {
-		name = p.Platform
+		name = req.Platform
 	}
 	dev := store.Device{
-		ID:         uuid.NewString(),
-		Name:       name,
-		Platform:   p.Platform,
-		Model:      sanitizeName(p.Model),
-		SecretHash: auth.HashSecret(secret),
-		PairedBy:   pc.ParentID,
-		CreatedAt:  now.UTC(),
+		ID:        uuid.NewString(),
+		Name:      name,
+		Platform:  req.Platform,
+		Model:     sanitizeName(req.Model),
+		PublicKey: req.PublicKey,
+		PairedBy:  pc.ParentID,
+		CreatedAt: now.UTC(),
 	}
 	if err := s.cfg.Devices.Add(dev); err != nil {
 		s.log.Error("storing device failed", "error", err)
-		return protocol.PairOK{}, &pairError{protocol.ErrorInternal, "internal error", http.StatusInternalServerError}
+		return protocol.PairResponse{}, errPairInternal
 	}
-	s.log.Info("device paired", "device", dev.ID, "name", dev.Name, "platform", dev.Platform, "ip", ip)
-	return protocol.PairOK{
-		DeviceID:     dev.ID,
-		DeviceSecret: secret,
-		BridgeID:     s.cfg.BridgeID,
-		BridgeName:   s.cfg.BridgeName,
-	}, nil
+	if err := s.cfg.Pairing.RecordUse(pc.Code, dev.ID, now); err != nil {
+		s.log.Warn("recording code use failed", "error", err)
+	}
+	s.log.Info("device paired", "device", dev.ID, "name", dev.Name, "platform", dev.Platform, "model", dev.Model,
+		"key", hp2.KeyFingerprint(dev.PublicKey), "ip", ip)
+	s.broadcastDevicePaired(dev, now)
+	return hp2.SignPairResponse(s.cfg.Identity, req, code, protocol.PairResponse{
+		DeviceID:   dev.ID,
+		BridgeID:   s.cfg.BridgeID,
+		BridgeName: s.cfg.BridgeName,
+	}), nil
+}
+
+// broadcastDevicePaired tells every other connected device about a new
+// pairing, so an unexpected one does not go unnoticed.
+func (s *Server) broadcastDevicePaired(dev store.Device, now time.Time) {
+	env := protocol.MustEnvelope(protocol.TypeDevicePaired, protocol.DevicePaired{
+		DeviceName: dev.Name,
+		Platform:   dev.Platform,
+		PairedAt:   protocol.Timestamp(now),
+	})
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for id, sess := range s.sessions {
+		if id != dev.ID {
+			sess.Send(env)
+		}
+	}
 }
 
 // checkCompanionCode enforces the restrictions of a companion code: only its
@@ -510,4 +500,11 @@ func (s *Server) CloseAll() {
 	for _, sess := range sessions {
 		sess.close(websocket.StatusGoingAway, "bridge shutting down")
 	}
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
 }

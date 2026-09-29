@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
+	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
 
 // The v1.2 endpoints serve the FRITZ!Box phonebook and call list to the
@@ -19,11 +20,8 @@ const (
 
 const notConfiguredMessage = "Telefonbuch und Anrufliste sind in der Bridge nicht eingerichtet (fritzbox.username in config.yaml)."
 
-// httpPhonebook handles GET /v1/phonebook (Bearer, ETag / If-None-Match).
-func (s *Server) httpPhonebook(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.httpAuthenticate(w, r); !ok {
-		return
-	}
+// httpPhonebook handles GET /v1/phonebook (HP2, ETag / If-None-Match).
+func (s *Server) httpPhonebook(w http.ResponseWriter, r *http.Request, _ store.Device) {
 	if s.cfg.Directory == nil {
 		writeJSON(w, http.StatusServiceUnavailable, protocol.Error{Code: protocol.ErrorFritzBoxUnavailable, Message: notConfiguredMessage})
 		return
@@ -44,11 +42,8 @@ func (s *Server) httpPhonebook(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(body)
 }
 
-// httpHistory handles GET /v1/history?limit=n (Bearer; 1-500, default 100).
-func (s *Server) httpHistory(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.httpAuthenticate(w, r); !ok {
-		return
-	}
+// httpHistory handles GET /v1/history?limit=n (HP2; 1-500, default 100).
+func (s *Server) httpHistory(w http.ResponseWriter, r *http.Request, _ store.Device) {
 	limit := historyDefaultLimit
 	if raw := r.URL.Query().Get("limit"); raw != "" {
 		n, err := strconv.Atoi(raw)

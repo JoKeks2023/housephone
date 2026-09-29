@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -18,8 +19,8 @@ func TestDevicesCRUD(t *testing.T) {
 		t.Fatalf("empty list: %v %v", list, err)
 	}
 	now := time.Now().UTC()
-	a := Device{ID: "a", Name: "iPhone", Platform: "ios", SecretHash: "h", CreatedAt: now}
-	b := Device{ID: "b", Name: "Watch", Platform: "watchos", SecretHash: "h", CreatedAt: now.Add(time.Second)}
+	a := Device{ID: "a", Name: "iPhone", Platform: "ios", PublicKey: "k", CreatedAt: now}
+	b := Device{ID: "b", Name: "Watch", Platform: "watchos", PublicKey: "k", CreatedAt: now.Add(time.Second)}
 	if err := devices.Add(b); err != nil {
 		t.Fatal(err)
 	}
@@ -115,14 +116,76 @@ func TestPairingCodeLifecycle(t *testing.T) {
 		t.Fatalf("expiry %v", pc.ExpiresAt)
 	}
 
-	// Lower-case input with whitespace is accepted.
-	got, err := pairing.Consume(" "+strings.ToLower(pc.Code)+" ", now.Add(time.Minute))
+	// Lower-case input in groups with whitespace is accepted.
+	grouped := strings.ToLower(pc.Code[0:4] + "-" + pc.Code[4:8] + "-" + pc.Code[8:12] + "-" + pc.Code[12:16])
+	got, err := pairing.Consume(" "+grouped+" ", now.Add(time.Minute))
 	if err != nil || got.Name != "iPhone Joris" {
 		t.Fatalf("consume: %+v %v", got, err)
 	}
 	// Single use.
 	if _, err := pairing.Consume(pc.Code, now.Add(time.Minute)); !errors.Is(err, ErrPairingInvalid) {
 		t.Fatalf("second consume: %v", err)
+	}
+
+	// The pair command learns who used the code, until PairingTTL later.
+	if err := pairing.RecordUse(pc.Code, "device-1", now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	used, found, err := pairing.UsedBy(pc.Code, now.Add(2*time.Minute))
+	if err != nil || !found || used.DeviceID != "device-1" {
+		t.Fatalf("UsedBy = %+v %v %v", used, found, err)
+	}
+	if _, found, _ := pairing.UsedBy(pc.Code, now.Add(time.Minute+PairingTTL)); found {
+		t.Fatal("usage record did not expire")
+	}
+}
+
+func TestPairingCodeRevoke(t *testing.T) {
+	pairing := NewPairing(t.TempDir())
+	now := time.Now()
+	pc, err := pairing.Create("", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if removed, err := pairing.Revoke(pc.Code); err != nil || !removed {
+		t.Fatalf("Revoke = %v %v", removed, err)
+	}
+	if _, err := pairing.Consume(pc.Code, now); !errors.Is(err, ErrPairingInvalid) {
+		t.Fatalf("revoked code accepted: %v", err)
+	}
+	if removed, _ := pairing.Revoke(pc.Code); removed {
+		t.Fatal("revoked twice")
+	}
+}
+
+func TestIdentityKeyIsStableAndPrivate(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := LoadIdentityKey(dir); err == nil {
+		t.Fatal("LoadIdentityKey created or found a key in an empty dir")
+	}
+	calls := 0
+	newSeed := func() ([]byte, error) {
+		calls++
+		return bytes.Repeat([]byte{byte(calls)}, 32), nil
+	}
+	first, err := LoadOrCreateIdentityKey(dir, newSeed)
+	if err != nil || len(first) != 32 {
+		t.Fatalf("create: %v", err)
+	}
+	second, err := LoadOrCreateIdentityKey(dir, newSeed)
+	if err != nil || !bytes.Equal(first, second) || calls != 1 {
+		t.Fatalf("not stable: %v calls=%d", err, calls)
+	}
+	loaded, err := LoadIdentityKey(dir)
+	if err != nil || !bytes.Equal(loaded, first) {
+		t.Fatalf("LoadIdentityKey: %v", err)
+	}
+	info, err := os.Stat(IdentityKeyPath(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("identity.key has mode %o, want 600", perm)
 	}
 }
 
@@ -136,7 +199,7 @@ func TestPairingCodeExpires(t *testing.T) {
 	if _, err := pairing.Consume(pc.Code, now.Add(PairingTTL)); !errors.Is(err, ErrPairingInvalid) {
 		t.Fatalf("expired code accepted: %v", err)
 	}
-	if _, err := pairing.Consume("WRONGCODE2", now); !errors.Is(err, ErrPairingInvalid) {
+	if _, err := pairing.Consume("WRONGCODE2WRONGC", now); !errors.Is(err, ErrPairingInvalid) {
 		t.Fatalf("unknown code: %v", err)
 	}
 }

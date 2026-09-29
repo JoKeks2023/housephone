@@ -3,290 +3,321 @@ package signaling
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"log/slog"
+	"errors"
 	"net/http"
-	"net/http/httptest"
-	"strings"
-	"sync"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/coder/websocket"
 
-	"github.com/JoKeks2023/housephone/bridge/internal/auth"
-	"github.com/JoKeks2023/housephone/bridge/internal/calls"
+	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
-	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
 
-type fakeHub struct {
-	mu        sync.Mutex
-	connected []calls.DeviceConn
-	messages  chan protocol.Envelope
-	gone      chan calls.DeviceConn
-	// statuses: CallStatus answers keyed by "<deviceID>/<callID>".
-	statuses map[string]protocol.CallStatus
-	revoked  []string
-}
-
-func newFakeHub() *fakeHub {
-	return &fakeHub{messages: make(chan protocol.Envelope, 10), gone: make(chan calls.DeviceConn, 10)}
-}
-
-func (h *fakeHub) DeviceConnected(c calls.DeviceConn) {
-	h.mu.Lock()
-	h.connected = append(h.connected, c)
-	h.mu.Unlock()
-}
-func (h *fakeHub) DeviceDisconnected(c calls.DeviceConn) { h.gone <- c }
-func (h *fakeHub) HandleDeviceMessage(c calls.DeviceConn, env protocol.Envelope) {
-	h.messages <- env
-}
-func (h *fakeHub) SIPRegistered() bool { return true }
-func (h *fakeHub) DeviceRevoked(c calls.DeviceConn) {
-	h.mu.Lock()
-	h.revoked = append(h.revoked, c.DeviceID())
-	h.mu.Unlock()
-}
-func (h *fakeHub) CallStatus(deviceID, callID string) (protocol.CallStatus, bool) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	st, ok := h.statuses[deviceID+"/"+callID]
-	return st, ok
-}
-
-func (h *fakeHub) last() calls.DeviceConn {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if len(h.connected) == 0 {
-		return nil
-	}
-	return h.connected[len(h.connected)-1]
-}
-
-type testServer struct {
-	srv     *Server
-	http    *httptest.Server
-	hub     *fakeHub
-	devices *store.Devices
-	pairing *store.Pairing
-}
-
-func newTestServer(t *testing.T, opts ...func(*Config)) *testServer {
-	t.Helper()
-	dir := t.TempDir()
-	ts := &testServer{hub: newFakeHub(), devices: store.NewDevices(dir), pairing: store.NewPairing(dir)}
-	cfg := Config{
-		BridgeID: "bridge-1", BridgeName: "Zuhause", BridgeVersion: "test",
-		PublicURL:         testPublicURL,
-		PushTopic:         "com.jorisconrad.housephone.voip",
-		TrustProxyHeaders: true,
-		Devices:           ts.devices, Pairing: ts.pairing, Hub: ts.hub,
-		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
-		PingInterval:     200 * time.Millisecond,
-		FirstMessageWait: time.Second,
-	}
-	for _, opt := range opts {
-		opt(&cfg)
-	}
-	ts.srv = New(cfg)
-	ts.http = httptest.NewServer(ts.srv.Handler())
-	t.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		ts.srv.Shutdown(ctx)
-		ts.http.Close()
-	})
-	return ts
-}
-
-func (ts *testServer) wsURL() string {
-	return "ws" + strings.TrimPrefix(ts.http.URL, "http") + "/v1/ws"
-}
-
-func (ts *testServer) dial(t *testing.T, header http.Header) (*websocket.Conn, *http.Response, error) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	return websocket.Dial(ctx, ts.wsURL(), &websocket.DialOptions{HTTPHeader: header})
-}
-
-func send(t *testing.T, c *websocket.Conn, msgType string, payload any) {
-	t.Helper()
-	data, err := protocol.MustEnvelope(msgType, payload).Marshal()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	if err := c.Write(ctx, websocket.MessageText, data); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func receive(t *testing.T, c *websocket.Conn, msgType string, payload any) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	_, data, err := c.Read(ctx)
-	if err != nil {
-		t.Fatalf("read %s: %v", msgType, err)
-	}
-	env, err := protocol.ParseEnvelope(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if env.Type != msgType {
-		t.Fatalf("got %s %s, want %s", env.Type, env.Payload, msgType)
-	}
-	if payload != nil {
-		if err := env.Decode(payload); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func closeStatus(t *testing.T, c *websocket.Conn) websocket.StatusCode {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	for {
-		if _, _, err := c.Read(ctx); err != nil {
-			return websocket.CloseStatus(err)
-		}
-	}
-}
-
-// pairDevice runs a successful pairing and returns the credentials.
-func (ts *testServer) pairDevice(t *testing.T) protocol.PairOK {
-	t.Helper()
-	pc, err := ts.pairing.Create("iPhone Joris", time.Now())
-	if err != nil {
-		t.Fatal(err)
-	}
-	c, _, err := ts.dial(t, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer c.CloseNow()
-	send(t, c, protocol.TypePair, protocol.Pair{Code: pc.Code, DeviceName: "iPhone", Platform: protocol.PlatformIOS, Model: "iPhone17,1"})
-	var ok protocol.PairOK
-	receive(t, c, protocol.TypePairOK, &ok)
-	if status := closeStatus(t, c); status != websocket.StatusNormalClosure {
-		t.Fatalf("pairing connection closed with %v", status)
-	}
-	return ok
-}
-
-func bearer(ok protocol.PairOK) http.Header {
-	return http.Header{"Authorization": {"Bearer " + ok.DeviceID + "." + ok.DeviceSecret}}
-}
-
-func TestHealth(t *testing.T) {
+func TestHealthRevealsNothingWithoutAuth(t *testing.T) {
 	ts := newTestServer(t)
-	res, err := http.Get(ts.http.URL + "/v1/health")
-	if err != nil {
-		t.Fatal(err)
+	res, body := ts.request(t, http.MethodGet, "/v1/health", nil, nil)
+	var plain map[string]any
+	if err := json.Unmarshal(body, &plain); err != nil || res.StatusCode != http.StatusOK {
+		t.Fatalf("health %d %s", res.StatusCode, body)
 	}
-	defer res.Body.Close()
-	var body map[string]any
-	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
-		t.Fatal(err)
+	if len(plain) != 1 || plain["status"] != "ok" {
+		t.Fatalf("unauthenticated health must only say status ok, got %v", plain)
 	}
-	if body["status"] != "ok" || body["sipRegistered"] != true || body["version"] != "test" {
-		t.Fatalf("health %v", body)
+
+	// A paired device gets the details, sealed.
+	d := ts.pairDevice(t)
+	authed := d.do(t, http.MethodGet, "/v1/health", nil)
+	if authed.Header.Get("Content-Type") != hp2.SealedContentType {
+		t.Fatalf("authenticated health not sealed: %v", authed.Header)
+	}
+	var full map[string]any
+	if err := json.Unmarshal(authed.Body, &full); err != nil || full["sipRegistered"] != true || full["version"] != "test" {
+		t.Fatalf("authenticated health %s %v", authed.Body, err)
 	}
 }
 
-func TestPairingStoresHashedSecret(t *testing.T) {
+func TestPairingStoresOnlyThePublicKey(t *testing.T) {
 	ts := newTestServer(t)
-	ok := ts.pairDevice(t)
-	if ok.BridgeID != "bridge-1" || ok.BridgeName != "Zuhause" || len(ok.DeviceSecret) != 43 {
-		t.Fatalf("pair.ok %+v", ok)
-	}
-	dev, err := ts.devices.Get(ok.DeviceID)
+	d := ts.pairDevice(t)
+	dev, err := ts.devices.Get(d.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if dev.Name != "iPhone Joris" || dev.Platform != "ios" || dev.Model != "iPhone17,1" {
 		t.Fatalf("stored device %+v", dev)
 	}
-	if strings.Contains(dev.SecretHash, ok.DeviceSecret) || !auth.VerifySecret(ok.DeviceSecret, dev.SecretHash) {
-		t.Fatal("secret must be stored hashed")
+	if dev.PublicKey != hp2.B64(d.Key.PublicKeyX963()) {
+		t.Fatal("stored key is not the device's public key")
+	}
+}
+
+func TestPairCommandLearnsWhoUsedTheCode(t *testing.T) {
+	ts := newTestServer(t)
+	pc, _ := ts.pairing.Create("", time.Now())
+	d := ts.pairWith(t, pc.Code, protocol.PlatformIOS, "iPhone", "iPhone17,1")
+	used, found, err := ts.pairing.UsedBy(pc.Code, time.Now())
+	if err != nil || !found || used.DeviceID != d.ID {
+		t.Fatalf("UsedBy = %+v %v %v", used, found, err)
+	}
+}
+
+// rawPair posts a pairing request built with key, optionally modified.
+func (ts *testServer) rawPair(t *testing.T, ip string, req protocol.PairRequest) (*http.Response, []byte) {
+	t.Helper()
+	return ts.request(t, http.MethodPost, "/v1/pair", ipHeader(ip), req)
+}
+
+func newPairRequest(t *testing.T, code string) protocol.PairRequest {
+	t.Helper()
+	key, _ := hp2.NewSoftwareKey()
+	req, err := hp2.NewPairRequest(key, code, "iPhone", protocol.PlatformIOS, "iPhone17,1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return req
+}
+
+func TestPairingAttacks(t *testing.T) {
+	ts := newTestServer(t)
+	pc, _ := ts.pairing.Create("", time.Now())
+
+	// A proof that does not match the key (or the nonce) is rejected with
+	// 403 before the code is consumed.
+	forged := newPairRequest(t, pc.Code)
+	other, _ := hp2.NewSoftwareKey()
+	forged.PublicKey = hp2.B64(other.PublicKeyX963())
+	if res, body := ts.rawPair(t, "10.9.0.1", forged); res.StatusCode != http.StatusForbidden || decodeError(t, body).Code != protocol.ErrorPairingInvalid {
+		t.Fatalf("foreign key: %d %s", res.StatusCode, body)
+	}
+	wrongNonce := newPairRequest(t, pc.Code)
+	wrongNonce.Nonce = hp2.B64(make([]byte, hp2.NonceSize))
+	if res, _ := ts.rawPair(t, "10.9.0.1", wrongNonce); res.StatusCode != http.StatusForbidden {
+		t.Fatalf("proof over another nonce: %d", res.StatusCode)
+	}
+	// The code is still usable by the real device …
+	d := ts.pairWith(t, pc.Code, protocol.PlatformIOS, "iPhone", "")
+	// … exactly once.
+	if res, body := ts.rawPair(t, "10.9.0.2", newPairRequest(t, pc.Code)); res.StatusCode != http.StatusForbidden || decodeError(t, body).Code != protocol.ErrorPairingInvalid {
+		t.Fatalf("code used twice: %d %s", res.StatusCode, body)
+	}
+	if _, err := ts.devices.Get(d.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Malformed keys are 400.
+	bad := newPairRequest(t, pc.Code)
+	bad.PublicKey = "AAAA"
+	if res, body := ts.rawPair(t, "10.9.0.3", bad); res.StatusCode != http.StatusBadRequest || decodeError(t, body).Code != protocol.ErrorBadRequest {
+		t.Fatalf("malformed key: %d %s", res.StatusCode, body)
 	}
 }
 
 func TestPairingRejectsInvalidCodeAndRateLimits(t *testing.T) {
 	ts := newTestServer(t)
-	try := func(code string) string {
-		c, _, err := ts.dial(t, http.Header{"CF-Connecting-IP": {"198.51.100.1"}})
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer c.CloseNow()
-		send(t, c, protocol.TypePair, protocol.Pair{Code: code, DeviceName: "x", Platform: protocol.PlatformIOS})
-		var e protocol.Error
-		receive(t, c, protocol.TypeError, &e)
-		return e.Code
-	}
 	for range 5 {
-		if got := try("WRONGCODE2"); got != protocol.ErrorPairingInvalid {
-			t.Fatalf("got %s", got)
+		if res, body := ts.rawPair(t, "198.51.100.1", newPairRequest(t, "WRONGCODEWRONGCO")); res.StatusCode != http.StatusForbidden {
+			t.Fatalf("wrong code: %d %s", res.StatusCode, body)
 		}
 	}
 	pc, _ := ts.pairing.Create("", time.Now())
-	if got := try(pc.Code); got != protocol.ErrorPairingRateLimited {
-		t.Fatalf("expected rate limit, got %s", got)
+	if res, body := ts.rawPair(t, "198.51.100.1", newPairRequest(t, pc.Code)); res.StatusCode != http.StatusTooManyRequests || decodeError(t, body).Code != protocol.ErrorPairingRateLimited {
+		t.Fatalf("expected rate limit, got %d %s", res.StatusCode, body)
 	}
 }
 
-func TestUnauthenticatedMessagesAreRejected(t *testing.T) {
+func TestWebSocketWithoutValidAuthIsNotUpgraded(t *testing.T) {
 	ts := newTestServer(t)
-	c, _, err := ts.dial(t, nil)
+	d := ts.pairDevice(t)
+	for name, header := range map[string]http.Header{
+		"none":   nil,
+		"bearer": {"Authorization": {"Bearer " + d.ID + ".c2VjcmV0"}},
+		"junk":   {"Authorization": {"HP2 id=" + d.ID + ", ts=1, nonce=a, epk=b, sig=c"}},
+	} {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		_, res, err := websocket.Dial(ctx, ts.wsURL(), &websocket.DialOptions{HTTPHeader: header})
+		cancel()
+		if err == nil || res == nil || res.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("%s: expected 401 without upgrade, got %v %v", name, res, err)
+		}
+	}
+}
+
+func TestRequestAttacks(t *testing.T) {
+	ts := newTestServer(t)
+	d := ts.pairDevice(t)
+
+	// A captured request cannot be replayed.
+	creq, err := hp2.NewClientRequest(d.Key, d.ID, testBridgeID, http.MethodGet, "/v1/health", nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.CloseNow()
-	send(t, c, protocol.TypeHello, protocol.Hello{AppVersion: "1"})
-	var e protocol.Error
-	receive(t, c, protocol.TypeError, &e)
-	if e.Code != protocol.ErrorUnauthorized {
-		t.Fatalf("code %s", e.Code)
+	auth := http.Header{"Authorization": {creq.Authorization()}}
+	if res, _ := ts.request(t, http.MethodGet, "/v1/health", auth, nil); res.StatusCode != http.StatusOK {
+		t.Fatalf("first use: %d", res.StatusCode)
 	}
-	if status := closeStatus(t, c); status != websocket.StatusPolicyViolation {
-		t.Fatalf("close %v", status)
+	res, body := ts.request(t, http.MethodGet, "/v1/health", auth, nil)
+	if res.StatusCode != http.StatusUnauthorized || decodeError(t, body).Code != protocol.ErrorUnauthorized {
+		t.Fatalf("replay: %d %s", res.StatusCode, body)
+	}
+	// Even the rejection is signed by the bridge.
+	if _, err := creq.VerifyAnswer(ts.identity.PublicKey(), res.StatusCode, body, res.Header.Get(hp2.BridgeHeader)); err != nil {
+		t.Fatalf("401 not signed: %v", err)
+	}
+
+	// ts outside ±60 s: signature valid, but clock_skew.
+	for _, skew := range []time.Duration{61 * time.Second, -61 * time.Second} {
+		skewed := *d
+		skewed.now = func() time.Time { return time.Now().Add(skew) }
+		res, err := skewed.tryDo(http.MethodGet, "/v1/health", nil, nil)
+		if err != nil || res.Status != http.StatusUnauthorized {
+			t.Fatalf("skew %v: %d %v", skew, res.Status, err)
+		}
+		var e protocol.Error
+		_ = json.Unmarshal(res.Body, &e)
+		if e.Code != protocol.ErrorClockSkew {
+			t.Fatalf("skew %v: code %q", skew, e.Code)
+		}
+	}
+	within := *d
+	within.now = func() time.Time { return time.Now().Add(50 * time.Second) }
+	if res, err := within.tryDo(http.MethodGet, "/v1/health", nil, nil); err != nil || res.Status != http.StatusOK {
+		t.Fatalf("50 s skew rejected: %d %v", res.Status, err)
+	}
+
+	// Signed with another key for the same device ID.
+	impostor := *d
+	impostor.Key, _ = hp2.NewSoftwareKey()
+	if res, err := impostor.tryDo(http.MethodGet, "/v1/health", nil, nil); err != nil || res.Status != http.StatusUnauthorized {
+		t.Fatalf("foreign key: %d %v", res.Status, err)
+	}
+
+	// Body changed after signing.
+	token := "abcd"
+	signed, _ := json.Marshal(protocol.DeviceUpdate{PushToken: &token})
+	creq, _ = hp2.NewClientRequest(d.Key, d.ID, testBridgeID, http.MethodPut, "/v1/device", signed, time.Now())
+	other := "ffff"
+	res, _ = ts.request(t, http.MethodPut, "/v1/device", http.Header{"Authorization": {creq.Authorization()}}, protocol.DeviceUpdate{PushToken: &other})
+	if res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("tampered body: %d", res.StatusCode)
+	}
+	// Signed for another path.
+	creq, _ = hp2.NewClientRequest(d.Key, d.ID, testBridgeID, http.MethodGet, "/v1/history", nil, time.Now())
+	if res, _ = ts.request(t, http.MethodGet, "/v1/health", http.Header{"Authorization": {creq.Authorization()}}, nil); res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("other path: %d", res.StatusCode)
+	}
+	if dev, _ := ts.devices.Get(d.ID); dev.PushToken != "" {
+		t.Fatalf("rejected update applied: %+v", dev)
 	}
 }
 
-func TestWrongSecretGets401(t *testing.T) {
+// dialRaw opens the WebSocket like hp2.Client.Dial but returns the keys, so
+// a test can write frames the real client never would.
+func dialRaw(t *testing.T, ts *testServer, d *testDevice) (*websocket.Conn, hp2.SessionKeys) {
+	t.Helper()
+	creq, err := hp2.NewClientRequest(d.Key, d.ID, testBridgeID, http.MethodGet, "/v1/ws", nil, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	ws, res, err := websocket.Dial(ctx, ts.wsURL(), &websocket.DialOptions{HTTPHeader: http.Header{"Authorization": {creq.Authorization()}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys, err := creq.VerifyAnswer(ts.identity.PublicKey(), res.StatusCode, nil, res.Header.Get(hp2.BridgeHeader))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ws, keys
+}
+
+func TestFrameIntegrityAttacks(t *testing.T) {
 	ts := newTestServer(t)
-	ok := ts.pairDevice(t)
-	ok.DeviceSecret = strings.Repeat("A", 43)
-	_, res, err := ts.dial(t, bearer(ok))
-	if err == nil {
-		t.Fatal("expected dial error")
+	d := ts.pairDevice(t)
+	hello, _ := protocol.MustEnvelope(protocol.TypeHello, protocol.Hello{AppVersion: "1"}).Marshal()
+	helloFrame := append([]byte{hp2.FrameJSON}, hello...)
+	attach, _ := protocol.MustEnvelope(protocol.TypeCallAttach, protocol.CallAttach{CallID: "x"}).Marshal()
+	attachFrame := append([]byte{hp2.FrameJSON}, attach...)
+
+	write := func(ws *websocket.Conn, typ websocket.MessageType, data []byte) {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := ws.Write(ctx, typ, data); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if res == nil || res.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %v", res)
+	expectClose := func(name string, ws *websocket.Conn) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		for {
+			if _, _, err := ws.Read(ctx); err != nil {
+				if got := websocket.CloseStatus(err); got != protocol.CloseIntegrity {
+					t.Fatalf("%s: closed with %v, want 4002", name, got)
+				}
+				return
+			}
+		}
 	}
+	started := func() (*websocket.Conn, *hp2.Sealer) {
+		ws, keys := dialRaw(t, ts, d)
+		sealer, _ := hp2.NewSealer(keys.DeviceToBridge)
+		sealed, _ := sealer.Seal(helloFrame)
+		write(ws, websocket.MessageBinary, sealed)
+		return ws, sealer
+	}
+
+	// A plaintext text frame (a v1 client, or injection) instead of hello.
+	ws, _ := dialRaw(t, ts, d)
+	write(ws, websocket.MessageText, hello)
+	expectClose("text frame", ws)
+
+	// A sealed frame with a flipped bit.
+	ws, sealer := started()
+	sealed, _ := sealer.Seal(attachFrame)
+	sealed[3] ^= 0x80
+	write(ws, websocket.MessageBinary, sealed)
+	expectClose("tampered frame", ws)
+
+	// The same sealed frame twice (replay within the connection).
+	ws, sealer = started()
+	sealed, _ = sealer.Seal(attachFrame)
+	write(ws, websocket.MessageBinary, sealed)
+	write(ws, websocket.MessageBinary, sealed)
+	expectClose("replayed frame", ws)
+
+	// A frame skipped (counter 2 before 1: reordered or dropped).
+	ws, sealer = started()
+	_, _ = sealer.Seal(attachFrame)
+	sealed, _ = sealer.Seal(attachFrame)
+	write(ws, websocket.MessageBinary, sealed)
+	expectClose("reordered frame", ws)
+
+	// A frame sealed with the bridge's direction key (reflected frame).
+	ws, keys := dialRaw(t, ts, d)
+	wrongDir, _ := hp2.NewSealer(keys.BridgeToDevice)
+	sealed, _ = wrongDir.Seal(helloFrame)
+	write(ws, websocket.MessageBinary, sealed)
+	expectClose("reflected frame", ws)
 }
 
 func TestAuthenticatedSessionFlow(t *testing.T) {
 	ts := newTestServer(t)
-	ok := ts.pairDevice(t)
-	c, _, err := ts.dial(t, bearer(ok))
+	d := ts.pairDevice(t)
+	c, err := ts.dial(t, d)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.CloseNow()
+	defer c.WS().CloseNow()
 	send(t, c, protocol.TypeHello, protocol.Hello{AppVersion: "0.1.0 (1)", Platform: protocol.PlatformIOS, PushToken: "abcd", PushEnvironment: protocol.PushEnvironmentDevelopment})
 	var welcome protocol.Welcome
 	receive(t, c, protocol.TypeWelcome, &welcome)
 	if welcome.BridgeName != "Zuhause" || !welcome.SIPRegistered {
 		t.Fatalf("welcome %+v", welcome)
 	}
-	dev, _ := ts.devices.Get(ok.DeviceID)
+	dev, _ := ts.devices.Get(d.ID)
 	if dev.PushToken != "abcd" || dev.PushEnvironment != "development" {
 		t.Fatalf("push token not stored: %+v", dev)
 	}
@@ -297,7 +328,7 @@ func TestAuthenticatedSessionFlow(t *testing.T) {
 	send(t, c, protocol.TypeDeviceUpdate, protocol.DeviceUpdate{PushToken: &good})
 	deadline := time.Now().Add(2 * time.Second)
 	for {
-		dev, _ = ts.devices.Get(ok.DeviceID)
+		dev, _ = ts.devices.Get(d.ID)
 		if dev.PushToken == good || time.Now().After(deadline) {
 			break
 		}
@@ -318,7 +349,7 @@ func TestAuthenticatedSessionFlow(t *testing.T) {
 		t.Fatal("message not forwarded")
 	}
 	conn := ts.hub.last()
-	if conn == nil || conn.DeviceID() != ok.DeviceID {
+	if conn == nil || conn.DeviceID() != d.ID {
 		t.Fatal("hub not informed about connection")
 	}
 	conn.Send(protocol.MustEnvelope(protocol.TypeStatus, protocol.Status{SIPRegistered: false}))
@@ -330,9 +361,9 @@ func TestAuthenticatedSessionFlow(t *testing.T) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		_, data, err := c.Read(ctx)
-		if err == nil {
-			env, _ := protocol.ParseEnvelope(data)
+		typ, plaintext, err := c.Read(ctx)
+		if err == nil && typ == hp2.FrameJSON {
+			env, _ := protocol.ParseEnvelope(plaintext[1:])
 			incoming <- env
 		}
 	}()
@@ -350,14 +381,9 @@ func TestAuthenticatedSessionFlow(t *testing.T) {
 
 func TestUnresponsiveClientIsDisconnectedByPing(t *testing.T) {
 	ts := newTestServer(t)
-	ok := ts.pairDevice(t)
-	c, _, err := ts.dial(t, bearer(ok))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer c.CloseNow()
-	send(t, c, protocol.TypeHello, protocol.Hello{})
-	receive(t, c, protocol.TypeWelcome, nil)
+	d := ts.pairDevice(t)
+	c := ts.connectHello(t, d, protocol.Hello{})
+	defer c.WS().CloseNow()
 	// Not reading → no pongs → the server gives up.
 	select {
 	case <-ts.hub.gone:
@@ -368,29 +394,18 @@ func TestUnresponsiveClientIsDisconnectedByPing(t *testing.T) {
 
 func TestSecondConnectionReplacesFirst(t *testing.T) {
 	ts := newTestServer(t)
-	ok := ts.pairDevice(t)
-	first, _, err := ts.dial(t, bearer(ok))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer first.CloseNow()
-	send(t, first, protocol.TypeHello, protocol.Hello{})
-	receive(t, first, protocol.TypeWelcome, nil)
-
-	second, _, err := ts.dial(t, bearer(ok))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer second.CloseNow()
-	send(t, second, protocol.TypeHello, protocol.Hello{})
-	receive(t, second, protocol.TypeWelcome, nil)
+	d := ts.pairDevice(t)
+	first := ts.connectHello(t, d, protocol.Hello{})
+	defer first.WS().CloseNow()
+	second := ts.connectHello(t, d, protocol.Hello{})
+	defer second.WS().CloseNow()
 
 	if status := closeStatus(t, first); status != protocol.CloseReplaced {
 		t.Fatalf("first connection closed with %v, want 4001", status)
 	}
 	select {
 	case gone := <-ts.hub.gone:
-		if gone.DeviceID() != ok.DeviceID {
+		if gone.DeviceID() != d.ID {
 			t.Fatal("wrong device")
 		}
 	case <-time.After(2 * time.Second):
@@ -400,12 +415,12 @@ func TestSecondConnectionReplacesFirst(t *testing.T) {
 
 func TestHelloRequiredFirst(t *testing.T) {
 	ts := newTestServer(t)
-	ok := ts.pairDevice(t)
-	c, _, err := ts.dial(t, bearer(ok))
+	d := ts.pairDevice(t)
+	c, err := ts.dial(t, d)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.CloseNow()
+	defer c.WS().CloseNow()
 	send(t, c, protocol.TypeCallAttach, protocol.CallAttach{CallID: "x"})
 	var e protocol.Error
 	receive(t, c, protocol.TypeError, &e)
@@ -416,35 +431,46 @@ func TestHelloRequiredFirst(t *testing.T) {
 
 func TestRemovedDeviceCannotConnect(t *testing.T) {
 	ts := newTestServer(t)
-	ok := ts.pairDevice(t)
-	if err := ts.devices.Remove(ok.DeviceID); err != nil {
+	d := ts.pairDevice(t)
+	if err := ts.devices.Remove(d.ID); err != nil {
 		t.Fatal(err)
 	}
-	_, res, err := ts.dial(t, bearer(ok))
-	if err == nil || res == nil || res.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401 after removal, got %v %v", res, err)
+	_, err := ts.dial(t, d)
+	var se *hp2.StatusError
+	if !errors.As(err, &se) || se.Status != http.StatusUnauthorized {
+		t.Fatalf("expected 401 after removal, got %v", err)
 	}
 }
 
 func TestDeviceUnpairRemovesDeviceAndCloses(t *testing.T) {
 	ts := newTestServer(t)
-	ok := ts.pairDevice(t)
-	c, _, err := ts.dial(t, bearer(ok))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer c.CloseNow()
-	send(t, c, protocol.TypeHello, protocol.Hello{PushToken: "abcd", PushEnvironment: protocol.PushEnvironmentProduction})
-	receive(t, c, protocol.TypeWelcome, nil)
+	d := ts.pairDevice(t)
+	c := ts.connectHello(t, d, protocol.Hello{PushToken: "abcd", PushEnvironment: protocol.PushEnvironmentProduction})
+	defer c.WS().CloseNow()
 	send(t, c, protocol.TypeDeviceUnpair, protocol.DeviceUnpair{})
 	if status := closeStatus(t, c); status != websocket.StatusNormalClosure {
 		t.Fatalf("close %v, want 1000", status)
 	}
-	if _, err := ts.devices.Get(ok.DeviceID); err == nil {
+	if _, err := ts.devices.Get(d.ID); err == nil {
 		t.Fatal("device (and its push token) still stored")
 	}
-	if _, res, err := ts.dial(t, bearer(ok)); err == nil || res == nil || res.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("unpaired device can still connect: %v %v", res, err)
+	if _, err := ts.dial(t, d); err == nil {
+		t.Fatal("unpaired device can still connect")
+	}
+}
+
+func TestNewPairingIsAnnouncedToOtherDevices(t *testing.T) {
+	ts := newTestServer(t)
+	phone := ts.pairDevice(t)
+	c := ts.connectHello(t, phone, protocol.Hello{AppVersion: "1", Platform: protocol.PlatformIOS})
+	defer c.WS().CloseNow()
+
+	pc, _ := ts.pairing.Create("Unbekanntes Gerät", time.Now())
+	ts.pairWith(t, pc.Code, protocol.PlatformIOS, "iPhone", "iPhone16,2")
+	var paired protocol.DevicePaired
+	receive(t, c, protocol.TypeDevicePaired, &paired)
+	if paired.DeviceName != "Unbekanntes Gerät" || paired.Platform != protocol.PlatformIOS || time.Since(paired.PairedAt) > time.Minute {
+		t.Fatalf("device.paired %+v", paired)
 	}
 }
 
@@ -467,5 +493,24 @@ func TestValidPushToken(t *testing.T) {
 		if got := validPushToken(token); got != want {
 			t.Errorf("validPushToken(%q) = %v", token, got)
 		}
+	}
+}
+
+func TestNonceCacheIsBounded(t *testing.T) {
+	c := newNonceCache()
+	now := time.Now()
+	for i := range maxNoncesPerDevice {
+		if !c.use("d", strconv.Itoa(i), now) {
+			t.Fatalf("nonce %d rejected", i)
+		}
+	}
+	if c.use("d", "one-more", now) {
+		t.Fatal("full cache accepted another live nonce")
+	}
+	if !c.use("d", "later", now.Add(hp2.NonceWindow)) {
+		t.Fatal("expired entries not evicted")
+	}
+	if !c.use("other-device", "x", now) {
+		t.Fatal("cache is not per device")
 	}
 }

@@ -9,14 +9,13 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
 	"github.com/JoKeks2023/housephone/bridge/internal/fritzbox"
+	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/lan"
 	"github.com/JoKeks2023/housephone/bridge/internal/logsafe"
 	"github.com/JoKeks2023/housephone/bridge/internal/media"
@@ -42,9 +41,11 @@ func WithPusher(p calls.Pusher) Option {
 
 // Bridge is a running bridge instance.
 type Bridge struct {
-	cfg       config.Config
-	log       *slog.Logger
-	Identity  store.Identity
+	cfg      config.Config
+	log      *slog.Logger
+	Identity store.Identity
+	// Key signs every answer; devices pin its fingerprint when pairing.
+	Key       *hp2.Identity
 	Devices   *store.Devices
 	Pairing   *store.Pairing
 	manager   *calls.Manager
@@ -71,10 +72,16 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 	if err != nil {
 		return nil, fmt.Errorf("bridge identity: %w", err)
 	}
+	key, err := LoadIdentityKey(cfg.Bridge.DataDir, true)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("bridge identity", "fingerprint", key.Fingerprint())
 	b := &Bridge{
 		cfg:      cfg,
 		log:      log,
 		Identity: identity,
+		Key:      key,
 		Devices:  store.NewDevices(cfg.Bridge.DataDir),
 		Pairing:  store.NewPairing(cfg.Bridge.DataDir),
 	}
@@ -198,6 +205,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		BridgeID:          identity.ID,
 		BridgeName:        cfg.Bridge.Name,
 		BridgeVersion:     version.Version,
+		Identity:          key,
 		PublicURL:         cfg.Bridge.PublicURL,
 		PushTopic:         cfg.APNs.Topic,
 		TrustProxyHeaders: cfg.Bridge.TrustProxyHeaders,
@@ -275,12 +283,28 @@ func (b *Bridge) Run(ctx context.Context) error {
 	return runErr
 }
 
-// PairingLink builds the housephone://pair link for a code.
-func PairingLink(publicURL, code, bridgeName string) string {
-	q := url.Values{}
-	q.Set("url", publicURL)
-	q.Set("code", code)
-	q.Set("name", bridgeName)
-	// url.Values.Encode uses "+" for spaces; the spec expects percent-encoding.
-	return "housephone://pair?" + strings.ReplaceAll(q.Encode(), "+", "%20")
+// PairingLink builds the housephone://pair link (v2) for a code; the
+// fingerprint lets the device check it pairs with this bridge.
+func PairingLink(publicURL, code, fingerprint, bridgeName string) string {
+	return hp2.FormatPairingLink(publicURL, code, fingerprint, bridgeName)
+}
+
+// LoadIdentityKey loads the bridge's Ed25519 key from the data directory,
+// creating it (0600) if create is set and it does not exist yet.
+func LoadIdentityKey(dataDir string, create bool) (*hp2.Identity, error) {
+	var seed []byte
+	var err error
+	if create {
+		seed, err = store.LoadOrCreateIdentityKey(dataDir, hp2.NewIdentitySeed)
+	} else {
+		seed, err = store.LoadIdentityKey(dataDir)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("bridge identity key %s: %w", store.IdentityKeyPath(dataDir), err)
+	}
+	key, err := hp2.NewIdentity(seed)
+	if err != nil {
+		return nil, fmt.Errorf("bridge identity key %s: %w", store.IdentityKeyPath(dataDir), err)
+	}
+	return key, nil
 }

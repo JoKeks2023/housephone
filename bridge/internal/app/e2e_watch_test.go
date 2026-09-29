@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coder/websocket"
 	"github.com/emiago/diago"
 	"github.com/google/uuid"
 	"github.com/pion/rtp"
 
+	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 )
 
@@ -26,67 +26,53 @@ const watchTopic = "com.jorisconrad.housephone.watchkitapp.voip"
 type watchDevice struct {
 	t      *testing.T
 	w      *world
-	auth   string
-	conn   *websocket.Conn
+	client *hp2.Client
+	conn   *hp2.Conn
 	msgs   chan protocol.Envelope
 	frames chan []byte
 }
 
-func (w *world) httpJSON(t *testing.T, method, path, auth string, body any, out any) int {
-	t.Helper()
-	data, _ := json.Marshal(body)
-	req, err := http.NewRequest(method, "http://"+w.bridge.Addr()+path, bytes.NewReader(data))
+// do sends a signed request like the watch app; the answer is verified and
+// opened.
+func (d *watchDevice) do(method, path string, body any) hp2.Response {
+	d.t.Helper()
+	var data []byte
+	if body != nil {
+		data, _ = json.Marshal(body)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+	res, err := d.client.Do(ctx, method, path, data, nil)
 	if err != nil {
-		t.Fatal(err)
+		d.t.Fatalf("%s %s: %v", method, path, err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	if auth != "" {
-		req.Header.Set("Authorization", auth)
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	if out != nil && res.StatusCode == http.StatusOK {
-		if err := json.NewDecoder(res.Body).Decode(out); err != nil {
-			t.Fatal(err)
-		}
-	}
-	return res.StatusCode
+	return res
 }
 
-// pairWatch pairs over HTTPS and registers the push token, as the watch app
-// does outside a call.
+// pairWatch pairs over HTTPS with the watch's own key and registers the
+// push token, as the watch app does outside a call.
 func (w *world) pairWatch(t *testing.T) *watchDevice {
 	t.Helper()
-	pc, err := w.bridge.Pairing.Create("Apple Watch", time.Now())
-	if err != nil {
-		t.Fatal(err)
-	}
-	var ok protocol.PairOK
-	if status := w.httpJSON(t, http.MethodPost, "/v1/pair", "", protocol.Pair{Code: pc.Code, DeviceName: "Watch", Platform: protocol.PlatformWatchOS}, &ok); status != http.StatusOK {
-		t.Fatalf("pair: %d", status)
-	}
-	auth := "Bearer " + ok.DeviceID + "." + ok.DeviceSecret
+	d := &watchDevice{t: t, w: w, client: w.pair(t, "Apple Watch", protocol.PlatformWatchOS, "Watch7,1")}
 	token, env, topic := "0badc0de", protocol.PushEnvironmentDevelopment, watchTopic
 	update := protocol.DeviceUpdate{PushToken: &token, PushEnvironment: &env, PushTopic: &topic, MediaCapabilities: []string{protocol.MediaWebSocketPCMA}}
-	if status := w.httpJSON(t, http.MethodPut, "/v1/device", auth, update, nil); status != http.StatusNoContent {
-		t.Fatalf("device update: %d", status)
+	if res := d.do(http.MethodPut, "/v1/device", update); res.Status != http.StatusNoContent {
+		t.Fatalf("device update: %d", res.Status)
 	}
-	dev, err := w.bridge.Devices.Get(ok.DeviceID)
+	dev, err := w.bridge.Devices.Get(d.client.DeviceID)
 	if err != nil || dev.PushTopic != watchTopic || !dev.UsesWebSocketAudio() || dev.Name != "Apple Watch" {
 		t.Fatalf("watch device %+v %v", dev, err)
 	}
-	return &watchDevice{t: t, w: w, auth: auth}
+	return d
 }
 
-// connect opens the WebSocket, as the watch may only do during a call.
+// connect opens the sealed WebSocket, as the watch may only do during a
+// call.
 func (d *watchDevice) connect() {
 	d.t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
-	conn, _, err := websocket.Dial(ctx, d.w.url, &websocket.DialOptions{HTTPHeader: http.Header{"Authorization": {d.auth}}})
+	conn, err := d.client.Dial(ctx)
 	if err != nil {
 		d.t.Fatal(err)
 	}
@@ -95,24 +81,24 @@ func (d *watchDevice) connect() {
 	d.frames = make(chan []byte, 200)
 	go func() {
 		for {
-			typ, data, err := conn.Read(context.Background())
+			typ, plaintext, err := conn.Read(context.Background())
 			if err != nil {
 				close(d.msgs)
 				return
 			}
-			if typ == websocket.MessageBinary {
+			if typ == hp2.FrameAudio {
 				select {
-				case d.frames <- data:
+				case d.frames <- plaintext:
 				default:
 				}
 				continue
 			}
-			if env, err := protocol.ParseEnvelope(data); err == nil {
+			if env, err := protocol.ParseEnvelope(plaintext[1:]); err == nil {
 				d.msgs <- env
 			}
 		}
 	}()
-	d.t.Cleanup(func() { conn.CloseNow() })
+	d.t.Cleanup(func() { conn.WS().CloseNow() })
 	d.send(protocol.TypeHello, protocol.Hello{AppVersion: "e2e-watch", Platform: protocol.PlatformWatchOS, MediaCapabilities: []string{protocol.MediaWebSocketPCMA}, PushTopic: watchTopic})
 	d.expect(protocol.TypeWelcome, nil)
 }
@@ -122,7 +108,7 @@ func (d *watchDevice) send(msgType string, payload any) {
 	data, _ := protocol.MustEnvelope(msgType, payload).Marshal()
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
-	if err := d.conn.Write(ctx, websocket.MessageText, data); err != nil {
+	if err := d.conn.WriteJSON(ctx, data); err != nil {
 		d.t.Fatal(err)
 	}
 }
@@ -132,7 +118,7 @@ func (d *watchDevice) sendFrame(fill byte) {
 	frame := append([]byte{protocol.AudioFrameType}, bytes.Repeat([]byte{fill}, protocol.AudioFrameBytes)...)
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
-	if err := d.conn.Write(ctx, websocket.MessageBinary, frame); err != nil {
+	if err := d.conn.WriteAudio(ctx, frame); err != nil {
 		d.t.Fatal(err)
 	}
 }
@@ -342,9 +328,13 @@ func TestEndToEndWatchIncomingCall(t *testing.T) {
 // callStatus polls GET /v1/calls/{callId} like the ringing watch does.
 func (d *watchDevice) callStatus(callID string) protocol.CallStatus {
 	d.t.Helper()
+	res := d.do(http.MethodGet, "/v1/calls/"+callID, nil)
+	if res.Status != http.StatusOK {
+		d.t.Fatalf("call status: HTTP %d", res.Status)
+	}
 	var st protocol.CallStatus
-	if status := d.w.httpJSON(d.t, http.MethodGet, "/v1/calls/"+callID, d.auth, nil, &st); status != http.StatusOK {
-		d.t.Fatalf("call status: HTTP %d", status)
+	if err := json.Unmarshal(res.Body, &st); err != nil {
+		d.t.Fatal(err)
 	}
 	return st
 }

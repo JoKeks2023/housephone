@@ -1,6 +1,8 @@
-// Package protocol defines the Housephone signaling protocol v1 with the
-// v1.1 watch extension (docs/protocol/signaling-v1.md) shared between the
-// bridge and devices.
+// Package protocol defines the Housephone signaling protocol shared between
+// the bridge and devices: the call messages of v1 with the v1.1 watch and
+// v1.2 FRITZ!Box extensions (docs/protocol/signaling-v1.md) and the pairing
+// of v2 (docs/protocol/signaling-v2.md). The v2 authentication and sealing
+// live in package hp2.
 package protocol
 
 import (
@@ -11,7 +13,6 @@ import (
 
 // Message types sent by devices.
 const (
-	TypePair         = "pair"
 	TypeHello        = "hello"
 	TypeDeviceUpdate = "device.update"
 	TypeDeviceUnpair = "device.unpair"
@@ -28,7 +29,6 @@ const (
 
 // Message types sent by the bridge.
 const (
-	TypePairOK       = "pair.ok"
 	TypeWelcome      = "welcome"
 	TypeStatus       = "status"
 	TypeCallIncoming = "call.incoming"
@@ -40,6 +40,9 @@ const (
 	TypePairCompanion = "pair.companion"
 	// TypeCallMedia replaces call.offer for websocket-pcma devices (v1.1).
 	TypeCallMedia = "call.media"
+	// TypeDevicePaired tells the connected devices that another device was
+	// paired (v2).
+	TypeDevicePaired = "device.paired"
 )
 
 // Media capabilities in hello/device.update (v1.1).
@@ -117,7 +120,10 @@ const (
 	// ErrorTooManyCalls: call.dial refused because the device (2) or the
 	// bridge (bridge.maxCalls) already has as many calls as allowed.
 	ErrorTooManyCalls = "too_many_calls"
-	ErrorInternal     = "internal"
+	// ErrorClockSkew (v2): the request signature is valid but its ts is
+	// more than 60 s off the bridge clock.
+	ErrorClockSkew = "clock_skew"
+	ErrorInternal  = "internal"
 )
 
 // WebSocket close codes beyond RFC 6455.
@@ -125,6 +131,9 @@ const (
 	// CloseReplaced is used when a newer connection of the same device
 	// replaces this one.
 	CloseReplaced = 4001
+	// CloseIntegrity is used when a frame fails authentication, arrives out
+	// of order or is not a sealed frame (v2).
+	CloseIntegrity = 4002
 	// CloseRevoked is used when the device was removed at the bridge
 	// (devices remove) while it was connected.
 	CloseRevoked = 4003
@@ -191,13 +200,6 @@ func ParseEnvelope(data []byte) (Envelope, error) {
 
 // Device → bridge payloads.
 
-type Pair struct {
-	Code       string `json:"code"`
-	DeviceName string `json:"deviceName"`
-	Platform   string `json:"platform"`
-	Model      string `json:"model,omitempty"`
-}
-
 type Hello struct {
 	AppVersion      string `json:"appVersion"`
 	Platform        string `json:"platform"`
@@ -259,11 +261,11 @@ type CallDTMF struct {
 
 // Bridge → device payloads.
 
-type PairOK struct {
-	DeviceID     string `json:"deviceId"`
-	DeviceSecret string `json:"deviceSecret"`
-	BridgeID     string `json:"bridgeId"`
-	BridgeName   string `json:"bridgeName"`
+// DevicePaired announces a newly paired device to the others (v2).
+type DevicePaired struct {
+	DeviceName string    `json:"deviceName"`
+	Platform   string    `json:"platform"`
+	PairedAt   time.Time `json:"pairedAt"`
 }
 
 type Welcome struct {
@@ -461,3 +463,27 @@ const (
 	AnsweredByPhone            = "phone"
 	AnsweredByAnsweringMachine = "answering_machine"
 )
+
+// PairRequest is the body of POST /v1/pair (v2). PublicKey is the device's
+// uncompressed P-256 key, Nonce 16 random bytes and Proof the device's
+// signature over hp2.PairProofMessage, all base64url without padding.
+type PairRequest struct {
+	Code       string `json:"code"`
+	DeviceName string `json:"deviceName"`
+	Platform   string `json:"platform"`
+	Model      string `json:"model,omitempty"`
+	PublicKey  string `json:"publicKey"`
+	Nonce      string `json:"nonce"`
+	Proof      string `json:"proof"`
+}
+
+// PairResponse answers POST /v1/pair (v2). Signature is the bridge's
+// Ed25519 signature over hp2.PairResponseMessage; the device checks it and
+// that SHA-256(BridgePublicKey) is the fingerprint from the pairing link.
+type PairResponse struct {
+	DeviceID        string `json:"deviceId"`
+	BridgeID        string `json:"bridgeId"`
+	BridgeName      string `json:"bridgeName"`
+	BridgePublicKey string `json:"bridgePublicKey"`
+	Signature       string `json:"signature"`
+}

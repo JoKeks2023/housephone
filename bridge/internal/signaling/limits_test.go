@@ -9,36 +9,41 @@ import (
 	"github.com/coder/websocket"
 )
 
-// Unauthenticated WebSocket connections are bounded: each may idle for
-// FirstMessageWait before sending pair.
-func TestUnauthenticatedConnectionsAreBounded(t *testing.T) {
-	ts := newTestServer(t, func(c *Config) { c.FirstMessageWait = 3 * time.Second })
-	phone := ts.pairDevice(t)
+// Without HP2 authentication a WebSocket is never upgraded (signaling v2),
+// so no unauthenticated connection can idle and occupy resources: many
+// attempts in parallel all get 401 at once, and a paired device still
+// connects.
+func TestUnauthenticatedConnectionsNeverOpen(t *testing.T) {
+	ts := newTestServer(t)
+	d := ts.pairDevice(t)
 
-	var conns []*websocket.Conn
-	defer func() {
-		for _, c := range conns {
-			c.CloseNow()
-		}
-	}()
-	for range maxPairingConns {
-		c, _, err := ts.dial(t, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		conns = append(conns, c)
+	results := make(chan int, 50)
+	for range 50 {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			c, res, err := websocket.Dial(ctx, ts.wsURL(), nil)
+			if err == nil {
+				c.CloseNow()
+				results <- http.StatusSwitchingProtocols
+				return
+			}
+			if res == nil {
+				results <- 0
+				return
+			}
+			results <- res.StatusCode
+		}()
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	_, res, err := websocket.Dial(ctx, ts.wsURL(), nil)
-	if err == nil || res == nil || res.StatusCode != http.StatusServiceUnavailable {
-		t.Fatalf("connection beyond the limit: %v %v", res, err)
+	for range 50 {
+		if status := <-results; status != http.StatusUnauthorized {
+			t.Fatalf("unauthenticated dial got %d, want 401", status)
+		}
 	}
 
-	// Authenticated connections are not affected.
-	c, _, err := ts.dial(t, bearer(phone))
+	c, err := ts.dial(t, d)
 	if err != nil {
 		t.Fatalf("authenticated connection refused: %v", err)
 	}
-	c.CloseNow()
+	c.WS().CloseNow()
 }

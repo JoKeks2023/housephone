@@ -3,10 +3,12 @@ package app_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -21,6 +23,7 @@ import (
 	"github.com/JoKeks2023/housephone/bridge/internal/codec"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
 	"github.com/JoKeks2023/housephone/bridge/internal/fakefritz"
+	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 	"github.com/JoKeks2023/housephone/bridge/internal/testdevice"
@@ -58,6 +61,8 @@ type world struct {
 	bridge *app.Bridge
 	pusher *recordingPusher
 	url    string
+	// dataDir is the bridge data directory (identity.key, devices).
+	dataDir string
 }
 
 // startWorld starts a fake FRITZ!Box and a bridge; opts adjust the bridge
@@ -106,7 +111,7 @@ func startWorld(t *testing.T, opts ...func(*config.Config)) *world {
 			t.Error("bridge did not shut down")
 		}
 	})
-	w := &world{box: box, bridge: bridge, pusher: pusher, url: "ws://" + bridge.Addr() + "/v1/ws"}
+	w := &world{box: box, bridge: bridge, pusher: pusher, url: "ws://" + bridge.Addr() + "/v1/ws", dataDir: cfg.Bridge.DataDir}
 	deadline := time.Now().Add(wait)
 	for !bridge.SIPRegistered() {
 		if time.Now().After(deadline) {
@@ -117,45 +122,52 @@ func startWorld(t *testing.T, opts ...func(*config.Config)) *world {
 	return w
 }
 
-// device is a test app: WebSocket client plus WebRTC peer.
+// device is a test app: HP2 client with a software key, sealed WebSocket
+// and WebRTC peer.
 type device struct {
-	t    *testing.T
-	conn *websocket.Conn
-	msgs chan protocol.Envelope
-	// auth is the Authorization header value (Bearer) of this device.
-	auth string
+	t      *testing.T
+	client *hp2.Client
+	conn   *hp2.Conn
+	msgs   chan protocol.Envelope
+	// closed gets the close status when the WebSocket ends.
+	closed chan websocket.StatusCode
 	// welcome is the bridge's answer to hello.
 	welcome protocol.Welcome
 }
 
-func (w *world) pairAndConnect(t *testing.T) *device {
+// pair pairs a new device the way the app does: pairing link from the pair
+// command (with the bridge's fingerprint), POST /v1/pair, check of the
+// bridge's signature.
+func (w *world) pair(t *testing.T, name, platform, model string) *hp2.Client {
 	t.Helper()
-	pc, err := w.bridge.Pairing.Create("Test-iPhone", time.Now())
+	pc, err := w.bridge.Pairing.Create(name, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	link, err := hp2.ParsePairingLink(app.PairingLink(w.url, hp2.GroupCode(pc.Code), w.bridge.Key.Fingerprint(), "Zuhause"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, err := hp2.HTTPBase(link.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, err := hp2.NewSoftwareKey()
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
-	pairConn, _, err := websocket.Dial(ctx, w.url, nil)
+	res, err := hp2.Pair(ctx, http.DefaultClient, base, key, link.Code, link.Fingerprint, "Test", platform, model)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("pairing: %v", err)
 	}
-	pd := &device{t: t, conn: pairConn, msgs: make(chan protocol.Envelope, 50)}
-	go pd.readLoop()
-	pd.send(protocol.TypePair, protocol.Pair{Code: pc.Code, DeviceName: "iPhone", Platform: protocol.PlatformIOS})
-	var ok protocol.PairOK
-	pd.expect(protocol.TypePairOK, &ok)
-	pairConn.CloseNow()
+	return &hp2.Client{BaseURL: base, DeviceID: res.DeviceID, BridgeID: res.BridgeID, Key: key, BridgePub: res.BridgePub}
+}
 
-	conn, _, err := websocket.Dial(ctx, w.url, &websocket.DialOptions{HTTPHeader: http.Header{
-		"Authorization": {"Bearer " + ok.DeviceID + "." + ok.DeviceSecret},
-	}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	d := &device{t: t, conn: conn, msgs: make(chan protocol.Envelope, 50), auth: "Bearer " + ok.DeviceID + "." + ok.DeviceSecret}
-	go d.readLoop()
-	t.Cleanup(func() { conn.CloseNow() })
+func (w *world) pairAndConnect(t *testing.T) *device {
+	t.Helper()
+	d := w.connect(t, w.pair(t, "Test-iPhone", protocol.PlatformIOS, "iPhone17,1"))
 	d.send(protocol.TypeHello, protocol.Hello{AppVersion: "e2e", Platform: protocol.PlatformIOS, PushToken: "a1b2c3d4", PushEnvironment: protocol.PushEnvironmentDevelopment})
 	d.expect(protocol.TypeWelcome, &d.welcome)
 	if !d.welcome.SIPRegistered {
@@ -164,14 +176,33 @@ func (w *world) pairAndConnect(t *testing.T) *device {
 	return d
 }
 
+// connect opens the sealed WebSocket of client.
+func (w *world) connect(t *testing.T, client *hp2.Client) *device {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+	conn, err := client.Dial(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := &device{t: t, client: client, conn: conn, msgs: make(chan protocol.Envelope, 50), closed: make(chan websocket.StatusCode, 1)}
+	go d.readLoop()
+	t.Cleanup(func() { conn.WS().CloseNow() })
+	return d
+}
+
 func (d *device) readLoop() {
 	for {
-		_, data, err := d.conn.Read(context.Background())
+		typ, plaintext, err := d.conn.Read(context.Background())
 		if err != nil {
+			d.closed <- websocket.CloseStatus(err)
 			close(d.msgs)
 			return
 		}
-		env, err := protocol.ParseEnvelope(data)
+		if typ != hp2.FrameJSON {
+			continue
+		}
+		env, err := protocol.ParseEnvelope(plaintext[1:])
 		if err == nil {
 			d.msgs <- env
 		}
@@ -183,9 +214,25 @@ func (d *device) send(msgType string, payload any) {
 	data, _ := protocol.MustEnvelope(msgType, payload).Marshal()
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
-	if err := d.conn.Write(ctx, websocket.MessageText, data); err != nil {
+	if err := d.conn.WriteJSON(ctx, data); err != nil {
 		d.t.Fatal(err)
 	}
+}
+
+// do sends a signed request; the answer is verified and opened.
+func (d *device) do(method, path string, body any, header http.Header) hp2.Response {
+	d.t.Helper()
+	var data []byte
+	if body != nil {
+		data, _ = json.Marshal(body)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+	res, err := d.client.Do(ctx, method, path, data, header)
+	if err != nil {
+		d.t.Fatalf("%s %s: %v", method, path, err)
+	}
+	return res
 }
 
 func (d *device) expect(msgType string, payload any) {
@@ -494,14 +541,62 @@ func TestEndToEndHealthAndPairingLink(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	body, _ := io.ReadAll(res.Body)
 	res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("health %d", res.StatusCode)
+	if res.StatusCode != http.StatusOK || strings.TrimSpace(string(body)) != `{"status":"ok"}` {
+		t.Fatalf("health %d %s", res.StatusCode, body)
 	}
-	link := app.PairingLink("wss://phone.example.com/v1/ws", "K7P2XH9QRM", "Mein Zuhause")
-	for _, want := range []string{"housephone://pair?", "code=K7P2XH9QRM", "url=wss%3A%2F%2Fphone.example.com%2Fv1%2Fws", "name=Mein%20Zuhause"} {
+	fp := w.bridge.Key.Fingerprint()
+	link := app.PairingLink("wss://phone.example.com/v1/ws", "K7P2XH9QRMW4DZT8", fp, "Mein Zuhause")
+	for _, want := range []string{"housephone://pair?v=2&", "code=K7P2XH9QRMW4DZT8", "url=wss%3A%2F%2Fphone.example.com%2Fv1%2Fws", "fp=" + fp, "name=Mein%20Zuhause"} {
 		if !strings.Contains(link, want) {
 			t.Fatalf("link %s lacks %s", link, want)
 		}
+	}
+
+	// The key survives a restart: same fingerprint from the data directory.
+	again, err := app.LoadIdentityKey(w.dataDir, false)
+	if err != nil || again.Fingerprint() != fp {
+		t.Fatalf("identity key reloaded: %v", err)
+	}
+	info, err := os.Stat(filepath.Join(w.dataDir, "identity.key"))
+	if err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("identity.key %v %v", info, err)
+	}
+
+	// Authenticated health: full details, sealed.
+	d := w.connect(t, w.pair(t, "iPhone", protocol.PlatformIOS, ""))
+	authed := d.do(http.MethodGet, "/v1/health", nil, nil)
+	var full map[string]any
+	if err := json.Unmarshal(authed.Body, &full); err != nil || full["sipRegistered"] != true || authed.Header.Get("Content-Type") != hp2.SealedContentType {
+		t.Fatalf("authenticated health %s %v", authed.Body, err)
+	}
+}
+
+// Removing a device (pair command's "devices remove") ends its open
+// connection with 4003 and its key stops working.
+func TestEndToEndRevocation(t *testing.T) {
+	w := startWorld(t)
+	d := w.pairAndConnect(t)
+	if err := w.bridge.Devices.Remove(d.client.DeviceID); err != nil {
+		t.Fatal(err)
+	}
+	d.send(protocol.TypeCallAttach, protocol.CallAttach{CallID: uuid.NewString()})
+	select {
+	case status := <-d.closed:
+		if status != websocket.StatusCode(protocol.CloseRevoked) {
+			t.Fatalf("closed with %v, want 4003", status)
+		}
+	case <-time.After(wait):
+		t.Fatal("revoked connection not closed")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+	res, err := d.client.Do(ctx, http.MethodGet, "/v1/health", nil, nil)
+	if err != nil || res.Status != http.StatusUnauthorized {
+		t.Fatalf("revoked key: %d %v", res.Status, err)
+	}
+	if _, err := d.client.Dial(ctx); err == nil {
+		t.Fatal("revoked device reconnected")
 	}
 }
