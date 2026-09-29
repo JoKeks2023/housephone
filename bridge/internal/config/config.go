@@ -169,6 +169,9 @@ func (a APNs) Enabled() bool {
 type Log struct {
 	// Level: debug, info, warn, error.
 	Level string `yaml:"level"`
+	// ShowNumbers logs phone numbers and caller names in full. By default
+	// numbers are masked to their last three digits and names are left out.
+	ShowNumbers bool `yaml:"showNumbers"`
 }
 
 // Default returns a configuration with all defaults applied.

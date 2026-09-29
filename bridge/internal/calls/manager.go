@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/codec"
+	"github.com/JoKeks2023/housephone/bridge/internal/logsafe"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
@@ -433,7 +434,7 @@ func (m *Manager) HandleIncoming(ctx context.Context, sip IncomingSIPCall) {
 		c.callerName = m.opts.CallerNames(c.caller)
 	}
 	c.sipIn = sip
-	log := c.log.With("caller", c.caller, "codec", c.codec)
+	log := c.log.With("caller", logsafe.Number(c.caller), logsafe.CallerName(c.callerName), "codec", c.codec)
 
 	devices, err := m.opts.Devices.List()
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
 	"github.com/JoKeks2023/housephone/bridge/internal/codec"
+	"github.com/JoKeks2023/housephone/bridge/internal/logsafe"
 )
 
 func (l *Leg) handleInvite(ctx context.Context, d *diago.DialogServerSession, handler func(context.Context, calls.IncomingSIPCall)) {
@@ -18,11 +19,14 @@ func (l *Leg) handleInvite(ctx context.Context, d *diago.DialogServerSession, ha
 	defer l.cancels.Delete(callID)
 
 	choice, err := chooseFromOffer(d.InviteRequest.Body())
+	from := logsafe.Number(d.FromUser())
 	if err != nil {
-		l.log.Warn("rejecting INVITE", "error", err, "from", d.FromUser())
+		l.log.Warn("rejecting INVITE", "error", err, "from", from, "offered", choice.names)
 		_ = d.DialogServerSession.Respond(sip.StatusNotAcceptableHere, "Not Acceptable Here", nil)
 		return
 	}
+	// The offered codecs explain why a call is not HD (no G.722 offered).
+	l.log.Info("incoming INVITE", "from", from, "offered", choice.names, "chosen", choice.codec)
 	if err := d.Trying(); err != nil {
 		l.log.Warn("sending 100 Trying failed", "error", err)
 	}

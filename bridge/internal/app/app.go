@@ -18,6 +18,7 @@ import (
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
 	"github.com/JoKeks2023/housephone/bridge/internal/fritzbox"
 	"github.com/JoKeks2023/housephone/bridge/internal/lan"
+	"github.com/JoKeks2023/housephone/bridge/internal/logsafe"
 	"github.com/JoKeks2023/housephone/bridge/internal/media"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/push"
@@ -61,6 +62,10 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 	var o options
 	for _, opt := range opts {
 		opt(&o)
+	}
+	logsafe.SetShowNumbers(cfg.Log.ShowNumbers)
+	if cfg.Log.ShowNumbers {
+		log.Warn("log.showNumbers is on: phone numbers and caller names are logged in full")
 	}
 	identity, err := store.LoadOrCreateIdentity(cfg.Bridge.DataDir)
 	if err != nil {

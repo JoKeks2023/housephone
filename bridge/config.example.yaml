@@ -79,3 +79,6 @@ fritzbox:
 
 log:
   level: "info"
+  # Telefonnummern im Log nur mit den letzten 3 Ziffern (…563), Anrufernamen gar
+  # nicht. true nur kurz zur Fehlersuche.
+  showNumbers: false

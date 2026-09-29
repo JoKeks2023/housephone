@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/codec"
+	"github.com/JoKeks2023/housephone/bridge/internal/logsafe"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 )
 
@@ -15,7 +16,7 @@ import (
 func (c *call) startOutgoing(conn DeviceConn) {
 	l := &leg{deviceID: conn.DeviceID(), conn: conn, ws: c.m.usesWebSocketAudio(conn.DeviceID())}
 	c.legs[l.deviceID] = l
-	c.log.Info("outgoing call", "device", l.deviceID, "number", c.number, "websocketAudio", l.ws)
+	c.log.Info("outgoing call", "device", l.deviceID, "number", logsafe.Number(c.number), "websocketAudio", l.ws)
 	if l.ws {
 		c.codec = codec.PCMA
 		c.attachWSMedia(l)
