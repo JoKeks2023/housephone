@@ -19,8 +19,10 @@
 import Contacts
 import Foundation
 import StoreKit
+import SwiftUI
 import UseCases
 
+@MainActor
 final class CompositionRoot: NSObject {
     @objc let userAgent: AKSIPUserAgent
     @objc let preferencesController: PreferencesController
@@ -40,7 +42,7 @@ final class CompositionRoot: NSObject {
     @objc let nameServers: NameServers
     private let defaults: UserDefaults
 
-    private let storeEventSource: SKPaymentQueueStoreEventSource
+    private let storeEventSource: StoreKitTransactionStoreEventSource
     private let userAgentEventSource: AKSIPUserAgentEventSource
     private let devicesChangeEventSource: CoreAudioSystemAudioDevicesChangeEventSource
     private let soundIOChangeEventSource: CoreAudioDefaultSystemSoundIOChangeEventSource
@@ -78,28 +80,11 @@ final class CompositionRoot: NSObject {
             delegate: userAgent
         )
 
-        let productsEventTargets = ProductsEventTargets()
+        let receipt = StoreKitTransactionReceipt()
 
-        let storeViewController = StoreViewController(
-            target: NullStoreViewEventTarget(), workspace: NSWorkspace.shared
-        )
-        let products = SKProductsRequestToProductsAdapter(expected: ExpectedProducts(), target: productsEventTargets)
-        let store = SKPaymentQueueToStoreAdapter(queue: SKPaymentQueue.default(), products: products)
-        let receipt = BundleReceipt(bundle: Bundle.main, gateway: ReceiptXPCGateway())
-        let storeViewEventTarget = DefaultStoreViewEventTarget(
-            factory: DefaultStoreUseCaseFactory(
-                products: products,
-                store: store,
-                receipt: receipt,
-                targets: productsEventTargets
-            ),
-            purchaseRestoration: PurchaseRestorationUseCase(store: store),
-            receiptRefresh: ReceiptRefreshUseCase(),
-            presenter: DefaultStoreViewPresenter(output: storeViewController)
-        )
-        storeViewController.updateTarget(storeViewEventTarget)
+        let storeEventTargets = StoreEventTargets(targets: [ObjCStoreEventTargetAdapter(target: storeEventTarget)])
 
-        storeWindowPresenter = StoreWindowPresenter(controller: StoreWindowController(contentViewController: storeViewController))
+        storeWindowPresenter = StoreWindowPresenter(controller: StoreWindowController(contentViewController: NSHostingController(rootView: StoreKitStoreView(target: storeEventTargets))))
 
         purchaseReminder = PurchaseReminderUseCase(
             accounts: SettingsAccounts(settings: defaults),
@@ -112,14 +97,7 @@ final class CompositionRoot: NSObject {
 
         userAgentStart = UserAgentStartUseCase(agent: userAgent, factory: PurchaseCheckUseCaseFactory(receipt: receipt))
 
-        let storeEventTargets = StoreEventTargets()
-        storeEventTargets.add(storeViewEventTarget)
-        storeEventTargets.add(ObjCStoreEventTargetAdapter(target: storeEventTarget))
-
-        storeEventSource = SKPaymentQueueStoreEventSource(
-            queue: SKPaymentQueue.default(),
-            target: ReceiptValidatingStoreEventTarget(origin: storeEventTargets, receipt: receipt)
-        )
+        storeEventSource = StoreKitTransactionStoreEventSource(target: storeEventTargets)
 
         let userAgentEventsUserAgentSoundIOSelection = UserAgentEventsUserAgentSoundIOSelectionUseCase(
             useCase: UserAgentSoundIOSelectionUseCase(
@@ -197,24 +175,16 @@ final class CompositionRoot: NSObject {
             )
         )
 
-        let contactsBackground = GCDExecutionQueue(queue: background)
-
         accountsEventSource = PreferencesControllerAccountsEventSource(
-            center: NotificationCenter.default,
-            target: EnqueuingAccountsEventTarget(
-                origin: CallHistoriesHistoryRemoveUseCase(histories: callHistories), queue: contactsBackground
-            )
+            center: NotificationCenter.default, target: CallHistoriesHistoryRemoveUseCase(histories: callHistories)
         )
 
         callEventSource = AKSIPCallEventSource(
             center: NotificationCenter.default,
             target: CallEventTargets(
                 targets: [
-                    EnqueuingCallEventTarget(
-                        origin: CallHistoryCallEventTarget(
-                            histories: callHistories, factory: DefaultCallHistoryRecordAddUseCaseFactory()
-                        ),
-                        queue: contactsBackground
+                    CallHistoryCallEventTarget(
+                        histories: callHistories, factory: DefaultCallHistoryRecordAddUseCaseFactory()
                     ),
                     MusicPlayerCallEventTarget(
                         player: SettingsMusicPlayer(
@@ -240,19 +210,16 @@ final class CompositionRoot: NSObject {
         let contactMatchingSettings = SimpleContactMatchingSettings(settings: defaults)
         let contactMatchingIndex = LazyDiscardingContactMatchingIndex(
             factory: SimpleContactMatchingIndexFactory(
-                contacts: CNContactStoreToContactsAdapter(), settings: contactMatchingSettings
+                contacts: CNContactStoreToContactsAdapter(store: CNContactStore()), settings: contactMatchingSettings
             )
         )
 
         contactsChangeEventSource = CNContactStoreContactsChangeEventSource(
-            center: NotificationCenter.default,
-            target: EnqueuingContactsChangeEventTarget(origin: contactMatchingIndex, queue: contactsBackground)
+            center: NotificationCenter.default, target: contactMatchingIndex
         )
 
         let dayChangeEventTargets = DayChangeEventTargets()
         dayChangeEventSource = NSCalendarDayChangeEventSource(center: NotificationCenter.default, target: dayChangeEventTargets)
-
-        let main = GCDExecutionQueue(queue: DispatchQueue.main)
 
         callHistoryViewEventTargetFactory = AsyncCallHistoryViewEventTargetFactory(
             origin: CallHistoryViewEventTargetFactory(
@@ -263,20 +230,12 @@ final class CompositionRoot: NSObject {
                 dateFormatter: ShortRelativeDateTimeFormatter(),
                 durationFormatter: DurationFormatter(),
                 storeEventTargets: storeEventTargets,
-                dayChangeEventTargets: dayChangeEventTargets,
-                background: contactsBackground,
-                main: main
-            ),
-            background: contactsBackground,
-            main: main
+                dayChangeEventTargets: dayChangeEventTargets
+            )
         )
 
         callHistoryPurchaseCheckUseCaseFactory = AsyncCallHistoryPurchaseCheckUseCaseFactory(
-            origin: CallHistoryPurchaseCheckUseCaseFactory(
-                histories: callHistories, receipt: receipt, background: contactsBackground, main: main
-            ),
-            background: contactsBackground,
-            main: main
+            origin: CallHistoryPurchaseCheckUseCaseFactory(histories: callHistories, receipt: receipt)
         )
 
         logFileURL = LogFileURL(locations: applicationDataLocations, filename: "Telephone.log")

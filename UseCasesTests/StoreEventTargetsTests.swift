@@ -16,108 +16,20 @@
 //  GNU General Public License for more details.
 //
 
+import Testing
 import UseCases
 import UseCasesTestDoubles
-import XCTest
 
-final class StoreEventTargetsTests: XCTestCase {
-    func testCallsDidStartPurchasingProductWithPassedArgumentOnAllTargets() {
+@MainActor
+struct StoreEventTargetsTests {
+    @Test func callsDidPurchaseOnAllTargets() async {
         let first = StoreEventTargetSpy()
         let second = StoreEventTargetSpy()
-        let sut = StoreEventTargets()
-        sut.add(first)
-        sut.add(second)
-        let identifier = "any"
+        let sut = StoreEventTargets(targets: [first, second])
 
-        sut.didStartPurchasingProduct(withIdentifier: identifier)
+        await sut.didPurchase()
 
-        XCTAssertTrue(first.didCallDidStartPurchasing)
-        XCTAssertEqual(first.invokedIdentifier, identifier)
-        XCTAssertTrue(second.didCallDidStartPurchasing)
-        XCTAssertEqual(second.invokedIdentifier, identifier)
-    }
-
-    func testCallsDidPurchaseOnAllTargets() {
-        let first = StoreEventTargetSpy()
-        let second = StoreEventTargetSpy()
-        let sut = StoreEventTargets()
-        sut.add(first)
-        sut.add(second)
-
-        sut.didPurchase()
-
-        XCTAssertTrue(first.didCallDidPurchase)
-        XCTAssertTrue(second.didCallDidPurchase)
-    }
-
-    func testCallsDidFailPurchasingWithPassedArgumentOnAllTargets() {
-        let first = StoreEventTargetSpy()
-        let second = StoreEventTargetSpy()
-        let sut = StoreEventTargets()
-        sut.add(first)
-        sut.add(second)
-        let error = "any"
-
-        sut.didFailPurchasing(error: error)
-
-        XCTAssertTrue(first.didCallDidFailPurchasing)
-        XCTAssertEqual(first.invokedError, error)
-        XCTAssertTrue(second.didCallDidFailPurchasing)
-        XCTAssertEqual(second.invokedError, error)
-    }
-
-    func testCallsDidCancelPurchasingOnAllTargets() {
-        let first = StoreEventTargetSpy()
-        let second = StoreEventTargetSpy()
-        let sut = StoreEventTargets()
-        sut.add(first)
-        sut.add(second)
-
-        sut.didCancelPurchasing()
-
-        XCTAssertTrue(first.didCallDidCancelPurchasing)
-        XCTAssertTrue(second.didCallDidCancelPurchasing)
-    }
-
-    func testCallsDidRestorePurchasesOnAllTargets() {
-        let first = StoreEventTargetSpy()
-        let second = StoreEventTargetSpy()
-        let sut = StoreEventTargets()
-        sut.add(first)
-        sut.add(second)
-
-        sut.didRestorePurchases()
-
-        XCTAssertTrue(first.didCallDidRestore)
-        XCTAssertTrue(second.didCallDidRestore)
-    }
-
-    func testCallsDidFailRestoringPurchasesWithPassedArgumentOnAllTargets() {
-        let first = StoreEventTargetSpy()
-        let second = StoreEventTargetSpy()
-        let sut = StoreEventTargets()
-        sut.add(first)
-        sut.add(second)
-        let error = "any"
-
-        sut.didFailRestoringPurchases(error: error)
-
-        XCTAssertTrue(first.didCallDidFailRestoring)
-        XCTAssertEqual(first.invokedError, error)
-        XCTAssertTrue(second.didCallDidFailRestoring)
-        XCTAssertEqual(second.invokedError, error)
-    }
-
-    func testCallsDidCancelRestoringPurchasesOnAllTargets() {
-        let first = StoreEventTargetSpy()
-        let second = StoreEventTargetSpy()
-        let sut = StoreEventTargets()
-        sut.add(first)
-        sut.add(second)
-
-        sut.didCancelRestoringPurchases()
-
-        XCTAssertTrue(first.didCallDidCancelRestoring)
-        XCTAssertTrue(second.didCallDidCancelRestoring)
+        #expect(first.didCallDidPurchase)
+        #expect(second.didCallDidPurchase)
     }
 }

@@ -16,8 +16,9 @@
 //  GNU General Public License for more details.
 //
 
+@MainActor
 public final class WeakStoreEventTarget {
-    private weak var origin: StoreEventTarget?
+    private weak let origin: StoreEventTarget?
 
     public init(origin: StoreEventTarget) {
         self.origin = origin
@@ -25,31 +26,7 @@ public final class WeakStoreEventTarget {
 }
 
 extension WeakStoreEventTarget: StoreEventTarget {
-    public func didStartPurchasingProduct(withIdentifier identifier: String) {
-        origin?.didStartPurchasingProduct(withIdentifier: identifier)
-    }
-
-    public func didPurchase() {
-        origin?.didPurchase()
-    }
-
-    public func didFailPurchasing(error: String) {
-        origin?.didFailPurchasing(error: error)
-    }
-
-    public func didCancelPurchasing() {
-        origin?.didCancelPurchasing()
-    }
-
-    public func didRestorePurchases() {
-        origin?.didRestorePurchases()
-    }
-
-    public func didFailRestoringPurchases(error: String) {
-        origin?.didFailRestoringPurchases(error: error)
-    }
-
-    public func didCancelRestoringPurchases() {
-        origin?.didCancelRestoringPurchases()
+    public func didPurchase() async {
+        await origin?.didPurchase()
     }
 }
