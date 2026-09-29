@@ -190,3 +190,26 @@ func TestTimestampHasNoFractionalSeconds(t *testing.T) {
 		t.Fatalf("unexpected timestamp encoding %s", out)
 	}
 }
+
+// The v1.2 HTTP responses (docs/protocol/fixtures/http) round-trip through
+// the Go types without losing or adding fields.
+func TestHTTPFixturesRoundTrip(t *testing.T) {
+	for file, v := range map[string]any{"phonebook.json": &Phonebook{}, "history.json": &History{}} {
+		t.Run(file, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join(fixturesDir, "http", file))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal(data, v); err != nil {
+				t.Fatal(err)
+			}
+			out, err := json.Marshal(v)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !semanticEqual(t, data, out) {
+				t.Fatalf("round trip mismatch\nfixture: %s\nencoded: %s", data, out)
+			}
+		})
+	}
+}

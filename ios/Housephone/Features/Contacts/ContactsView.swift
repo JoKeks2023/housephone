@@ -1,7 +1,44 @@
 import Contacts
+import HousephoneKit
 import SwiftUI
 
 struct ContactsView: View {
+    enum Source: String {
+        case fritzBox
+        case iPhone
+    }
+
+    @Environment(FritzBoxData.self) private var fritzBox
+    @AppStorage("contacts.source") private var source: Source = .fritzBox
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if fritzBox.showsPhonebook, source == .fritzBox {
+                    FritzBoxContactsList()
+                } else {
+                    DeviceContactsContent()
+                }
+            }
+            .navigationTitle("Kontakte")
+            .toolbar {
+                if fritzBox.showsPhonebook {
+                    ToolbarItem(placement: .principal) {
+                        Picker("Quelle", selection: $source) {
+                            Text("FRITZ!Box").tag(Source.fritzBox)
+                            Text("iPhone").tag(Source.iPhone)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The iPhone's own contacts.
+private struct DeviceContactsContent: View {
     @Environment(ContactsDirectory.self) private var contacts
     @Environment(CallCenter.self) private var callCenter
     @Environment(\.openURL) private var openURL
@@ -9,10 +46,7 @@ struct ContactsView: View {
     @State private var selected: ContactEntry?
 
     var body: some View {
-        NavigationStack {
-            content
-                .navigationTitle("Kontakte")
-        }
+        content
     }
 
     @ViewBuilder

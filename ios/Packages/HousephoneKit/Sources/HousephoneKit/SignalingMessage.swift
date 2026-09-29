@@ -190,12 +190,20 @@ public struct Welcome: Codable, Sendable, Equatable {
     public var bridgeName: String
     public var bridgeVersion: String
     public var sipRegistered: Bool
+    /// Extra functions (v1.2), e.g. the FRITZ!Box phonebook. `nil` from
+    /// bridges before v1.2.
+    public var features: [BridgeFeature]?
 
-    public init(bridgeId: String, bridgeName: String, bridgeVersion: String, sipRegistered: Bool) {
+    public init(bridgeId: String, bridgeName: String, bridgeVersion: String, sipRegistered: Bool, features: [BridgeFeature]? = nil) {
         self.bridgeId = bridgeId
         self.bridgeName = bridgeName
         self.bridgeVersion = bridgeVersion
         self.sipRegistered = sipRegistered
+        self.features = features
+    }
+
+    public func supports(_ feature: BridgeFeature) -> Bool {
+        features?.contains(feature) == true
     }
 }
 
@@ -385,6 +393,9 @@ public struct SignalingErrorCode: RawRepresentable, Codable, Sendable, Hashable 
     public static let sipUnavailable = Self(rawValue: "sip_unavailable")
     public static let callNotFound = Self(rawValue: "call_not_found")
     public static let invalidNumber = Self(rawValue: "invalid_number")
+    /// v1.2: TR-064 not set up at the bridge, or the FRITZ!Box refused or
+    /// did not answer.
+    public static let fritzboxUnavailable = Self(rawValue: "fritzbox_unavailable")
     public static let `internal` = Self(rawValue: "internal")
 }
 

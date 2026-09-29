@@ -54,5 +54,17 @@ apns:
   teamId: "T9CA6D7T8N"
   topic: "com.jorisconrad.housephone.voip"
 
+# Telefonbuch und Anrufliste der FRITZ!Box (optional). Aktiv, sobald
+# username gesetzt ist. Kennwort per HOUSEPHONE_FRITZBOX_PASSWORD bzw.
+# HOUSEPHONE_FRITZBOX_PASSWORD_FILE. Der FRITZ!Box-Benutzer braucht nur das
+# Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“.
+fritzbox:
+  # Leer = sip.registrar.
+  host: ""
+  port: 49000
+  username: ""
+  timezone: "Europe/Berlin"
+  countryCode: "49"
+
 log:
   level: "info"

@@ -40,6 +40,10 @@ type Options struct {
 	Pusher  Pusher
 	Devices DeviceDirectory
 	Logger  *slog.Logger
+	// CallerNames looks up a caller number in the FRITZ!Box phonebook when
+	// the INVITE carries no display name (v1.2). It must not block; nil
+	// disables the lookup.
+	CallerNames func(number string) string
 
 	ReattachTimeout time.Duration
 	TombstoneTTL    time.Duration
@@ -368,6 +372,9 @@ func (m *Manager) ActiveCalls() int {
 func (m *Manager) HandleIncoming(ctx context.Context, sip IncomingSIPCall) {
 	c := newCall(m, uuid.NewString(), directionIncoming)
 	c.caller, c.callerName, c.codec = sip.Caller(), sip.CallerName(), sip.Codec()
+	if c.callerName == "" && c.caller != "" && m.opts.CallerNames != nil {
+		c.callerName = m.opts.CallerNames(c.caller)
+	}
 	c.sipIn = sip
 	log := c.log.With("caller", c.caller, "codec", c.codec)
 

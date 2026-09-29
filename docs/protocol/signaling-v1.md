@@ -58,7 +58,7 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`: iPhone-App
 | type | payload | Wann |
 |---|---|---|
 | `pair.ok` | `{deviceId, deviceSecret, bridgeId, bridgeName}` | Kopplung erfolgreich. Danach schließt die Bridge die Kopplungsverbindung (Close-Code `1000`). |
-| `welcome` | `{bridgeId, bridgeName, bridgeVersion, sipRegistered}` | Antwort auf `hello`. |
+| `welcome` | `{bridgeId, bridgeName, bridgeVersion, sipRegistered, features?}` | Antwort auf `hello`. `features` (v1.2): Liste verfügbarer Zusatzfunktionen, z. B. `["fritzbox.phonebook","fritzbox.history"]`; fehlt = keine. |
 | `status` | `{sipRegistered}` | Wenn sich der Registrierungsstatus an der FRITZ!Box ändert. |
 | `call.incoming` | `{callId, caller, callerName?, startedAt}` | Antwort auf `call.attach`, **nur solange der Anruf klingelt**. Wird außerdem unaufgefordert an bereits verbundene Geräte gesendet – das ist nur eine Benachrichtigung; ein `call.offer` kommt erst nach `call.attach`. |
 | `call.offer` | `{callId, sdp, iceServers}` | WebRTC-SDP-Offer. Die Bridge ist **immer** der Offerer. `iceServers`: `[{urls:[String], username?, credential?}]`, darf leer sein. Kann während eines laufenden Anrufs **erneut** kommen (ICE-Restart nach Re-Attach oder ICE-Fehler) – das Gerät antwortet jedes Mal mit `call.answer` auf derselben PeerConnection. |
@@ -82,7 +82,7 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`: iPhone-App
 
 ### Fehlercodes in `error`
 
-`unauthorized`, `bad_request`, `pairing_invalid` (Code falsch, abgelaufen oder bereits benutzt), `pairing_rate_limited`, `sip_unavailable` (nicht an der FRITZ!Box registriert), `call_not_found`, `invalid_number`, `internal`.
+`unauthorized`, `bad_request`, `pairing_invalid` (Code falsch, abgelaufen oder bereits benutzt), `pairing_rate_limited`, `sip_unavailable` (nicht an der FRITZ!Box registriert), `call_not_found`, `invalid_number`, `fritzbox_unavailable` (v1.2: TR-064 nicht eingerichtet oder FRITZ!Box nicht erreichbar/Anmeldung abgelehnt), `internal`.
 
 - `call.answer` und `call.dtmf` für unbekannte Anrufe → `error{call_not_found}`.
 - `call.attach`, `call.accept` und `call.hangup` für unbekannte Anrufe → `call.ended` (siehe „Späte Nachrichten“).
@@ -282,3 +282,71 @@ Für Geräte mit `mediaCapabilities: ["websocket-pcma"]` gilt:
   - Ausgehend von einem `websocket-pcma`-Gerät bietet die INVITE nur PCMA an.
 - DTMF weiterhin über `call.dtmf`.
 - Bricht die Verbindung ab, gilt dieselbe 30-s-Reattach-Regel. Nach erneutem `call.attach` sendet die Bridge wieder `call.media`, und der Ton geht auf der neuen Verbindung weiter.
+
+## Erweiterung v1.2: Telefonbuch und Anrufliste (ADR-0003)
+
+Rückwärtskompatibel. Beide Endpunkte brauchen Bearer-Auth wie `/v1/device` und sind für iPhone und Watch gleich.
+
+| Methode + Pfad | Antwort |
+|---|---|
+| `GET /v1/phonebook` | `200` + Telefonbuch (siehe unten), Header `ETag`. Mit `If-None-Match: <etag>` → `304` ohne Body. |
+| `GET /v1/history?limit=<n>` | `200` + Anrufliste, neueste zuerst. `limit` 1–500, Standard 100. |
+
+- Fehlerfälle:
+  - `401 unauthorized`
+  - `503 fritzbox_unavailable`, wenn TR-064 nicht konfiguriert ist, die FRITZ!Box nicht antwortet oder die Anmeldung ablehnt. `message` sagt, was los ist.
+- `welcome.features` enthält `fritzbox.phonebook` bzw. `fritzbox.history` nur, wenn die Bridge TR-064 konfiguriert hat und der letzte Abruf funktioniert hat.
+
+### Telefonbuch
+
+```json
+{
+  "updatedAt": "2026-09-29T18:04:05Z",
+  "contacts": [
+    { "id": "0-1234", "name": "Oma", "favorite": true, "phonebook": "Telefonbuch",
+      "numbers": [ { "number": "030123456", "type": "home", "preferred": true } ] }
+  ]
+}
+```
+
+- **`id`:** `<Telefonbuch-ID>-<uniqueid>`, stabil solange der Kontakt existiert.
+- **`favorite`:** Das ist die FRITZ!Box-Kategorie „VIP“ (`category` = 1).
+- **`number`:** so, wie sie in der FRITZ!Box steht, ohne Leerzeichen, Striche und Klammern. Erlaubt sind nur `+0-9*#`. Interne Nummern wie `**620` sind wählbar.
+- **`type`:** `home` \| `mobile` \| `work` \| `fax_work` \| `intern` \| `memo` \| `other`. Unbekannte Werte werden zu `other`.
+- **`preferred`:** entspricht `prio="1"`.
+- **Nicht enthalten:** Kontakte ohne Nummer und Nummern vom Typ `fax_work`.
+- **Sortierung:** nach `name`. Die Apps sortieren lokal nach Gebietsschema neu.
+- **ETag:** hängt nur vom Inhalt ab, nicht von `updatedAt`.
+
+### Anrufliste
+
+```json
+{
+  "updatedAt": "2026-09-29T18:04:05Z",
+  "calls": [
+    { "id": "2512", "direction": "incoming", "result": "answered", "number": "030123456",
+      "name": "Oma", "device": "Mobilteil 1", "answeredBy": "phone",
+      "startedAt": "2026-09-29T16:04:00Z", "durationSeconds": 300 }
+  ]
+}
+```
+
+- **Zuordnung der FRITZ!Box-Typen:**
+
+| Typ | `direction` | `result` |
+|---|---|---|
+| 1 | `incoming` | `answered` |
+| 2 | `incoming` | `missed` |
+| 3 | `outgoing` | `answered` |
+| 9 | `incoming` | `active` |
+| 10 | `incoming` | `rejected` |
+| 11 | `outgoing` | `active` |
+
+- **`number`:** die Nummer der Gegenstelle, eingehend aus `Caller`, ausgehend aus `Called`. Leer, wenn sie unterdrückt ist.
+- **`name`:** Name der Gegenstelle laut FRITZ!Box, sonst weggelassen.
+- **`device`:** das FRITZ!Box-Gerät, z. B. „Mobilteil 1“ oder „Housephone“. Fehlt, wenn die FRITZ!Box kein Gerät nennt.
+- **`answeredBy`:** nur bei `incoming`/`answered`. `answering_machine`, wenn `Port` 6 oder 40–49 ist, sonst `phone`.
+- **Fax:** Einträge mit `Port` 5 entfallen.
+- **`startedAt`:** Die Ortszeit `TT.MM.JJ HH:MM` der FRITZ!Box wird mit `fritzbox.timezone` nach UTC umgerechnet (RFC 3339, ohne Sekundenbruchteile).
+- **`durationSeconds`:** aus `h:mm` (die FRITZ!Box rundet auf volle Minuten auf) mal 60. `0`, wenn nicht verbunden.
+

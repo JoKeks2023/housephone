@@ -100,6 +100,39 @@ Für die Watch musst du auf dem Server und an der FRITZ!Box nichts einrichten:
 - **Codec:** Nimmst du an der Watch ab, beantwortet die Bridge den Anruf der FRITZ!Box mit PCMA. Am iPhone nimmt sie G.722 (HD). Umgewandelt wird nie.
   - Bietet die FRITZ!Box für einen Anruf kein PCMA an (sehr unüblich), klingelt die Watch für diesen Anruf nicht.
 
+## 8. Telefonbuch und Anrufliste der FRITZ!Box (optional)
+
+Mit diesem Schritt zeigen iPhone und Watch das FRITZ!Box-Telefonbuch (mit Favoriten) und die Anrufliste des Anschlusses, einschließlich der Anrufe am Schnurlostelefon und auf dem Anrufbeantworter. Eingehende Anrufe bekommen den Namen aus dem Telefonbuch. Die Bridge liest nur, sie ändert in der FRITZ!Box nichts.
+
+1. **Benutzer anlegen:** `http://fritz.box` → **System → FRITZ!Box-Benutzer → Benutzer hinzufügen**.
+   - Name z. B. `housephone`, ein langes Kennwort.
+   - Als Recht **nur** „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“ ankreuzen.
+2. **TR-064 erlauben:** **Heimnetz → Netzwerk → Netzwerkeinstellungen → „Zugriff für Anwendungen zulassen“** einschalten (Standard: an).
+3. **Konfigurieren:**
+   - `config.yaml`: `fritzbox.username: "housephone"`. `host` bleibt leer, dann gilt `sip.registrar`.
+   - Kennwort:
+     ```sh
+     printf '%s' 'FRITZBOX-KENNWORT' > secrets/fritzbox_password && chmod 600 secrets/fritzbox_password
+     ```
+   - In `docker-compose.yml` ist `HOUSEPHONE_FRITZBOX_PASSWORD_FILE` schon eingetragen.
+4. **Neu starten:** `docker compose up -d`. Im Log erscheinen `FRITZ!Box phonebook loaded` und `FRITZ!Box call list loaded`.
+
+| Schlüssel in `config.yaml` | Standard | Bedeutung |
+|---|---|---|
+| `fritzbox.username` | leer (= aus) | FRITZ!Box-Benutzer; gesetzt = Funktion an |
+| `fritzbox.host` | `sip.registrar` | FRITZ!Box, z. B. `192.168.0.1` |
+| `fritzbox.port` | `49000` | TR-064-Port ohne TLS; nur für die Frage nach dem TLS-Port |
+| `fritzbox.timezone` | `Europe/Berlin` | Zeitzone der Anrufliste |
+| `fritzbox.countryCode` | `49` | Ländervorwahl ohne `+`, für den Namensabgleich |
+
+Das Kennwort nie in `config.yaml` eintragen, sondern per `HOUSEPHONE_FRITZBOX_PASSWORD` oder, empfohlen, per `HOUSEPHONE_FRITZBOX_PASSWORD_FILE` (Datei `secrets/fritzbox_password`).
+
+Technik:
+- **Schnittstelle:** TR-064 (`X_AVM-DE_OnTel`) über HTTPS auf dem TLS-Port der FRITZ!Box (meist 49443), mit Digest-Anmeldung.
+- **Zertifikat:** Die FRITZ!Box hat ein selbstsigniertes Zertifikat, das nicht geprüft wird. Die Verbindung ist trotzdem verschlüsselt.
+- **Zwischenspeicher:** Telefonbuch 10 Minuten, Anrufliste 30 Sekunden.
+- **Endpunkte:** `GET /v1/phonebook` und `GET /v1/history` (siehe `docs/protocol/signaling-v1.md`, v1.2).
+
 ## Betrieb
 
 | Aufgabe | Befehl |
@@ -129,6 +162,10 @@ Sichere diesen Ordner. Verlierst du ihn, müssen alle Geräte neu gekoppelt werd
 | `no public IP configured` | STUN nicht erreichbar → `media.publicIp`/`publicHost` setzen. |
 | `FRITZ!Box does not report its external IP via UPnP` | In der FRITZ!Box **Heimnetz → Netzwerk → Netzwerkeinstellungen → „Statusinformationen über UPnP übertragen“** einschalten. Bis dahin arbeitet die Bridge mit STUN. |
 | Watch klingelt nicht | Log `push failed … DeviceTokenNotForTopic` = Topic der Watch passt nicht zum Token. Die Watch-App einmal öffnen, dann meldet sie Token und Topic neu. `not ringing websocket-pcma device` = der Anruf bot kein PCMA an. |
+| `FRITZ!Box phonebook unavailable` / App zeigt „FRITZ!Box nicht erreichbar“ | „Zugriff für Anwendungen zulassen“ einschalten, `fritzbox.host` prüfen (Standard `sip.registrar`). |
+| App zeigt „Anmeldung abgelehnt“ | Benutzer/Kennwort in `secrets/fritzbox_password` prüfen; der Benutzer braucht das Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“. |
+| Anrufliste fehlt, Telefonbuch geht | Die Anrufliste ist in der FRITZ!Box abgeschaltet (**Telefonie → Anrufe**) oder der Benutzer hat das Recht nicht. |
+| Anrufe zeigen keinen Namen aus dem Telefonbuch | Die Nummer steht mehrfach mit verschiedenen Namen im Telefonbuch (dann bewusst kein Name), oder das Telefonbuch war beim Anruf noch nicht geladen (Log beim Start). |
 | Watch-Gespräch stockt | Der Ton der Watch läuft über TCP (Tunnel). Die Bridge puffert höchstens 200 ms und verwirft ältere Rahmen. Bei schlechtem Netz lieber am iPhone annehmen. |
 
 ## Entwicklung
@@ -147,6 +184,7 @@ E2E_LOG=1 go test -run EndToEnd -v ./internal/app/
 | `internal/media` | WebRTC (pion) mit einem UDP-Port, öffentliche IP |
 | `internal/signaling` | WebSocket-Server, Kopplung, Auth |
 | `internal/push` | APNs-VoIP-Push |
+| `internal/fritzbox` | TR-064: Telefonbuch, Anrufliste, Zwischenspeicher, Namen für eingehende Anrufe; `fritzboxtest` ist die Test-FRITZ!Box |
 | `internal/store` | Dateibasierter Speicher (Geräte, Kopplungscodes) |
 
 Abhängigkeiten: pion ist auf `webrtc v4.2.19` / `ice v4.4.0` festgelegt. Neuere Versionen nutzen `stun/v4`, das nicht zu diago v0.40.0 passt.

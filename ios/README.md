@@ -21,15 +21,15 @@ open Housephone.xcodeproj
 
 | Pfad | Inhalt |
 |---|---|
-| `Packages/HousephoneKit` | Plattformneutral und lokal testbar (`swift test`): Protokoll-Nachrichten, `SignalingClient` (WebSocket inkl. Binär-Audio, Reconnect, Kopplung), `BridgeHTTPClient` (HTTPS-Kopplung der Watch), `CallSession` (Zustandsmaschine eines Anrufs), G.711 A-law, Audio-Rahmen, Jitter-Puffer, WatchConnectivity-Nachrichten, Kopplungslink, Schlüsselbund, Push-Payload, Freiton |
+| `Packages/HousephoneKit` | Plattformneutral und lokal testbar (`swift test`): Protokoll-Nachrichten, `SignalingClient` (WebSocket inkl. Binär-Audio, Reconnect, Kopplung), `BridgeHTTPClient` (HTTPS-Kopplung der Watch, FRITZ!Box-Telefonbuch mit ETag, Anrufliste), `FritzBoxResource` (Cache auf der Platte), `PhonebookNameIndex` (Anrufername), `CallSession` (Zustandsmaschine eines Anrufs), G.711 A-law, Audio-Rahmen, Jitter-Puffer, WatchConnectivity-Nachrichten, Kopplungslink, Schlüsselbund, Push-Payload, Freiton |
 | `Housephone/Calling` | `CallCenter` (CallKit + PushKit + Ablaufsteuerung), `MediaEngine` (WebRTC), `RingbackPlayer` |
 | `Housephone/Bridge` | `BridgeConnection`: Kopplung, Verbindungsstatus, Push-Token, Kopplungscode für die Watch; `WatchLink`: WatchConnectivity |
-| `Housephone/Features` | Tastenfeld, Anrufe, Kontakte, Einstellungen, Onboarding/Kopplung, Anrufbildschirm |
+| `Housephone/Features` | Tastenfeld, Anrufe (Housephone/FRITZ!Box), Kontakte (FRITZ!Box/iPhone), Einstellungen, Onboarding/Kopplung, Anrufbildschirm |
 | `Housephone/Design` | Design-Tokens (Designsprache jorisconrad) und gemeinsame Bausteine |
 | `Housephone/Resources` | Assets (Icon, Akzentfarbe), String-Kataloge (Deutsch als Quelle, Englisch) |
 | `HousephoneWatch/Calling` | `WatchCallCenter` (CallKit + PushKit, eine WebSocket-Verbindung pro Anruf), `CallAudio` (AVAudioEngine mit Echounterdrückung, A-law, Jitter-Puffer, Freiton) |
 | `HousephoneWatch/Bridge` | `WatchBridge` (Zugangsdaten, Push-Token per HTTPS), `PhoneLink` (WatchConnectivity) |
-| `HousephoneWatch/Features` | Kopplungshinweis, Start (Bereitschaft, letzte Anrufe), Tastenfeld, Anrufbildschirm mit Digital-Crown-Lautstärke |
+| `HousephoneWatch/Features` | Kopplungshinweis, Start (Bereitschaft, verpasste FRITZ!Box-Anrufe, letzte Anrufe), Tastenfeld, FRITZ!Box-Kontakte, Anrufbildschirm mit Digital-Crown-Lautstärke |
 
 ### Warum die Watch anders telefoniert
 

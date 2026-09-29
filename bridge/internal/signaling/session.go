@@ -185,6 +185,7 @@ func (srv *Server) runDevice(ctx context.Context, conn *websocket.Conn, dev stor
 		BridgeName:    srv.cfg.BridgeName,
 		BridgeVersion: srv.cfg.BridgeVersion,
 		SIPRegistered: srv.cfg.Hub.SIPRegistered(),
+		Features:      srv.features(),
 	}))
 	if helloErr != nil {
 		sess.Send(errorEnvelope(protocol.ErrorBadRequest, helloErr.Error()))

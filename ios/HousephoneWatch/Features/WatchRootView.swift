@@ -6,6 +6,8 @@ import SwiftUI
 struct WatchRootView: View {
     @Environment(WatchBridge.self) private var bridge
     @Environment(WatchCallCenter.self) private var callCenter
+    @Environment(WatchFritzBox.self) private var fritzBox
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -24,6 +26,14 @@ struct WatchRootView: View {
         }
         .animation(WatchTheme.Motion.standard, value: callCenter.activeCall?.id)
         .animation(WatchTheme.Motion.standard, value: bridge.isPaired)
+        .onChange(of: bridge.isPaired) { _, paired in
+            // Phonebook and call list belong to the bridge that is gone.
+            if !paired { fritzBox.clear() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, bridge.isPaired else { return }
+            Task { await fritzBox.refreshAll() }
+        }
         .alert(
             callCenter.failure.map { Text($0.message) } ?? Text(verbatim: ""),
             isPresented: Binding(
@@ -83,11 +93,12 @@ struct PairingHintView: View {
     }
 }
 
-/// Home: readiness at a glance, dial, recent calls.
+/// Home: readiness at a glance, dial, contacts, missed and recent calls.
 struct WatchHomeView: View {
     @Environment(WatchBridge.self) private var bridge
     @Environment(WatchCallCenter.self) private var callCenter
     @Environment(RecentCalls.self) private var recents
+    @Environment(WatchFritzBox.self) private var fritzBox
     @State private var microphone = AVAudioApplication.shared.recordPermission
     @State private var confirmsUnpair = false
     @State private var isUnpairing = false
@@ -103,6 +114,11 @@ struct WatchHomeView: View {
                     Label("Wählen", systemImage: "circle.grid.3x3.fill")
                         .foregroundStyle(Color.accentColor)
                 }
+                NavigationLink {
+                    WatchContactsView()
+                } label: {
+                    Label("Kontakte", systemImage: "person.crop.circle")
+                }
                 if microphone != .granted {
                     Button {
                         Task {
@@ -112,6 +128,24 @@ struct WatchHomeView: View {
                     } label: {
                         Label("Mikrofon erlauben", systemImage: "mic.slash")
                     }
+                }
+            }
+
+            let missed = fritzBox.recentMissedCalls()
+            if !missed.isEmpty {
+                Section {
+                    ForEach(missed) { call in
+                        Button {
+                            Task { await callCenter.startCall(to: call.number, name: missedName(call)) }
+                        } label: {
+                            MissedCallRow(call: call, name: missedName(call))
+                        }
+                        .disabled(call.number.isEmpty)
+                    }
+                } header: {
+                    Text("Verpasst")
+                } footer: {
+                    Text("Letzte 24 Stunden, laut FRITZ!Box")
                 }
             }
 
@@ -166,6 +200,13 @@ struct WatchHomeView: View {
         .onAppear {
             microphone = AVAudioApplication.shared.recordPermission
         }
+        .task { await fritzBox.refreshAll() }
+    }
+
+    private func missedName(_ call: FritzBoxCall) -> String? {
+        if let name = fritzBox.name(for: call.number) { return name }
+        guard let name = call.name?.trimmingCharacters(in: .whitespaces), !name.isEmpty else { return nil }
+        return name
     }
 
     @ViewBuilder
@@ -185,6 +226,7 @@ struct WatchHomeView: View {
 
 struct RecentCallRow: View {
     let call: RecentCall
+    @Environment(WatchFritzBox.self) private var fritzBox
 
     var body: some View {
         HStack(spacing: WatchTheme.Space.s2) {
@@ -208,6 +250,7 @@ struct RecentCallRow: View {
 
     private var title: String {
         if let name = call.name, !name.isEmpty { return name }
+        if let name = fritzBox.name(for: call.number) { return name }
         return call.number.isEmpty ? String(localized: "Unbekannt") : call.number
     }
 
@@ -217,5 +260,30 @@ struct RecentCallRow: View {
         case (.incoming, _): "phone.arrow.down.left"
         case (.outgoing, _): "phone.arrow.up.right"
         }
+    }
+}
+
+/// A missed call from the FRITZ!Box call list.
+struct MissedCallRow: View {
+    let call: FritzBoxCall
+    let name: String?
+
+    var body: some View {
+        HStack(spacing: WatchTheme.Space.s2) {
+            Image(systemName: "phone.arrow.down.left.fill")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(WatchTheme.danger)
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name ?? (call.number.isEmpty ? String(localized: "Unbekannt") : call.number))
+                    .foregroundStyle(WatchTheme.danger)
+                    .lineLimit(1)
+                Text(call.startedAt, format: .relative(presentation: .named))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text("Zurückrufen"))
     }
 }

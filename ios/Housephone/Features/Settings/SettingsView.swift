@@ -1,4 +1,5 @@
 import AVFAudio
+import HousephoneKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -24,6 +25,15 @@ struct SettingsView: View {
                     if let version = bridge.welcome?.bridgeVersion {
                         LabeledContent("Version") {
                             Text(version).font(.callout.monospaced())
+                        }
+                    }
+                    if let welcome = bridge.welcome {
+                        LabeledContent("Telefonbuch & Anrufliste") {
+                            if welcome.supports(.fritzboxPhonebook) || welcome.supports(.fritzboxHistory) {
+                                StatusIndicator(tone: .positive, label: "Verbunden")
+                            } else {
+                                StatusIndicator(tone: .neutral, label: "Nicht eingerichtet")
+                            }
                         }
                     }
                 } header: {

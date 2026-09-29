@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<phonebooks>
+<phonebook owner="1" name="Telefonbuch">
+<timestamp>1759161845</timestamp>
+<contact>
+<category>1</category>
+<person>
+<realName>Oma</realName>
+</person>
+<telephony nid="3">
+<services nid="0"><!-- emails 0 --></services>
+<number type="home" prio="1" id="0" quickdial="" vanity="">030 123456</number>
+<number type="mobile" prio="0" id="1" quickdial="" vanity="">+49 (170) 123-4567</number>
+<number type="fax_work" prio="0" id="2" quickdial="" vanity="">030 / 12 34 599</number>
+</telephony>
+<services />
+<setup />
+<features doorphone="0" />
+<mod_time>1759161845</mod_time>
+<uniqueid>1234</uniqueid>
+</contact>
+<contact>
+<category>0</category>
+<person>
+<realName>Türsprechanlage</realName>
+</person>
+<uniqueid>1236</uniqueid>
+<telephony>
+<services>
+</services>
+<!-- numbers:1-->
+<number type="intern" vanity="" prio="1" >**620</number>
+<doorphone>
+<videoURL>http://192.168.178.30/live%20test.png</videoURL>
+<openkey>*20#</openkey>
+</doorphone>
+</telephony>
+</contact>
+<contact>
+<category>0</category>
+<person>
+<realName>Nur Fax GmbH</realName>
+</person>
+<telephony nid="1">
+<number type="fax_work" prio="1" id="0">089 555 01</number>
+</telephony>
+<uniqueid>1240</uniqueid>
+</contact>
+<contact>
+<category>0</category>
+<person>
+<realName>Ohne Nummer</realName>
+</person>
+<telephony nid="0" />
+<uniqueid>1241</uniqueid>
+</contact>
+</phonebook>
+</phonebooks>

@@ -102,6 +102,63 @@ func TestValidateServeReportsProblems(t *testing.T) {
 	}
 }
 
+func TestFritzBoxConfig(t *testing.T) {
+	cfg := Default()
+	if cfg.FritzBox.Enabled() || cfg.FritzBox.Timezone != "Europe/Berlin" || cfg.FritzBox.CountryCode != "49" {
+		t.Fatalf("defaults: %+v", cfg.FritzBox)
+	}
+	if cfg.FritzBoxHost() != "fritz.box" {
+		t.Fatalf("host should default to sip.registrar, got %q", cfg.FritzBoxHost())
+	}
+	cfg.FritzBox.Host = "192.168.0.1"
+	if cfg.FritzBoxHost() != "192.168.0.1" {
+		t.Fatalf("explicit host ignored: %q", cfg.FritzBoxHost())
+	}
+
+	dir := t.TempDir()
+	env := map[string]string{EnvFritzBoxPasswordFile: writeFile(t, dir, "fritzbox_password", "geheim\n")}
+	cfg = Default()
+	if err := cfg.applyEnv(func(k string) (string, bool) { v, ok := env[k]; return v, ok }); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.FritzBox.Password != "geheim" {
+		t.Fatalf("password file not applied: %q", cfg.FritzBox.Password)
+	}
+	env = map[string]string{EnvFritzBoxPassword: "direkt"}
+	cfg = Default()
+	_ = cfg.applyEnv(func(k string) (string, bool) { v, ok := env[k]; return v, ok })
+	if cfg.FritzBox.Password != "direkt" {
+		t.Fatalf("password env not applied: %q", cfg.FritzBox.Password)
+	}
+}
+
+func TestFritzBoxValidation(t *testing.T) {
+	valid := Default()
+	valid.SIP.Username, valid.SIP.Password = "620", "x"
+	valid.FritzBox.Username, valid.FritzBox.Password = "housephone", "geheim"
+	if err := valid.ValidateServe(); err != nil {
+		t.Fatalf("valid config rejected: %v", err)
+	}
+
+	broken := valid
+	broken.FritzBox.Password = ""
+	broken.FritzBox.Timezone = "Mars/Olympus"
+	broken.FritzBox.CountryCode = "+49"
+	err := broken.ValidateServe()
+	for _, want := range []string{"fritzbox.password", "fritzbox.timezone", "fritzbox.countryCode"} {
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("missing %q in %v", want, err)
+		}
+	}
+
+	// Without username, fritzbox.* is not checked (feature off).
+	off := valid
+	off.FritzBox = FritzBox{Timezone: "nonsense"}
+	if err := off.ValidateServe(); err != nil {
+		t.Fatalf("disabled fritzbox section validated: %v", err)
+	}
+}
+
 func TestIsIPv4(t *testing.T) {
 	for ip, want := range map[string]bool{
 		"1.2.3.4": true, "192.168.178.1": true, "01.2.3.4": false,
