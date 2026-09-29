@@ -84,6 +84,23 @@ curl -s http://localhost:8080/v1/health     # {"status":"ok"} (Details nur für 
 
 Ohne Docker: `go build -o housephone-bridge ./cmd/housephone-bridge`, dann `HOUSEPHONE_SIP_PASSWORD=... ./housephone-bridge -config config.yaml serve` (z. B. als systemd-Dienst).
 
+### Fertiges Image und Kurzbefehl
+
+- Das Image kommt aus der GitHub Container Registry, für amd64 und arm64:
+  - `ghcr.io/jokeks2023/housephone-bridge:edge`: jeder Stand von `master`
+  - `ghcr.io/jokeks2023/housephone-bridge:latest`: jede getaggte Version (`v…`)
+- Selbst bauen: in `docker-compose.yml` `image:` auskommentieren und `build: .` aktivieren.
+- Aktualisieren: `docker compose pull && docker compose up -d`.
+
+`./housephone` spart das lange `docker compose exec …`:
+
+```sh
+./housephone pair -name "iPhone"   # Kopplungscode + QR-Code
+./housephone devices list
+./housephone identity              # Fingerabdruck der Bridge
+./housephone tui                   # Admin-Oberfläche (kommt mit HPHN-28)
+```
+
 ## 6. iPhone koppeln
 
 ```sh

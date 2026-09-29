@@ -1,12 +1,13 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.27-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS build
+ARG TARGETOS TARGETARCH
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 ARG VERSION=dev
-RUN CGO_ENABLED=0 go build -trimpath \
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath \
       -ldflags "-s -w -X github.com/JoKeks2023/housephone/bridge/internal/version.Version=${VERSION}" \
       -o /out/housephone-bridge ./cmd/housephone-bridge \
  && mkdir -p /out/data /out/config
