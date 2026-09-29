@@ -6,6 +6,9 @@ import Foundation
 // testable without WatchConnectivity.
 
 /// iPhone → Watch: pair with this bridge using a companion pairing code.
+///
+/// Carries the fingerprint of the bridge the iPhone pinned, so the watch
+/// verifies the same bridge identity as the iPhone did from the QR code.
 public struct CompanionPairingInstruction: Equatable, Sendable {
     public var link: PairingLink
     public var expiresAt: Date
@@ -15,8 +18,12 @@ public struct CompanionPairingInstruction: Equatable, Sendable {
         self.expiresAt = expiresAt
     }
 
-    public init(pairing: CompanionPairing, bridgeName: String?) {
-        self.init(link: PairingLink(bridgeURL: pairing.url, code: pairing.code, bridgeName: bridgeName), expiresAt: pairing.expiresAt)
+    /// `fingerprint`: the iPhone's pinned `BridgeCredentials.bridgeFingerprint`.
+    public init(pairing: CompanionPairing, bridgeName: String?, fingerprint: String) {
+        self.init(
+            link: PairingLink(bridgeURL: pairing.url, code: pairing.code, bridgeName: bridgeName, fingerprint: fingerprint),
+            expiresAt: pairing.expiresAt
+        )
     }
 
     public static let messageType = "housephone.pair"
@@ -26,6 +33,7 @@ public struct CompanionPairingInstruction: Equatable, Sendable {
             "type": Self.messageType,
             "url": link.bridgeURL.absoluteString,
             "code": link.code,
+            "fp": link.fingerprint,
             "bridgeName": link.bridgeName ?? "",
             "expiresAt": expiresAt.timeIntervalSince1970,
         ]
@@ -37,10 +45,15 @@ public struct CompanionPairingInstruction: Equatable, Sendable {
               let url = URL(string: urlString),
               let rawCode = dictionary["code"] as? String,
               let code = PairingCode.normalize(rawCode),
+              let fingerprint = dictionary["fp"] as? String,
+              PairingLink.isValidFingerprint(fingerprint),
               let expires = dictionary["expiresAt"] as? Double
         else { return nil }
         let name = (dictionary["bridgeName"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        self.init(link: PairingLink(bridgeURL: url, code: code, bridgeName: name), expiresAt: Date(timeIntervalSince1970: expires))
+        self.init(
+            link: PairingLink(bridgeURL: url, code: code, bridgeName: name, fingerprint: fingerprint),
+            expiresAt: Date(timeIntervalSince1970: expires)
+        )
     }
 
     public func isExpired(at now: Date = .now) -> Bool { now >= expiresAt }

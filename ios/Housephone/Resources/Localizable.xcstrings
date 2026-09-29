@@ -1871,6 +1871,156 @@
           }
         }
       }
+    },
+    "Dieser Link stammt von einer älteren Bridge. Aktualisiere die Bridge und erzeuge einen neuen Code.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This link is from an older bridge. Update the bridge and create a new code."
+          }
+        }
+      }
+    },
+    "Dem Link fehlt die Kennung der Bridge. Erzeuge einen neuen Code.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The link is missing the bridge’s fingerprint. Create a new code."
+          }
+        }
+      }
+    },
+    "Später": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later"
+          }
+        }
+      }
+    },
+    "Code %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code %@"
+          }
+        }
+      }
+    },
+    "Diese Bridge ist nicht die aus dem QR-Code. Die Kopplung wurde abgebrochen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This bridge is not the one from the QR code. Pairing was cancelled."
+          }
+        }
+      }
+    },
+    "Bridge nicht vertrauenswürdig. Die Kopplung wurde abgebrochen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bridge not trusted. Pairing was cancelled."
+          }
+        }
+      }
+    },
+    "Uhrzeit des iPhones prüfen: Sie weicht zu stark von der Bridge ab.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the iPhone’s time: it differs too much from the bridge."
+          }
+        }
+      }
+    },
+    "Den QR-Code zeigt dein Server mit `housephone-bridge pair` an – oder kopiere den Kopplungslink und tippe auf „Einsetzen“.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your server shows the QR code with `housephone-bridge pair` – or copy the pairing link and tap “Paste”."
+          }
+        }
+      }
+    },
+    "Fingerabdruck": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fingerprint"
+          }
+        }
+      }
+    },
+    "Bridge nicht vertrauenswürdig": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bridge not trusted"
+          }
+        }
+      }
+    },
+    "Uhrzeit des iPhones prüfen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the iPhone’s time"
+          }
+        }
+      }
+    },
+    "Neues Gerät gekoppelt: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New device paired: %@"
+          }
+        }
+      }
+    },
+    "Neues Gerät gekoppelt": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New device paired"
+          }
+        }
+      }
+    },
+    "„%@“ wurde %@ mit deiner Bridge gekoppelt. Warst du das nicht? Entferne das Gerät auf dem Server.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@” was paired with your bridge %2$@. Not you? Remove the device on the server."
+          }
+        }
+      }
+    },
+    "Hinweis schließen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss"
+          }
+        }
+      }
     }
   }
 }

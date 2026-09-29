@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 public enum BridgeHTTPError: Error, Equatable, Sendable {
     case invalidBridgeURL
@@ -46,17 +47,32 @@ struct CallStatusPayload: Decodable {
     }
 }
 
-/// The HTTPS endpoints of signaling v1.1 and v1.2. The Apple Watch uses
-/// them because watchOS only allows WebSocket during a CallKit call; plain
-/// HTTPS works any time. Phonebook and call list are HTTPS-only on both.
+/// The HTTPS endpoints of the bridge. The Apple Watch uses them because
+/// watchOS only allows WebSocket during a CallKit call; plain HTTPS works
+/// any time. Phonebook and call list are HTTPS-only on both.
+///
+/// Signaling v2 (ADR-0004): every request except pairing is signed with
+/// the device key, and every response must carry a valid signature of the
+/// pinned bridge key (errors included). Successful responses with a body
+/// are sealed end to end.
 ///
 /// Errors: `SignalingClientError.unauthorized` for 401,
-/// `SignalingClientError.bridge` when the bridge sent an `error` payload.
+/// `.clockSkew` when the bridge rejected the timestamp,
+/// `.untrustedBridge` for a missing or wrong bridge signature,
+/// `.bridge` when the bridge sent an `error` payload.
 public struct BridgeHTTPClient: Sendable {
     private let session: URLSession
+    private let keyStore: any DeviceKeyStore
+    private let now: @Sendable () -> Date
 
-    public init(session: URLSession = .shared) {
+    public init(
+        session: URLSession = .shared,
+        keyStore: any DeviceKeyStore = KeychainDeviceKeyStore(),
+        now: @escaping @Sendable () -> Date = { Date() }
+    ) {
         self.session = session
+        self.keyStore = keyStore
+        self.now = now
     }
 
     /// `wss://host/prefix/v1/ws` → `https://host/prefix/v1/<name>`.
@@ -82,27 +98,52 @@ public struct BridgeHTTPClient: Sendable {
         return components.url
     }
 
-    /// `POST /v1/pair`.
+    // MARK: - Pairing
+
+    /// `POST /v1/pair` (v2). Creates a new device key under a fresh tag,
+    /// proves possession, and accepts the answer only if the bridge holds
+    /// the key from the link's fingerprint and signed this pairing. On
+    /// failure the new key is deleted again; an existing pairing and its
+    /// key stay untouched.
     public func pair(link: PairingLink, deviceName: String, platform: DevicePlatform, model: String?) async throws -> BridgeCredentials {
         guard let url = Self.endpoint("pair", for: link.bridgeURL) else { throw BridgeHTTPError.invalidBridgeURL }
-        let request = PairRequest(code: link.code, deviceName: deviceName, platform: platform, model: model)
-        let data = try await perform(method: "POST", url: url, body: try SignalingCoding.makeEncoder().encode(request), authorization: nil)
-        guard let result = try? SignalingCoding.makeDecoder().decode(PairingResult.self, from: data) else {
-            throw BridgeHTTPError.invalidResponse
+        let tag = "device-" + UUID().uuidString.lowercased()
+        let key = try keyStore.makeKey(tag: tag)
+        do {
+            let request = try HP2Pairing.request(
+                link: link,
+                deviceName: deviceName,
+                platform: platform,
+                model: model,
+                key: key,
+                nonce: try Self.randomBytes(HP2.nonceLength)
+            )
+            let body = try SignalingCoding.makeEncoder().encode(request)
+            let (data, response) = try await session.data(for: makeRequest(method: "POST", url: url, body: body))
+            guard let http = response as? HTTPURLResponse else { throw BridgeHTTPError.invalidResponse }
+            guard (200..<300).contains(http.statusCode) else { throw Self.failure(status: http.statusCode, body: data) }
+            guard let result = try? SignalingCoding.makeDecoder().decode(PairingResult.self, from: data) else {
+                throw BridgeHTTPError.invalidResponse
+            }
+            return try HP2Pairing.credentials(from: result, request: request, link: link, keyTag: tag)
+        } catch {
+            try? keyStore.deleteKey(tag: tag)
+            throw error
         }
-        return BridgeCredentials(bridgeURL: link.bridgeURL, pairing: result)
     }
+
+    // MARK: - Authenticated endpoints
 
     /// `PUT /v1/device`: push token, capabilities, topic.
     public func updateDevice(_ update: DeviceUpdate, credentials: BridgeCredentials) async throws {
         guard let url = Self.endpoint("device", for: credentials.bridgeURL) else { throw BridgeHTTPError.invalidBridgeURL }
-        _ = try await perform(method: "PUT", url: url, body: try SignalingCoding.makeEncoder().encode(update), authorization: credentials.authorizationHeader)
+        _ = try await send(method: "PUT", url: url, body: try SignalingCoding.makeEncoder().encode(update), credentials: credentials)
     }
 
     /// `DELETE /v1/device`: the device unpairs itself.
     public func deleteDevice(credentials: BridgeCredentials) async throws {
         guard let url = Self.endpoint("device", for: credentials.bridgeURL) else { throw BridgeHTTPError.invalidBridgeURL }
-        _ = try await perform(method: "DELETE", url: url, body: nil, authorization: credentials.authorizationHeader)
+        _ = try await send(method: "DELETE", url: url, body: nil, credentials: credentials)
     }
 
     /// `GET /v1/calls/{callId}`: the call from this device's point of view.
@@ -113,7 +154,7 @@ public struct BridgeHTTPClient: Sendable {
         guard let url = Self.endpoint("calls/\(callId)", for: credentials.bridgeURL) else { throw BridgeHTTPError.invalidBridgeURL }
         let data: Data
         do {
-            data = try await perform(method: "GET", url: url, body: nil, authorization: credentials.authorizationHeader)
+            data = try await send(method: "GET", url: url, body: nil, credentials: credentials).data
         } catch SignalingClientError.bridge(let error) where error.code == .callNotFound {
             return BridgeCallStatus(callId: callId, state: .ended(.notFound, sipCode: nil))
         }
@@ -130,7 +171,7 @@ public struct BridgeHTTPClient: Sendable {
     public func phonebook(ifNoneMatch etag: String?, credentials: BridgeCredentials) async throws -> FritzBoxFetchResult<FritzBoxPhonebook> {
         guard let url = Self.endpoint("phonebook", for: credentials.bridgeURL) else { throw BridgeHTTPError.invalidBridgeURL }
         let headers = etag.map { ["If-None-Match": $0] } ?? [:]
-        let (data, response) = try await send(method: "GET", url: url, body: nil, authorization: credentials.authorizationHeader, headers: headers)
+        let (data, response) = try await send(method: "GET", url: url, body: nil, credentials: credentials, headers: headers)
         if response.statusCode == 304 { return .notModified }
         guard let phonebook = try? SignalingCoding.makeDecoder().decode(FritzBoxPhonebook.self, from: data) else {
             throw BridgeHTTPError.invalidResponse
@@ -145,49 +186,107 @@ public struct BridgeHTTPClient: Sendable {
         else { throw BridgeHTTPError.invalidBridgeURL }
         components.queryItems = [URLQueryItem(name: "limit", value: String(min(max(limit, 1), 500)))]
         guard let url = components.url else { throw BridgeHTTPError.invalidBridgeURL }
-        let data = try await perform(method: "GET", url: url, body: nil, authorization: credentials.authorizationHeader)
+        let data = try await send(method: "GET", url: url, body: nil, credentials: credentials).data
         guard let history = try? SignalingCoding.makeDecoder().decode(FritzBoxCallList.self, from: data) else {
             throw BridgeHTTPError.invalidResponse
         }
         return history
     }
 
-    private func perform(method: String, url: URL, body: Data?, authorization: String?) async throws -> Data {
-        try await send(method: method, url: url, body: body, authorization: authorization, headers: [:]).data
-    }
+    // MARK: - Private
 
-    /// Sends a request; success is any 2xx and 304.
-    private func send(method: String, url: URL, body: Data?, authorization: String?, headers: [String: String]) async throws -> (data: Data, response: HTTPURLResponse) {
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        request.timeoutInterval = 15
-        // Never answer from URLCache: responses are per device, and a 304
-        // must reach `phonebook(ifNoneMatch:)` as a 304.
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        if let body {
-            request.httpBody = body
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    /// Signs the request, verifies the bridge's signature on the response
+    /// and opens a sealed body. Success is any 2xx and 304; returns the
+    /// plaintext body.
+    private func send(
+        method: String,
+        url: URL,
+        body: Data?,
+        credentials: BridgeCredentials,
+        headers: [String: String] = [:]
+    ) async throws -> (data: Data, response: HTTPURLResponse) {
+        guard let key = try keyStore.key(tag: credentials.keyTag) else {
+            // Without its key this device can't prove who it is.
+            throw SignalingClientError.unauthorized
         }
-        if let authorization {
-            request.setValue(authorization, forHTTPHeaderField: "Authorization")
-        }
+        let exchange = try HP2Signer(credentials: credentials, key: key, now: now).exchange(method: method, url: url, body: body)
+        var request = makeRequest(method: method, url: url, body: body)
+        request.setValue(exchange.authorization.headerValue, forHTTPHeaderField: "Authorization")
         for (field, value) in headers {
             request.setValue(value, forHTTPHeaderField: field)
         }
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw BridgeHTTPError.invalidResponse }
+
+        let keys: HP2SessionKeys
+        do {
+            keys = try exchange.verifyResponse(status: http.statusCode, bridgeHeader: http.value(forHTTPHeaderField: HP2.bridgeHeaderName), body: data)
+        } catch {
+            throw SignalingClientError.untrustedBridge
+        }
+
+        let plaintext: Data
+        if data.isEmpty {
+            plaintext = data
+        } else if http.value(forHTTPHeaderField: "Content-Type")?.hasPrefix(HP2.sealedContentType) == true {
+            do {
+                plaintext = try exchange.openBody(data, keys: keys)
+            } catch {
+                throw SignalingClientError.untrustedBridge
+            }
+        } else if http.statusCode >= 400 {
+            // Signed but unsealed: an error the bridge answered before it
+            // could trust the request (e.g. 401).
+            plaintext = data
+        } else {
+            // Content of a successful response is always sealed.
+            throw SignalingClientError.untrustedBridge
+        }
+
         switch http.statusCode {
         case 200..<300, 304:
-            return (data, http)
-        case 401:
-            throw SignalingClientError.unauthorized
+            return (plaintext, http)
         default:
-            if let payload = try? SignalingCoding.makeDecoder().decode(SignalingErrorPayload.self, from: data) {
-                throw SignalingClientError.bridge(payload)
-            }
-            throw BridgeHTTPError.unexpectedStatus(http.statusCode)
+            throw Self.failure(status: http.statusCode, body: plaintext)
         }
+    }
+
+    private func makeRequest(method: String, url: URL, body: Data?) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.timeoutInterval = 15
+        // Never answer from URLCache: responses are per device and signed
+        // for one request, and a 304 must reach `phonebook(ifNoneMatch:)`.
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let body {
+            request.httpBody = body
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        return request
+    }
+
+    /// Maps an error status and its (plaintext) body.
+    private static func failure(status: Int, body: Data) -> any Error {
+        let payload = try? SignalingCoding.makeDecoder().decode(SignalingErrorPayload.self, from: body)
+        if status == 401 {
+            let code = payload?.code ?? (try? JSONDecoder().decode(ErrorCode.self, from: body)).map { SignalingErrorCode(rawValue: $0.code) }
+            return code == .clockSkew ? SignalingClientError.clockSkew : SignalingClientError.unauthorized
+        }
+        if let payload { return SignalingClientError.bridge(payload) }
+        return BridgeHTTPError.unexpectedStatus(status)
+    }
+
+    /// `{"code": "…"}` without a message, as in v2's 401 bodies.
+    private struct ErrorCode: Decodable {
+        var code: String
+    }
+
+    private static func randomBytes(_ count: Int) throws -> Data {
+        var data = Data(count: count)
+        let status = data.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, count, $0.baseAddress!) }
+        guard status == errSecSuccess else { throw KeychainError(status: status) }
+        return data
     }
 }

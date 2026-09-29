@@ -52,7 +52,13 @@ final class WatchLink: NSObject {
         let instruction: CompanionPairingInstruction
         do {
             let code = try await bridge.requestCompanionPairing(deviceName: String(localized: "Apple Watch"))
-            instruction = CompanionPairingInstruction(pairing: code, bridgeName: bridge.welcome?.bridgeName ?? bridge.credentials?.bridgeName)
+            // The watch pins the same bridge key as the iPhone.
+            guard let credentials = bridge.credentials else { throw SignalingClientError.notConnected }
+            instruction = CompanionPairingInstruction(
+                pairing: code,
+                bridgeName: bridge.welcome?.bridgeName ?? credentials.bridgeName,
+                fingerprint: credentials.bridgeFingerprint
+            )
         } catch {
             logger.error("Companion code failed: \(String(describing: error), privacy: .public)")
             pairing = .failed(String(localized: "Die Bridge hat keinen Kopplungscode geliefert. Prüfe, ob sie erreichbar ist."))

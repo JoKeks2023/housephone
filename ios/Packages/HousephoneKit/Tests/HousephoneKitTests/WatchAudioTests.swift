@@ -229,12 +229,17 @@ struct CallSessionWebSocketMediaTests {
 }
 
 struct CompanionLinkTests {
+    static let fp = "If4x36FUomFia_hUBG_SJxt77UtqvkWqWId-9H-XIbk"
+
     @Test func pairingInstructionRoundTrips() throws {
-        let pairing = CompanionPairing(code: "M4QX7ZP2KD", url: URL(string: "wss://phone.example.com/v1/ws")!, expiresAt: Date(timeIntervalSince1970: 1_800_000_600))
-        let instruction = CompanionPairingInstruction(pairing: pairing, bridgeName: "Zuhause")
+        let pairing = CompanionPairing(code: "M4QX7ZP2KDW8HT3N", url: URL(string: "wss://phone.example.com/v1/ws")!, expiresAt: Date(timeIntervalSince1970: 1_800_000_600))
+        let instruction = CompanionPairingInstruction(pairing: pairing, bridgeName: "Zuhause", fingerprint: Self.fp)
+        #expect(PropertyListSerialization.propertyList(instruction.dictionary, isValidFor: .binary))
         let decoded = try #require(CompanionPairingInstruction(dictionary: instruction.dictionary))
         #expect(decoded == instruction)
         #expect(decoded.link.bridgeName == "Zuhause")
+        // The watch pins the same bridge as the iPhone.
+        #expect(decoded.link.fingerprint == Self.fp)
         #expect(decoded.isExpired(at: Date(timeIntervalSince1970: 1_800_000_599)) == false)
         #expect(decoded.isExpired(at: Date(timeIntervalSince1970: 1_800_000_600)))
     }
@@ -242,7 +247,14 @@ struct CompanionLinkTests {
     @Test func instructionIgnoresOtherMessages() {
         #expect(CompanionPairingInstruction(dictionary: ["type": "something"]) == nil)
         #expect(CompanionPairingInstruction(dictionary: [
-            "type": CompanionPairingInstruction.messageType, "url": "wss://x/v1/ws", "code": "invalid", "expiresAt": 0.0,
+            "type": CompanionPairingInstruction.messageType, "url": "wss://x/v1/ws", "code": "invalid", "fp": Self.fp, "expiresAt": 0.0,
+        ]) == nil)
+        // Without the pinned fingerprint the watch can't check the bridge.
+        #expect(CompanionPairingInstruction(dictionary: [
+            "type": CompanionPairingInstruction.messageType, "url": "wss://x/v1/ws", "code": "M4QX7ZP2KDW8HT3N", "expiresAt": 0.0,
+        ]) == nil)
+        #expect(CompanionPairingInstruction(dictionary: [
+            "type": CompanionPairingInstruction.messageType, "url": "wss://x/v1/ws", "code": "M4QX7ZP2KDW8HT3N", "fp": "short", "expiresAt": 0.0,
         ]) == nil)
     }
 

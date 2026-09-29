@@ -41,8 +41,8 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: Theme.Space.s4) {
             AppGlyph()
             Text("Housephone")
-                .font(.system(size: 40, weight: .semibold))
-                .tracking(-0.8)
+                .font(.largeTitle.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
             Text("Dein Festnetz auf dem iPhone – über deine FRITZ!Box, zu Hause und unterwegs.")
                 .font(.title3)
                 .foregroundStyle(.secondary)
@@ -82,7 +82,7 @@ struct OnboardingView: View {
             .buttonBorderShape(.capsule)
             .tint(.secondary)
 
-            Text("Den QR-Code zeigt dein Server mit `housephone-bridge pair` an.")
+            Text("Den QR-Code zeigt dein Server mit `housephone-bridge pair` an – oder kopiere den Kopplungslink und tippe auf „Einsetzen“.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -119,25 +119,24 @@ private struct FeatureRow: View {
     }
 }
 
-/// House with a handset: the app's mark.
+/// House with a handset inside, as on the app icon: accent only, the
+/// handset cut out of the house.
 struct AppGlyph: View {
     var size: CGFloat = 64
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
+        ZStack {
             Image(systemName: "house.fill")
                 .font(.system(size: size * 0.62, weight: .semibold))
                 .foregroundStyle(Color.accentColor)
-                .frame(width: size, height: size)
-                .background(Color.accentColor.opacity(0.14), in: .rect(cornerRadius: Theme.Radius.xl))
             Image(systemName: "phone.fill")
-                .font(.system(size: size * 0.22, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: size * 0.4, height: size * 0.4)
-                .background(Theme.call, in: .circle)
-                .overlay(Circle().strokeBorder(Color(.systemBackground), lineWidth: 3))
-                .offset(x: size * 0.12, y: size * 0.12)
+                .font(.system(size: size * 0.2, weight: .bold))
+                .foregroundStyle(Color(.systemBackground))
+                // Sits in the body of the house, below the roof.
+                .offset(y: size * 0.08)
         }
+        .frame(width: size, height: size)
+        .background(Color.accentColor.opacity(0.14), in: .rect(cornerRadius: Theme.Radius.xl))
         .accessibilityHidden(true)
     }
 }

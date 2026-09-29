@@ -18,10 +18,23 @@ final class BridgeConnection {
         case rejected
     }
 
+    /// Why the connection stopped although the device is paired. Status is
+    /// `.offline` then; retried on `refresh()` (app active, push), never
+    /// without the bridge check.
+    enum Problem: Equatable {
+        /// The bridge could not prove it holds the pinned key.
+        case untrustedBridge
+        /// The bridge rejected this device's clock.
+        case clockSkew
+    }
+
     private(set) var credentials: BridgeCredentials?
     private(set) var status: Status
     private(set) var welcome: Welcome?
     private(set) var pushToken: String?
+    private(set) var problem: Problem?
+    /// The bridge reported a newly paired device; shown until dismissed.
+    private(set) var newlyPairedDevice: DevicePaired?
     /// Increases with every successful (re)connection. Calls use it to
     /// know whether they still need to attach on the current connection.
     private(set) var generation = 0
@@ -34,14 +47,16 @@ final class BridgeConnection {
     @ObservationIgnored var onPairingChanged: ((Bool) -> Void)?
 
     @ObservationIgnored private let store: any CredentialStore
+    @ObservationIgnored private let keyStore: any DeviceKeyStore
     @ObservationIgnored private var client: SignalingClient?
     @ObservationIgnored private var eventsTask: Task<Void, Never>?
     @ObservationIgnored private var companionWaiter: CheckedContinuation<CompanionPairing, any Error>?
     @ObservationIgnored private var companionTimeout: Task<Void, Never>?
     @ObservationIgnored private let logger = Logger(subsystem: "com.jorisconrad.housephone", category: "bridge")
 
-    init(store: any CredentialStore) {
+    init(store: any CredentialStore, keyStore: any DeviceKeyStore = KeychainDeviceKeyStore()) {
         self.store = store
+        self.keyStore = keyStore
         let stored: BridgeCredentials?
         do {
             stored = try store.load()
@@ -62,7 +77,7 @@ final class BridgeConnection {
 
     func start() {
         guard let credentials, client == nil else { return }
-        let client = SignalingClient(credentials: credentials, hello: makeHello())
+        let client = SignalingClient(credentials: credentials, hello: makeHello(), keyStore: keyStore)
         self.client = client
         status = .connecting
         eventsTask = Task { [weak self] in
@@ -96,19 +111,38 @@ final class BridgeConnection {
 
     // MARK: - Pairing
 
+    /// Pairs over `POST /v1/pair` with a new device key. Throws
+    /// `HP2Error.bridgeIdentityMismatch` if the bridge doesn't hold the key
+    /// from the link's fingerprint. The old pairing stays until the new one
+    /// is saved; then its key is deleted.
     func pair(with link: PairingLink) async throws {
         let device = UIDevice.current
-        let credentials = try await SignalingClient.pair(
+        let credentials = try await BridgeHTTPClient(keyStore: keyStore).pair(
             link: link,
             deviceName: device.name,
             platform: .ios,
             model: Self.hardwareModel
         )
-        try store.save(credentials)
+        do {
+            try store.save(credentials)
+        } catch {
+            try? keyStore.deleteKey(tag: credentials.keyTag)
+            throw error
+        }
+        let previousKeyTag = self.credentials?.keyTag
         stopClient()
         self.credentials = credentials
+        problem = nil
+        newlyPairedDevice = nil
+        if let previousKeyTag, previousKeyTag != credentials.keyTag {
+            try? keyStore.deleteKey(tag: previousKeyTag)
+        }
         start()
         onPairingChanged?(true)
+    }
+
+    func dismissNewlyPairedDevice() {
+        newlyPairedDevice = nil
     }
 
     /// Asks the bridge to forget this device (best effort, at most 3 s),
@@ -123,9 +157,14 @@ final class BridgeConnection {
         }
         stopClient()
         try? store.delete()
+        if let keyTag = credentials?.keyTag {
+            try? keyStore.deleteKey(tag: keyTag)
+        }
         credentials = nil
         welcome = nil
         pushToken = nil
+        problem = nil
+        newlyPairedDevice = nil
         status = .unpaired
         onPairingChanged?(false)
     }
@@ -207,6 +246,7 @@ final class BridgeConnection {
             switch state {
             case .connected(let welcome):
                 self.welcome = welcome
+                problem = nil
                 status = .online(sipRegistered: welcome.sipRegistered)
                 generation += 1
                 logger.info("Connected to \(welcome.bridgeName, privacy: .public) \(welcome.bridgeVersion, privacy: .public)")
@@ -219,6 +259,15 @@ final class BridgeConnection {
             case .unauthorized:
                 status = .rejected
                 finishCompanionRequest(.failure(SignalingClientError.unauthorized))
+            case .untrustedBridge:
+                logger.error("Bridge failed the identity check")
+                status = .offline
+                problem = .untrustedBridge
+                finishCompanionRequest(.failure(SignalingClientError.untrustedBridge))
+            case .clockSkew:
+                status = .offline
+                problem = .clockSkew
+                finishCompanionRequest(.failure(SignalingClientError.clockSkew))
             }
         case .message(let message):
             switch message {
@@ -228,6 +277,8 @@ final class BridgeConnection {
             case .pairCompanion(let pairing):
                 finishCompanionRequest(.success(pairing))
                 return
+            case .devicePaired(let paired):
+                newlyPairedDevice = paired
             case .error(let error) where error.callId == nil && companionWaiter != nil:
                 finishCompanionRequest(.failure(SignalingClientError.bridge(error)))
             default:

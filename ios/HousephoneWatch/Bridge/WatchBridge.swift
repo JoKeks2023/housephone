@@ -36,6 +36,7 @@ final class WatchBridge {
     @ObservationIgnored var onPairedChange: ((Bool) -> Void)?
 
     @ObservationIgnored private let store: any CredentialStore
+    @ObservationIgnored private let keyStore: any DeviceKeyStore
     @ObservationIgnored private let http: BridgeHTTPClient
     @ObservationIgnored private var retryTask: Task<Void, Never>?
     @ObservationIgnored private let logger = Logger(subsystem: "com.jorisconrad.housephone.watch", category: "bridge")
@@ -59,9 +60,12 @@ final class WatchBridge {
         }
     }
 
-    init(store: any CredentialStore, http: BridgeHTTPClient = BridgeHTTPClient()) {
+    /// The watch has its own device key (Secure Enclave), independent of
+    /// the iPhone's; `keyStore` holds it.
+    init(store: any CredentialStore, keyStore: any DeviceKeyStore = KeychainDeviceKeyStore(), http: BridgeHTTPClient? = nil) {
         self.store = store
-        self.http = http
+        self.keyStore = keyStore
+        self.http = http ?? BridgeHTTPClient(keyStore: keyStore)
         credentials = try? store.load()
     }
 
@@ -96,7 +100,15 @@ final class WatchBridge {
                 platform: .watchos,
                 model: Self.hardwareModel
             )
-            try store.save(paired)
+            do {
+                try store.save(paired)
+            } catch {
+                try? keyStore.deleteKey(tag: paired.keyTag)
+                throw error
+            }
+            if let previousKeyTag = credentials?.keyTag, previousKeyTag != paired.keyTag {
+                try? keyStore.deleteKey(tag: previousKeyTag)
+            }
             credentials = paired
             pairedAt = .now
             isRejected = false
@@ -129,6 +141,9 @@ final class WatchBridge {
             }
         }
         try? store.delete()
+        if let keyTag = credentials?.keyTag {
+            try? keyStore.deleteKey(tag: keyTag)
+        }
         credentials = nil
         pairedAt = nil
         registration = .none
@@ -214,7 +229,7 @@ final class WatchBridge {
         var configuration = SignalingClient.Configuration()
         configuration.initialBackoff = .milliseconds(300)
         configuration.maximumBackoff = .seconds(3)
-        return SignalingClient(credentials: credentials, hello: hello, configuration: configuration)
+        return SignalingClient(credentials: credentials, hello: hello, keyStore: keyStore, configuration: configuration)
     }
 
     /// The call as the bridge sees it for this watch (`GET /v1/calls/{id}`),
@@ -258,6 +273,8 @@ final class WatchBridge {
             String(localized: "Der Code ist ungültig oder abgelaufen. Starte die Kopplung auf dem iPhone neu.")
         case SignalingClientError.bridge(let payload) where payload.code == .pairingRateLimited:
             String(localized: "Zu viele Versuche. Warte eine Minute und versuche es dann erneut.")
+        case HP2Error.bridgeIdentityMismatch:
+            String(localized: "Diese Bridge ist nicht die, mit der das iPhone gekoppelt ist.")
         case let error as URLError where error.code == .notConnectedToInternet || error.code == .networkConnectionLost:
             String(localized: "Die Watch ist offline. Verbinde sie mit dem iPhone oder einem WLAN.")
         case is URLError:
