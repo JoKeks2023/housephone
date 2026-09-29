@@ -18,7 +18,7 @@ enum WatchCallFailure: Identifiable, Equatable {
 
     var message: LocalizedStringResource {
         switch self {
-        case .notPaired: "Koppel die Watch zuerst in der iPhone-App."
+        case .notPaired: "Kopple die Watch zuerst in der iPhone-App."
         case .invalidNumber: "Diese Nummer kann nicht gewählt werden."
         case .callInProgress: "Es läuft bereits ein Anruf."
         case .bridgeUnreachable: "Die Bridge ist nicht erreichbar."

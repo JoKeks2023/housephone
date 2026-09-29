@@ -93,7 +93,7 @@ private struct WatchContactEntry: View {
     }
 
     private func label(detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: WatchTheme.Space.hairline) {
             HStack(spacing: WatchTheme.Space.s1) {
                 Text(contact.name)
                     .lineLimit(1)
@@ -121,7 +121,7 @@ private struct WatchNumberChoice: View {
             Button {
                 Task { await callCenter.startCall(to: number.number, name: contact.name) }
             } label: {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: WatchTheme.Space.hairline) {
                     Text(number.type.label)
                     Text(number.number)
                         .font(.footnote)
@@ -192,7 +192,7 @@ extension FritzBoxLoadFailure {
         switch self {
         case .unavailable: "In der Bridge ist kein Zugang zur FRITZ!Box eingerichtet."
         case .unreachable: "Telefonbuch und Anrufliste kommen über deine Bridge. Prüfe die Verbindung."
-        case .unauthorized: "Koppel die Watch auf dem iPhone neu."
+        case .unauthorized: "Kopple die Watch auf dem iPhone neu."
         }
     }
 

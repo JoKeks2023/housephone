@@ -5,11 +5,21 @@ import SwiftUI
 /// the same thing — tuned for a glanceable, one-hand screen.
 enum WatchTheme {
     enum Space {
+        /// Between a title and its subtitle only.
+        static let hairline: CGFloat = 2
         static let s1: CGFloat = 4
         static let s2: CGFloat = 8
         static let s3: CGFloat = 12
         static let s4: CGFloat = 16
     }
+
+    enum Radius {
+        static let sm: CGFloat = 6
+        static let md: CGFloat = 8
+    }
+
+    /// Smallest comfortable touch target on the watch.
+    static let minTarget: CGFloat = 40
 
     /// Starting or accepting a call.
     static let call = Color(red: 0x2E / 255, green: 0xA0 / 255, blue: 0x43 / 255)
@@ -21,6 +31,37 @@ enum WatchTheme {
     enum Motion {
         static let standard = Animation.spring(duration: 0.35, bounce: 0)
         static let snappy = Animation.spring(duration: 0.2, bounce: 0)
+        /// Press feedback: on at touch-down, easing out on release.
+        static let release = Animation.easeOut(duration: 0.25)
+    }
+}
+
+extension View {
+    /// Applies `animation` unless the user asked for reduced motion; then
+    /// a short cross-fade.
+    func motion<V: Equatable>(_ animation: Animation, value: V) -> some View {
+        modifier(WatchReducedMotion(animation: animation, value: value))
+    }
+}
+
+private struct WatchReducedMotion<V: Equatable>: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let animation: Animation
+    let value: V
+
+    func body(content: Content) -> some View {
+        content.animation(reduceMotion ? .easeInOut(duration: 0.15) : animation, value: value)
+    }
+}
+
+/// Scales and dims at touch-down, eases back on release: every tappable
+/// shape on the watch answers the finger.
+struct WatchPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .animation(configuration.isPressed ? nil : WatchTheme.Motion.release, value: configuration.isPressed)
     }
 }
 
@@ -99,7 +140,7 @@ struct WatchCallButton: View {
                 .frame(width: size, height: size)
                 .background(Circle().fill(kind.color.gradient))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(WatchPressStyle())
         .accessibilityLabel(Text(label))
     }
 }

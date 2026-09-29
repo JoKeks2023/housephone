@@ -72,6 +72,16 @@
         }
       }
     },
+    "Anruf nicht möglich": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't place call"
+          }
+        }
+      }
+    },
     "Anrufen": {
       "localizations": {
         "en": {
@@ -118,6 +128,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Busy"
+          }
+        }
+      }
+    },
+    "Bridge": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bridge"
           }
         }
       }
@@ -202,7 +222,7 @@
         }
       }
     },
-    "Die Bridge kennt diese Watch nicht mehr. Koppel sie auf dem iPhone neu.": {
+    "Die Bridge kennt diese Watch nicht mehr. Kopple sie auf dem iPhone neu.": {
       "localizations": {
         "en": {
           "stringUnit": {
@@ -372,6 +392,16 @@
         }
       }
     },
+    "Keine Nummer eingegeben": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No number entered"
+          }
+        }
+      }
+    },
     "Keine Treffer": {
       "localizations": {
         "en": {
@@ -402,7 +432,7 @@
         }
       }
     },
-    "Koppel die Watch auf dem iPhone neu.": {
+    "Kopple die Watch auf dem iPhone neu.": {
       "localizations": {
         "en": {
           "stringUnit": {
@@ -412,12 +442,22 @@
         }
       }
     },
-    "Koppel die Watch zuerst in der iPhone-App.": {
+    "Kopple die Watch zuerst in der iPhone-App.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Pair the watch in the iPhone app first."
+          }
+        }
+      }
+    },
+    "Kopplung": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pairing"
           }
         }
       }
@@ -532,6 +572,16 @@
         }
       }
     },
+    "Noch keine Tastentöne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No tones yet"
+          }
+        }
+      }
+    },
     "Notiz": {
       "localizations": {
         "en": {
@@ -548,6 +598,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Number"
+          }
+        }
+      }
+    },
+    "Nummer löschen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear Number"
           }
         }
       }
@@ -582,6 +642,16 @@
         }
       }
     },
+    "Raute": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pound"
+          }
+        }
+      }
+    },
     "Sonstige": {
       "localizations": {
         "en": {
@@ -592,22 +662,22 @@
         }
       }
     },
+    "Stern": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Star"
+          }
+        }
+      }
+    },
     "Stumm": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Mute"
-          }
-        }
-      }
-    },
-    "Stumm aus": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unmute"
           }
         }
       }
@@ -682,12 +752,12 @@
         }
       }
     },
-    "Wartet auf Push-Freigabe": {
+    "Noch nicht bereit für Anrufe": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Waiting for push access"
+            "value": "Not ready for calls yet"
           }
         }
       }

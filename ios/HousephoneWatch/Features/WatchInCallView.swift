@@ -38,7 +38,7 @@ struct WatchInCallView: View {
 
     private func content(for call: CallSession) -> some View {
         VStack(spacing: WatchTheme.Space.s2) {
-            VStack(spacing: 2) {
+            VStack(spacing: WatchTheme.Space.hairline) {
                 Text(title(for: call))
                     .font(.title3.weight(.semibold))
                     .lineLimit(2)
@@ -68,7 +68,7 @@ struct WatchInCallView: View {
                 HStack(alignment: .center) {
                     controlButton(
                         symbol: callCenter.isMuted ? "mic.slash.fill" : "mic.fill",
-                        label: callCenter.isMuted ? "Stumm aus" : "Stumm",
+                        label: "Stumm",
                         isOn: callCenter.isMuted
                     ) {
                         callCenter.setMuted(!callCenter.isMuted)
@@ -87,7 +87,7 @@ struct WatchInCallView: View {
                 .padding(.horizontal, WatchTheme.Space.s1)
             }
         }
-        .animation(WatchTheme.Motion.standard, value: showsVolume)
+        .motion(WatchTheme.Motion.standard, value: showsVolume)
     }
 
     private func controlButton(symbol: String, label: LocalizedStringKey, isOn: Bool, action: @escaping () -> Void) -> some View {
@@ -95,11 +95,12 @@ struct WatchInCallView: View {
             Image(systemName: symbol)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(isOn ? Color.black : Color.white)
-                .frame(width: 40, height: 40)
+                .frame(width: WatchTheme.minTarget, height: WatchTheme.minTarget)
                 .background(Circle().fill(isOn ? Color.white : Color.white.opacity(0.16)))
                 .contentTransition(.symbolEffect(.replace))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(WatchPressStyle())
+        .motion(WatchTheme.Motion.snappy, value: isOn)
         .accessibilityLabel(Text(label))
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
@@ -138,28 +139,42 @@ struct WatchCallStatusLine: View {
     let call: CallSession
     let connection: WatchCallCenter.ConnectionState?
 
+    private var isReconnecting: Bool {
+        call.phase == .connected && connection == .reconnecting
+    }
+
     var body: some View {
-        switch call.phase {
-        case .connected:
-            if connection == .reconnecting {
-                Text("Verbindung wird wiederhergestellt …")
-            } else if let connectedAt = call.connectedAt {
-                TimelineView(.periodic(from: connectedAt, by: 1)) { context in
-                    Text(context.date.timeIntervalSince(connectedAt).callDurationText)
+        Group {
+            switch call.phase {
+            case .connected:
+                if isReconnecting {
+                    Text("Verbindung wird wiederhergestellt …")
+                } else if let connectedAt = call.connectedAt {
+                    Text(timerInterval: connectedAt...Date.distantFuture, countsDown: false)
                         .monospacedDigit()
                 }
+            case .ended:
+                Text(endedText)
+            case .ringing:
+                Text(call.direction == .incoming ? "Eingehender Anruf" : "Klingelt …")
+            case .earlyMedia:
+                Text("Klingelt …")
+            case .answering:
+                Text("Verbinde …")
+            case .waitingForBridge:
+                Text(call.direction == .incoming ? "Eingehender Anruf" : "Verbinde …")
             }
-        case .ended:
-            Text(endedText)
-        case .ringing:
-            Text(call.direction == .incoming ? "Eingehender Anruf" : "Klingelt …")
-        case .earlyMedia:
-            Text("Klingelt …")
-        case .answering:
-            Text("Verbinde …")
-        case .waitingForBridge:
-            Text(call.direction == .incoming ? "Eingehender Anruf" : "Verbinde …")
         }
+        // Each state replaces the last with a soft blur instead of a jump.
+        .id(StatusKey(phase: call.phase, reconnecting: isReconnecting))
+        .transition(.blurReplace)
+        .motion(WatchTheme.Motion.standard, value: StatusKey(phase: call.phase, reconnecting: isReconnecting))
+        .sensoryFeedback(.start, trigger: call.phase) { _, new in new == .connected }
+    }
+
+    private struct StatusKey: Hashable {
+        let phase: CallPhase
+        let reconnecting: Bool
     }
 
     private var endedText: LocalizedStringKey {
@@ -185,6 +200,7 @@ struct DTMFKeypad: View {
                 .font(.body.monospacedDigit())
                 .lineLimit(1)
                 .truncationMode(.head)
+                .accessibilityLabel(digits.isEmpty ? Text("Noch keine Tastentöne") : Text(AttributedString.spokenNumber(digits)))
             WatchKeyGrid { key in
                 digits.append(key)
                 callCenter.playDTMF(key)
