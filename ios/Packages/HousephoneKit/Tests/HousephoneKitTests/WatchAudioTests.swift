@@ -227,3 +227,31 @@ struct CallSessionWebSocketMediaTests {
         #expect(!CallMedia(callId: callId, codec: "G722", sampleRate: 16000).isSupported)
     }
 }
+
+struct CompanionLinkTests {
+    @Test func pairingInstructionRoundTrips() throws {
+        let pairing = CompanionPairing(code: "M4QX7ZP2KD", url: URL(string: "wss://phone.example.com/v1/ws")!, expiresAt: Date(timeIntervalSince1970: 1_800_000_600))
+        let instruction = CompanionPairingInstruction(pairing: pairing, bridgeName: "Zuhause")
+        let decoded = try #require(CompanionPairingInstruction(dictionary: instruction.dictionary))
+        #expect(decoded == instruction)
+        #expect(decoded.link.bridgeName == "Zuhause")
+        #expect(decoded.isExpired(at: Date(timeIntervalSince1970: 1_800_000_599)) == false)
+        #expect(decoded.isExpired(at: Date(timeIntervalSince1970: 1_800_000_600)))
+    }
+
+    @Test func instructionIgnoresOtherMessages() {
+        #expect(CompanionPairingInstruction(dictionary: ["type": "something"]) == nil)
+        #expect(CompanionPairingInstruction(dictionary: [
+            "type": CompanionPairingInstruction.messageType, "url": "wss://x/v1/ws", "code": "invalid", "expiresAt": 0.0,
+        ]) == nil)
+    }
+
+    @Test func watchStateRoundTripsThroughPropertyList() throws {
+        let state = WatchPairingState(phase: .paired, bridgeName: "Zuhause", canReceiveCalls: true, updatedAt: Date(timeIntervalSince1970: 1_800_000_000))
+        let dictionary = state.dictionary
+        // WatchConnectivity requires property-list values.
+        #expect(PropertyListSerialization.propertyList(dictionary, isValidFor: .binary))
+        #expect(WatchPairingState(dictionary: dictionary) == state)
+        #expect(WatchPairingState(dictionary: [:]) == nil)
+    }
+}

@@ -13,6 +13,7 @@ struct HousephoneApp: App {
             RootView()
                 .environment(services.bridge)
                 .environment(services.callCenter)
+                .environment(services.watchLink)
                 .environment(services.contacts)
                 .environment(services.appModel)
                 .modelContainer(services.modelContainer)

@@ -1181,6 +1181,166 @@
           }
         }
       }
+    },
+    "Apple Watch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Watch"
+          }
+        }
+      }
+    },
+    "Housephone nicht installiert": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone not installed"
+          }
+        }
+      }
+    },
+    "Gekoppelt, klingelt noch nicht": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paired, can’t ring yet"
+          }
+        }
+      }
+    },
+    "Code wird angefordert …": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requesting code …"
+          }
+        }
+      }
+    },
+    "Watch koppelt sich …": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch is pairing …"
+          }
+        }
+      }
+    },
+    "Öffne Housephone auf deiner Apple Watch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Housephone on your Apple Watch"
+          }
+        }
+      }
+    },
+    "Der Code gilt bis %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The code is valid until %@."
+          }
+        }
+      }
+    },
+    "Erneut koppeln": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pair again"
+          }
+        }
+      }
+    },
+    "Apple Watch koppeln": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pair Apple Watch"
+          }
+        }
+      }
+    },
+    "Installiere Housephone in der Watch-App auf dem iPhone unter „Verfügbare Apps“.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install Housephone in the Watch app on your iPhone under “Available Apps”."
+          }
+        }
+      }
+    },
+    "Zum Koppeln muss die Bridge erreichbar sein.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The bridge must be reachable to pair."
+          }
+        }
+      }
+    },
+    "Bei Anrufen klingelt auch deine Watch. Du kannst direkt am Handgelenk annehmen und sprechen – auch ohne iPhone in der Nähe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your watch rings too. Answer and talk right on your wrist – even without your iPhone nearby."
+          }
+        }
+      }
+    },
+    "Danach klingelt auch deine Watch, und du kannst direkt am Handgelenk telefonieren.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Then your watch rings too, and you can take calls right on your wrist."
+          }
+        }
+      }
+    },
+    "Die Bridge hat keinen Kopplungscode geliefert. Prüfe, ob sie erreichbar ist.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The bridge didn’t provide a pairing code. Check that it’s reachable."
+          }
+        }
+      }
+    },
+    "Die Watch hat unerwartet geantwortet. Aktualisiere Housephone auf beiden Geräten.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The watch sent an unexpected reply. Update Housephone on both devices."
+          }
+        }
+      }
+    },
+    "Die Watch konnte sich nicht koppeln.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The watch couldn’t pair."
+          }
+        }
+      }
     }
   }
 }
