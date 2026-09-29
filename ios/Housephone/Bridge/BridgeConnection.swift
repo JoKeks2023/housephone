@@ -239,8 +239,8 @@ final class BridgeConnection {
         pathObserver.start { [weak self] path in
             Task { @MainActor in
                 guard let self else { return }
-                lastPath = path
-                guard let client else { return }
+                self.lastPath = path
+                guard let client = self.client else { return }
                 await client.networkPathChanged(path)
             }
         }
