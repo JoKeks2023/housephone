@@ -61,6 +61,8 @@ type world struct {
 	bridge *app.Bridge
 	pusher *recordingPusher
 	url    string
+	// lanURL is the private listener (pairing); url the public one.
+	lanURL string
 	// dataDir is the bridge data directory (identity.key, devices).
 	dataDir string
 }
@@ -76,6 +78,9 @@ func startWorld(t *testing.T, opts ...func(*config.Config)) *world {
 	}
 	cfg := config.Default()
 	cfg.Bridge.Listen = "127.0.0.1:0"
+	cfg.Bridge.PrivateListen = "127.0.0.1:0"
+	// Tests connect from loopback, which the defaults do not trust.
+	cfg.Bridge.TrustedNetworks = []string{"127.0.0.0/8"}
 	cfg.Bridge.DataDir = t.TempDir()
 	cfg.SIP.Registrar = box.Host
 	cfg.SIP.Port = box.Port
@@ -111,7 +116,7 @@ func startWorld(t *testing.T, opts ...func(*config.Config)) *world {
 			t.Error("bridge did not shut down")
 		}
 	})
-	w := &world{box: box, bridge: bridge, pusher: pusher, url: "ws://" + bridge.Addr() + "/v1/ws", dataDir: cfg.Bridge.DataDir}
+	w := &world{box: box, bridge: bridge, pusher: pusher, url: "ws://" + bridge.Addr() + "/v1/ws", lanURL: bridge.LanURL(), dataDir: cfg.Bridge.DataDir}
 	deadline := time.Now().Add(wait)
 	for !bridge.SIPRegistered() {
 		if time.Now().After(deadline) {
@@ -136,15 +141,20 @@ type device struct {
 }
 
 // pair pairs a new device the way the app does: pairing link from the pair
-// command (with the bridge's fingerprint), POST /v1/pair, check of the
-// bridge's signature.
+// command (with the bridge's fingerprint), POST /v1/pair over the private
+// listener (lan), check of the bridge's signature. Afterwards the device
+// talks to the public listener.
 func (w *world) pair(t *testing.T, name, platform, model string) *hp2.Client {
 	t.Helper()
 	pc, err := w.bridge.Pairing.Create(name, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
-	link, err := hp2.ParsePairingLink(app.PairingLink(w.url, hp2.GroupCode(pc.Code), w.bridge.Key.Fingerprint(), "Zuhause"))
+	link, err := hp2.ParsePairingLink(app.PairingLink(w.url, w.lanURL, hp2.GroupCode(pc.Code), w.bridge.Key.Fingerprint(), "Zuhause"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairBase, err := hp2.HTTPBase(link.LAN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +168,7 @@ func (w *world) pair(t *testing.T, name, platform, model string) *hp2.Client {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
-	res, err := hp2.Pair(ctx, http.DefaultClient, base, key, link.Code, link.Fingerprint, "Test", platform, model)
+	res, err := hp2.Pair(ctx, http.DefaultClient, pairBase, key, link.Code, link.Fingerprint, "Test", platform, model)
 	if err != nil {
 		t.Fatalf("pairing: %v", err)
 	}
@@ -547,8 +557,8 @@ func TestEndToEndHealthAndPairingLink(t *testing.T) {
 		t.Fatalf("health %d %s", res.StatusCode, body)
 	}
 	fp := w.bridge.Key.Fingerprint()
-	link := app.PairingLink("wss://phone.example.com/v1/ws", "K7P2XH9QRMW4DZT8", fp, "Mein Zuhause")
-	for _, want := range []string{"housephone://pair?v=2&", "code=K7P2XH9QRMW4DZT8", "url=wss%3A%2F%2Fphone.example.com%2Fv1%2Fws", "fp=" + fp, "name=Mein%20Zuhause"} {
+	link := app.PairingLink("wss://phone.example.com/v1/ws", "ws://192.168.178.20:8081/v1/ws", "K7P2XH9QRMW4DZT8", fp, "Mein Zuhause")
+	for _, want := range []string{"housephone://pair?v=2&", "code=K7P2XH9QRMW4DZT8", "url=wss%3A%2F%2Fphone.example.com%2Fv1%2Fws", "lan=ws%3A%2F%2F192.168.178.20%3A8081%2Fv1%2Fws", "fp=" + fp, "name=Mein%20Zuhause"} {
 		if !strings.Contains(link, want) {
 			t.Fatalf("link %s lacks %s", link, want)
 		}

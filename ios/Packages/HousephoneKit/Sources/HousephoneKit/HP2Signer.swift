@@ -173,6 +173,7 @@ public enum HP2Pairing {
         else { throw .bridgeIdentityMismatch }
         return BridgeCredentials(
             bridgeURL: link.bridgeURL,
+            lanURL: link.lanURL,
             deviceId: result.deviceId,
             bridgeId: result.bridgeId,
             bridgeName: result.bridgeName,

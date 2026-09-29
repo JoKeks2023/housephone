@@ -1,1 +1,1 @@
-{"type":"pair.companion","payload":{"code":"M4QX7ZP2KD","url":"wss://phone.example.com/v1/ws","expiresAt":"2026-09-29T18:14:05Z"}}
+{"type":"pair.companion","payload":{"code":"M4QX7ZP2KD","url":"wss://phone.example.com/v1/ws","lanUrl":"ws://192.168.178.20:8081/v1/ws","expiresAt":"2026-09-29T18:14:05Z"}}

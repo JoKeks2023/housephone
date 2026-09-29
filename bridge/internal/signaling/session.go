@@ -32,6 +32,9 @@ type session struct {
 	revoked bool
 
 	connectedAt time.Time
+	// private: connected over the private listener (home network), where
+	// companion pairing is allowed.
+	private bool
 
 	sinkMu sync.Mutex
 	sink   calls.AudioSink
@@ -122,7 +125,7 @@ func (s *session) close(code websocket.StatusCode, reason string) {
 }
 
 // runDevice serves an authenticated device until the connection ends.
-func (srv *Server) runDevice(ctx context.Context, conn *hp2.Conn, dev store.Device, ip string) {
+func (srv *Server) runDevice(ctx context.Context, conn *hp2.Conn, dev store.Device, ip string, private bool) {
 	defer conn.WS().CloseNow()
 	log := srv.log.With("device", dev.ID, "name", dev.Name)
 
@@ -159,6 +162,7 @@ func (srv *Server) runDevice(ctx context.Context, conn *hp2.Conn, dev store.Devi
 	srv.applyDeviceChanges(dev.ID, changes)
 
 	sess := newSession(dev.ID, conn)
+	sess.private = private
 	srv.mu.Lock()
 	old := srv.sessions[dev.ID]
 	srv.sessions[dev.ID] = sess
@@ -167,7 +171,7 @@ func (srv *Server) runDevice(ctx context.Context, conn *hp2.Conn, dev store.Devi
 		log.Info("replacing previous connection")
 		old.close(websocket.StatusCode(protocol.CloseReplaced), "replaced")
 	}
-	log.Info("device connected", "ip", ip, "app", hello.AppVersion, "platform", hello.Platform, "media", hello.MediaCapabilities)
+	log.Info("device connected", "ip", ip, "private", private, "app", hello.AppVersion, "platform", hello.Platform, "media", hello.MediaCapabilities)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -206,6 +210,7 @@ func (srv *Server) runDevice(ctx context.Context, conn *hp2.Conn, dev store.Devi
 		BridgeVersion: srv.cfg.BridgeVersion,
 		SIPRegistered: srv.cfg.Hub.SIPRegistered(),
 		Features:      srv.features(),
+		LanURL:        srv.cfg.LanURL,
 	}))
 	if helloErr != nil {
 		sess.Send(errorEnvelope(protocol.ErrorBadRequest, helloErr.Error()))
@@ -364,6 +369,10 @@ func (srv *Server) revalidateLoop(ctx context.Context, sess *session) {
 // Apple Watch (v1.1). A companion code only pairs a watch, stays bound to
 // the iPhone that requested it and replaces that iPhone's previous code.
 func (srv *Server) pairCompanion(sess *session, env protocol.Envelope) {
+	if !sess.private {
+		sess.Send(errorEnvelope(protocol.ErrorHomeNetworkRequired, "Die Watch lässt sich nur im Heimnetz oder über Tailscale koppeln"))
+		return
+	}
 	var req protocol.PairCompanionRequest
 	if err := env.Decode(&req); err != nil || req.Platform != protocol.PlatformWatchOS {
 		sess.Send(errorEnvelope(protocol.ErrorBadRequest, "deviceName and platform watchos are required"))
@@ -393,6 +402,7 @@ func (srv *Server) pairCompanion(sess *session, env protocol.Envelope) {
 	sess.Send(protocol.MustEnvelope(protocol.TypePairCompanion, protocol.PairCompanion{
 		Code:      pc.Code,
 		URL:       srv.cfg.PublicURL,
+		LanURL:    srv.cfg.LanURL,
 		ExpiresAt: protocol.Timestamp(pc.ExpiresAt),
 	}))
 }

@@ -10,6 +10,8 @@ public enum PairingLinkError: Error, Equatable, Sendable {
     case outdatedLink
     /// No or no valid bridge fingerprint (`fp`).
     case invalidFingerprint
+    /// `lan` is present but no ws:// or wss:// URL.
+    case invalidLanURL
 }
 
 /// One-time pairing codes: 16 characters from `A-Z2-9` without `0 O 1 I`
@@ -37,19 +39,25 @@ public enum PairingCode {
     }
 }
 
-/// `housephone://pair?v=2&url=<wss-URL>&code=<code>&fp=<fingerprint>&name=<bridge name>`
+/// `housephone://pair?v=2&url=<wss-URL>&lan=<ws-URL>&code=<code>&fp=<fingerprint>&name=<bridge name>`
+///
+/// `url` is the public address (Cloudflare Tunnel), `lan` the bridge's
+/// private listener in the home network. Pairing only works over `lan`;
+/// links of older bridges have no `lan` and pair over `url`.
 ///
 /// `fp` is `base64url(SHA-256(bridge key))`. Pairing succeeds only if the
 /// bridge proves it holds exactly that key, so a link read from the
 /// bridge's own screen pins the right bridge.
 public struct PairingLink: Equatable, Sendable {
     public let bridgeURL: URL
+    public let lanURL: URL?
     public let code: String
     public let bridgeName: String?
     public let fingerprint: String
 
-    public init(bridgeURL: URL, code: String, bridgeName: String?, fingerprint: String) {
+    public init(bridgeURL: URL, lanURL: URL? = nil, code: String, bridgeName: String?, fingerprint: String) {
         self.bridgeURL = bridgeURL
+        self.lanURL = lanURL
         self.code = code
         self.bridgeName = bridgeName
         self.fingerprint = fingerprint
@@ -69,10 +77,13 @@ public struct PairingLink: Equatable, Sendable {
         guard value("v") == "2" else { throw .outdatedLink }
 
         guard let rawBridgeURL = value("url"), !rawBridgeURL.isEmpty else { throw .missingBridgeURL }
-        guard let bridgeURL = URL(string: rawBridgeURL),
-              let scheme = bridgeURL.scheme?.lowercased(), scheme == "wss" || scheme == "ws",
-              let host = bridgeURL.host(), !host.isEmpty
-        else { throw .invalidBridgeURL }
+        guard let bridgeURL = Self.webSocketURL(rawBridgeURL) else { throw .invalidBridgeURL }
+
+        var lanURL: URL?
+        if let rawLan = value("lan"), !rawLan.isEmpty {
+            guard let url = Self.webSocketURL(rawLan) else { throw .invalidLanURL }
+            lanURL = url
+        }
 
         guard let rawCode = value("code"), !rawCode.isEmpty else { throw .missingCode }
         guard let code = PairingCode.normalize(rawCode) else { throw .invalidCode }
@@ -80,8 +91,20 @@ public struct PairingLink: Equatable, Sendable {
         guard let fingerprint = value("fp"), Self.isValidFingerprint(fingerprint) else { throw .invalidFingerprint }
 
         let name = value("name")
-        self.init(bridgeURL: bridgeURL, code: code, bridgeName: name?.isEmpty == false ? name : nil, fingerprint: fingerprint)
+        self.init(bridgeURL: bridgeURL, lanURL: lanURL, code: code, bridgeName: name?.isEmpty == false ? name : nil, fingerprint: fingerprint)
     }
+
+    private static func webSocketURL(_ raw: String) -> URL? {
+        guard let url = URL(string: raw),
+              let scheme = url.scheme?.lowercased(), scheme == "wss" || scheme == "ws",
+              let host = url.host(), !host.isEmpty
+        else { return nil }
+        return url
+    }
+
+    /// Where pairing happens: the private listener, or `bridgeURL` for
+    /// links of older bridges without one.
+    public var pairingURL: URL { lanURL ?? bridgeURL }
 
     /// Parses pasted text, tolerating surrounding whitespace.
     public init(string: String) throws(PairingLinkError) {

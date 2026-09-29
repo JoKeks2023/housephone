@@ -22,6 +22,7 @@ const (
 	EnvConfig          = "HOUSEPHONE_CONFIG"
 	EnvDataDir         = "HOUSEPHONE_DATA_DIR"
 	EnvPublicURL       = "HOUSEPHONE_PUBLIC_URL"
+	EnvLanURL          = "HOUSEPHONE_LAN_URL"
 	EnvSIPPassword     = "HOUSEPHONE_SIP_PASSWORD"
 	EnvSIPPasswordFile = "HOUSEPHONE_SIP_PASSWORD_FILE"
 	EnvAPNsKeyFile     = "HOUSEPHONE_APNS_KEY_FILE"
@@ -69,8 +70,24 @@ func (f FritzBox) Enabled() bool { return f.Username != "" }
 type Bridge struct {
 	// Name is shown in the app, e.g. "Zuhause".
 	Name string `yaml:"name"`
-	// Listen is the HTTP/WebSocket listen address, e.g. ":8080".
+	// Listen is the public HTTP/WebSocket listen address behind the
+	// Cloudflare Tunnel, e.g. "127.0.0.1:8080". It only serves telephony
+	// for paired devices: no pairing, no administration.
 	Listen string `yaml:"listen"`
+	// PrivateListen is the listener for the home network (and Tailscale):
+	// everything Listen serves plus pairing. It only accepts connections
+	// from TrustedNetworks; loopback never counts (cloudflared connects from
+	// there). Empty disables it, and with it pairing.
+	PrivateListen string `yaml:"privateListen"`
+	// TrustedNetworks are the source CIDRs PrivateListen accepts. Empty:
+	// RFC 1918, unique local (fc00::/7) and link-local addresses.
+	TrustedNetworks []string `yaml:"trustedNetworks"`
+	// Tailscale adds the Tailscale ranges (100.64.0.0/10,
+	// fd7a:115c:a1e0::/48) to TrustedNetworks.
+	Tailscale bool `yaml:"tailscale"`
+	// LanURL is the ws:// URL of PrivateListen that devices use at home and
+	// for pairing. Empty: derived from the bridge's LAN IP.
+	LanURL string `yaml:"lanUrl"`
 	// PublicURL is the wss:// URL devices use, embedded in pairing links.
 	PublicURL string `yaml:"publicUrl"`
 	// DataDir holds devices.json, pairing.json and bridge.json.
@@ -86,15 +103,43 @@ type Bridge struct {
 	MaxCalls int `yaml:"maxCalls"`
 }
 
+// DefaultTrustedNetworks are the home network ranges: RFC 1918, unique
+// local and link-local. Loopback is deliberately missing.
+var DefaultTrustedNetworks = []string{
+	"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+	"fc00::/7", "169.254.0.0/16", "fe80::/10",
+}
+
+// TailscaleNetworks are the address ranges Tailscale assigns.
+var TailscaleNetworks = []string{"100.64.0.0/10", "fd7a:115c:a1e0::/48"}
+
 // TrustedProxyNets parses TrustedProxies (IP addresses or CIDRs).
 func (b Bridge) TrustedProxyNets() ([]*net.IPNet, error) {
+	return parseNets("bridge.trustedProxies", b.TrustedProxies)
+}
+
+// TrustedNetworkNets returns the source networks the private listener
+// accepts: TrustedNetworks (or the defaults) plus Tailscale if enabled.
+func (b Bridge) TrustedNetworkNets() ([]*net.IPNet, error) {
+	raw := b.TrustedNetworks
+	if len(raw) == 0 {
+		raw = DefaultTrustedNetworks
+	}
+	if b.Tailscale {
+		raw = append(append([]string{}, raw...), TailscaleNetworks...)
+	}
+	return parseNets("bridge.trustedNetworks", raw)
+}
+
+// parseNets parses IP addresses or CIDRs.
+func parseNets(field string, list []string) ([]*net.IPNet, error) {
 	var out []*net.IPNet
-	for _, raw := range b.TrustedProxies {
+	for _, raw := range list {
 		raw = strings.TrimSpace(raw)
 		if !strings.Contains(raw, "/") {
 			ip := net.ParseIP(raw)
 			if ip == nil {
-				return nil, fmt.Errorf("bridge.trustedProxies: %q is no IP address or CIDR", raw)
+				return nil, fmt.Errorf("%s: %q is no IP address or CIDR", field, raw)
 			}
 			bits := 32
 			if ip.To4() == nil {
@@ -104,7 +149,7 @@ func (b Bridge) TrustedProxyNets() ([]*net.IPNet, error) {
 		}
 		_, n, err := net.ParseCIDR(raw)
 		if err != nil {
-			return nil, fmt.Errorf("bridge.trustedProxies: %q is no IP address or CIDR", raw)
+			return nil, fmt.Errorf("%s: %q is no IP address or CIDR", field, raw)
 		}
 		out = append(out, n)
 	}
@@ -180,9 +225,11 @@ func Default() Config {
 		Bridge: Bridge{
 			Name: "Zuhause",
 			// Only reachable locally (cloudflared runs on the same host).
-			Listen:   "127.0.0.1:8080",
-			DataDir:  "data",
-			MaxCalls: 8,
+			Listen: "127.0.0.1:8080",
+			// Home network only (source filter), for pairing and at home.
+			PrivateListen: ":8081",
+			DataDir:       "data",
+			MaxCalls:      8,
 		},
 		SIP: SIP{
 			Registrar:             "fritz.box",
@@ -239,6 +286,7 @@ func (c *Config) applyEnv(lookup func(string) (string, bool)) error {
 	}
 	set(EnvDataDir, &c.Bridge.DataDir)
 	set(EnvPublicURL, &c.Bridge.PublicURL)
+	set(EnvLanURL, &c.Bridge.LanURL)
 	set(EnvSIPPassword, &c.SIP.Password)
 	set(EnvAPNsKeyFile, &c.APNs.KeyFile)
 	set(EnvAPNsKeyID, &c.APNs.KeyID)
@@ -283,6 +331,19 @@ func (c Config) ValidateServe() error {
 	}
 	if _, err := c.Bridge.TrustedProxyNets(); err != nil {
 		errs = append(errs, err)
+	}
+	if _, err := c.Bridge.TrustedNetworkNets(); err != nil {
+		errs = append(errs, err)
+	}
+	if c.Bridge.PrivateListen != "" {
+		if _, _, err := net.SplitHostPort(c.Bridge.PrivateListen); err != nil {
+			errs = append(errs, fmt.Errorf("bridge.privateListen: %w", err))
+		}
+	}
+	if c.Bridge.LanURL != "" {
+		if err := validateWSURL("bridge.lanUrl", c.Bridge.LanURL); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	if c.Bridge.MaxCalls < 1 || c.Bridge.MaxCalls > 100 {
 		errs = append(errs, fmt.Errorf("bridge.maxCalls must be between 1 and 100, got %d", c.Bridge.MaxCalls))
@@ -345,20 +406,34 @@ func (c Config) ValidatePair() error {
 	if c.Bridge.PublicURL == "" {
 		return fmt.Errorf("bridge.publicUrl is required for pairing (or %s)", EnvPublicURL)
 	}
-	return ValidatePublicURL(c.Bridge.PublicURL)
+	if err := ValidatePublicURL(c.Bridge.PublicURL); err != nil {
+		return err
+	}
+	// Devices pair only over the private listener (home network).
+	if c.Bridge.PrivateListen == "" && c.Bridge.LanURL == "" {
+		return errors.New("bridge.privateListen is required for pairing: devices pair in the home network")
+	}
+	if c.Bridge.LanURL != "" {
+		return validateWSURL("bridge.lanUrl", c.Bridge.LanURL)
+	}
+	return nil
 }
 
 // ValidatePublicURL requires a ws:// or wss:// URL with a host.
 func ValidatePublicURL(raw string) error {
+	return validateWSURL("bridge.publicUrl", raw)
+}
+
+func validateWSURL(field, raw string) error {
 	u, err := url.Parse(raw)
 	if err != nil {
-		return fmt.Errorf("bridge.publicUrl: %w", err)
+		return fmt.Errorf("%s: %w", field, err)
 	}
 	if u.Scheme != "wss" && u.Scheme != "ws" {
-		return fmt.Errorf("bridge.publicUrl must start with wss:// (got %q)", raw)
+		return fmt.Errorf("%s must start with wss:// or ws:// (got %q)", field, raw)
 	}
 	if u.Host == "" {
-		return fmt.Errorf("bridge.publicUrl has no host: %q", raw)
+		return fmt.Errorf("%s has no host: %q", field, raw)
 	}
 	return nil
 }

@@ -59,6 +59,9 @@ type Config struct {
 	Identity *hp2.Identity
 	// PublicURL is the wss:// URL sent in pair.companion (v1.1).
 	PublicURL string
+	// LanURL is the ws:// URL of the private listener, sent in welcome and
+	// pair.companion. Empty without a private listener.
+	LanURL string
 	// PushTopic is the configured APNs topic; per-device topics must share
 	// its bundle prefix (v1.1).
 	PushTopic string
@@ -148,12 +151,28 @@ func New(cfg Config) *Server {
 	}
 }
 
-// Handler returns the HTTP routes.
-func (s *Server) Handler() http.Handler {
+// PublicHandler returns the routes of the public listener (behind the
+// Cloudflare Tunnel): telephony for paired devices only. Pairing answers
+// 404 and pair.companion.request an error.
+func (s *Server) PublicHandler() http.Handler { return s.routes(false) }
+
+// PrivateHandler returns the routes of the private listener: everything,
+// including pairing, but only for clients whose address (RemoteAddr, never
+// a proxy header) lies in trusted.
+func (s *Server) PrivateHandler(trusted []*net.IPNet) http.Handler {
+	return s.sourceFilter(trusted, s.routes(true))
+}
+
+// Handler returns all routes without a source filter (tests).
+func (s *Server) Handler() http.Handler { return s.routes(true) }
+
+func (s *Server) routes(private bool) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/health", s.health)
-	mux.HandleFunc("GET /v1/ws", s.websocket)
-	mux.HandleFunc("POST /v1/pair", withDeadline(s.httpPair))
+	mux.HandleFunc("GET /v1/ws", func(w http.ResponseWriter, r *http.Request) { s.websocket(w, r, private) })
+	if private {
+		mux.HandleFunc("POST /v1/pair", withDeadline(s.httpPair))
+	}
 	mux.HandleFunc("PUT /v1/device", s.authed(s.httpUpdateDevice))
 	mux.HandleFunc("DELETE /v1/device", s.authed(s.httpDeleteDevice))
 	mux.HandleFunc("GET /v1/calls/{callId}", s.authed(s.httpCallStatus))
@@ -161,6 +180,47 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/history", s.authed(s.httpHistory))
 	mux.HandleFunc("/", s.notFound)
 	return mux
+}
+
+// sourceFilter lets only clients from trusted networks through. It looks at
+// the TCP peer only: a proxy on the same host (cloudflared) connects from
+// loopback, which is why loopback is not trusted unless listed explicitly.
+func (s *Server) sourceFilter(trusted []*net.IPNet, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !TrustedSource(trusted, r.RemoteAddr) {
+			s.warnClient("private listener: untrusted source", peerHost(r.RemoteAddr))
+			s.writeSignedError(w, s.sessionFromHeader(r), http.StatusForbidden, protocol.Error{Code: protocol.ErrorHomeNetworkRequired, Message: "only reachable from the home network"})
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// TrustedSource reports whether the peer address (host:port or host) lies
+// in one of the trusted networks.
+func TrustedSource(trusted []*net.IPNet, remoteAddr string) bool {
+	host := peerHost(remoteAddr)
+	// Zone of a link-local address (fe80::1%en0).
+	if i := strings.IndexByte(host, '%'); i >= 0 {
+		host = host[:i]
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	for _, n := range trusted {
+		if n.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func peerHost(remoteAddr string) string {
+	if h, _, err := net.SplitHostPort(remoteAddr); err == nil {
+		return h
+	}
+	return remoteAddr
 }
 
 // notFound answers unknown paths and methods with 404, signed when the
@@ -200,7 +260,9 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 
 // websocket upgrades an HP2-authenticated request to the sealed device
 // connection. Without valid authentication there is no upgrade (401).
-func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
+// private marks connections of the private listener; only they may request
+// companion pairing codes.
+func (s *Server) websocket(w http.ResponseWriter, r *http.Request, private bool) {
 	s.active.Add(1)
 	defer s.active.Done()
 	res := s.checkRequest(r, nil)
@@ -221,7 +283,7 @@ func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 		ws.CloseNow()
 		return
 	}
-	s.runDevice(r.Context(), conn, res.dev, s.clientIP(r))
+	s.runDevice(r.Context(), conn, res.dev, s.clientIP(r), private)
 }
 
 // clientIP is the address used for rate limits and logs. Proxy headers are
