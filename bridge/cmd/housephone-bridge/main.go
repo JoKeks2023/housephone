@@ -146,7 +146,7 @@ func pair(cfg config.Config, name string, out io.Writer) error {
 		return err
 	}
 	link := app.PairingLink(cfg.Bridge.PublicURL, pc.Code, cfg.Bridge.Name)
-	fmt.Fprintln(out, "Scanne diesen QR-Code in der Housephone-App (Einstellungen → Bridge koppeln):")
+	fmt.Fprintln(out, "Öffne die Housephone-App und scanne diesen QR-Code (die Kopplung erscheint beim ersten Start und nach dem Entkoppeln):")
 	fmt.Fprintln(out)
 	qrterminal.GenerateWithConfig(link, qrterminal.Config{
 		Level:          qrterminal.L,

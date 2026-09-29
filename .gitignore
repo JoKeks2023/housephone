@@ -17,6 +17,7 @@ ios/*.xcodeproj/
 ios/**/.build/
 ios/**/.swiftpm/
 bridge/bin/
+bridge/housephone-bridge
 bridge/data/
 *.p8
 
