@@ -70,6 +70,9 @@ struct SettingsView: View {
                     LabeledContent("Version") {
                         Text(BridgeConnection.appVersion).font(.callout.monospaced())
                     }
+                    NavigationLink("Danksagungen") {
+                        AcknowledgementsView()
+                    }
                 }
             }
             .navigationTitle("Einstellungen")

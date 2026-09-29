@@ -1701,6 +1701,176 @@
           }
         }
       }
+    },
+    "Danksagungen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acknowledgements"
+          }
+        }
+      }
+    },
+    "Open Source": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Source"
+          }
+        }
+      }
+    },
+    "Housephone telefoniert mit WebRTC von Google, und darin stecken diese Open-Source-Projekte. Danke an alle, die daran mitarbeiten. Die App für die Apple Watch nutzt keine fremden Bibliotheken.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone makes calls with Google's WebRTC, which contains these open-source projects. Thanks to everyone who works on them. The Apple Watch app uses no third-party libraries."
+          }
+        }
+      }
+    },
+    "Den Lizenztext findest du online:": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can find the license text online:"
+          }
+        }
+      }
+    },
+    "Patentzusage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Patent grant"
+          }
+        }
+      }
+    },
+    "Lizenztext": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "License text"
+          }
+        }
+      }
+    },
+    "Gesprächsverbindung und Audio": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Call connection and audio"
+          }
+        }
+      }
+    },
+    "Verschlüsselung": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encryption"
+          }
+        }
+      }
+    },
+    "Verschlüsselte Sprachübertragung": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypted voice transport"
+          }
+        }
+      }
+    },
+    "Audio-Codec": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio codec"
+          }
+        }
+      }
+    },
+    "C++-Grundbibliothek": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "C++ base library"
+          }
+        }
+      }
+    },
+    "Datenformat": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data format"
+          }
+        }
+      }
+    },
+    "C++-Laufzeit": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "C++ runtime"
+          }
+        }
+      }
+    },
+    "Video-Codecs VP8/VP9 (Teil von WebRTC)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VP8/VP9 video codecs (part of WebRTC)"
+          }
+        }
+      }
+    },
+    "Video-Codec AV1 (Teil von WebRTC)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AV1 video codec (part of WebRTC)"
+          }
+        }
+      }
+    },
+    "AV1-Decoder (Teil von WebRTC)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AV1 decoder (part of WebRTC)"
+          }
+        }
+      }
+    },
+    "Bildformate (Teil von WebRTC)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image formats (part of WebRTC)"
+          }
+        }
+      }
     }
   }
 }
