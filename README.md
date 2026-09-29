@@ -1,11 +1,63 @@
+# Housephone
+
+Mit iPhone und Apple Watch über die **FRITZ!Box** telefonieren – zu Hause und unterwegs, **ohne VPN**, mit CallKit wie bei normalen Anrufen.
+
+```
+FRITZ!Box ◄─SIP/RTP (LAN)─► Bridge (Heimserver) ◄── WSS (Cloudflare Tunnel) ──► iPhone / Apple Watch
+                               │  ◄════ Ton: WebRTC über UDP 50000 (iPhone), WebSocket (Watch) ════►
+                               └─ VoIP-Push (APNs) ──► Apple ──► iPhone / Apple Watch
+```
+
+- **Bridge** ([`bridge/`](bridge/)): Go-Dienst auf dem Heimserver.
+  - meldet sich an der FRITZ!Box als IP-Telefon an
+  - weckt Geräte per VoIP-Push
+  - reicht Gespräche ohne Transcoding durch (G.722 HD auf dem iPhone, G.711 auf der Watch)
+- **iPhone-App** ([`ios/`](ios/)): SwiftUI, iOS 26, Liquid Glass.
+  - CallKit und PushKit
+  - Tastenfeld, Anrufliste, Kontakte
+  - Rückruf aus der iPhone-Anrufliste
+- **Watch-App** ([`ios/HousephoneWatch`](ios/HousephoneWatch)): eigene CallKit-App für watchOS 26.
+  - Die Uhr klingelt selbst.
+  - Annehmen und Sprechen am Handgelenk, auch ohne iPhone in der Nähe.
+
+## Loslegen
+
+**[`docs/setup.md`](docs/setup.md)** – von null bis zum ersten Anruf (FRITZ!Box, APNs-Key, Cloudflare Tunnel, Bridge, App, Kopplung, Test-Checkliste).
+
+## Dokumentation
+
+| Thema | Dokument |
+|---|---|
+| Architektur | [ADR-0001 Bridge](docs/architecture/ADR-0001-bridge-architektur.md), [ADR-0002 Watch](docs/architecture/ADR-0002-watch.md) |
+| Protokoll Bridge ↔ Geräte | [`docs/protocol/signaling-v1.md`](docs/protocol/signaling-v1.md) + [Fixtures](docs/protocol/fixtures/) |
+| Bridge betreiben | [`bridge/README.md`](bridge/README.md) |
+| Apps bauen | [`ios/README.md`](ios/README.md) |
+| Aufgaben und Berichte | [`docs/tasks/`](docs/tasks/) |
+
+## Entwicklung
+
+```sh
+cd bridge && go test -race ./...                   # Bridge
+cd ios/Packages/HousephoneKit && swift test        # Protokoll, Zustände, Audio-Bausteine
+cd ios && xcodegen generate && open Housephone.xcodeproj
+```
+
+Die CI (`.github/workflows/`) testet die Bridge (inkl. Docker-Image) und baut die iPhone-App samt eingebetteter Watch-App.
+
+---
+
+## Legacy: Telephone für macOS
+
+Dieses Repository ist aus [64characters/Telephone](https://github.com/64characters/Telephone) entstanden. Der macOS-Code (`Telephone/`, `Domain/`, `UseCases/` …) liegt weiterhin hier und dient als Referenz. Die ursprüngliche Anleitung folgt unverändert.
+
 Telephone is a VoIP SIP softphone for Mac. It allows you to make phone
 calls over the Internet or your company network. If your phone line
 supports SIP protocol, you can use it on your Mac instead of a
 physical phone anywhere you have a decent network connection.
 
-## Building
+### Building (legacy)
 
-### Opus
+#### Opus
 
 Opus codec is optional.
 
@@ -21,7 +73,7 @@ Build and install:
     $ make
     $ make install
 
-### LibreSSL
+#### LibreSSL
 
 Download:
 
@@ -37,7 +89,7 @@ Build and install:
     $ make
     $ make install
 
-### PJSIP
+#### PJSIP
 
 Download:
 
@@ -70,7 +122,7 @@ Build and install (remove `--with-opus` option if you don’t need Opus):
     
 Build Telephone.
 
-## Contribution
+### Contribution
 
 For the legal reasons, pull requests are not accepted. Please feel
 free to share your thoughts and ideas by commenting on the issues.
