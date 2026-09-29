@@ -46,6 +46,45 @@ public struct CompanionPairingInstruction: Equatable, Sendable {
     public func isExpired(at now: Date = .now) -> Bool { now >= expiresAt }
 }
 
+/// iPhone → Watch: the iPhone was unpaired, so the watch unpairs as well.
+///
+/// It may travel through the WatchConnectivity queue and arrive much later.
+/// `applies(toPairingAt:)` keeps such a late instruction from undoing a
+/// pairing the watch made after the iPhone unpaired.
+public struct CompanionUnpairInstruction: Equatable, Sendable {
+    public var issuedAt: Date
+
+    public init(issuedAt: Date = .now) {
+        self.issuedAt = issuedAt
+    }
+
+    public static let messageType = "housephone.unpair"
+
+    public var dictionary: [String: Any] {
+        ["type": Self.messageType, "issuedAt": issuedAt.timeIntervalSince1970]
+    }
+
+    public init?(dictionary: [String: Any]) {
+        guard dictionary["type"] as? String == Self.messageType,
+              let issued = dictionary["issuedAt"] as? Double
+        else { return nil }
+        self.init(issuedAt: Date(timeIntervalSince1970: issued))
+    }
+
+    /// Whether this instruction is meant for a pairing made at `pairedAt`
+    /// (`nil`: unknown, e.g. paired by an older version).
+    public func applies(toPairingAt pairedAt: Date?) -> Bool {
+        guard let pairedAt else { return true }
+        return issuedAt >= pairedAt
+    }
+}
+
+/// The `type` of a WatchConnectivity dictionary, e.g. to find queued
+/// transfers of one kind.
+public func companionMessageType(of dictionary: [String: Any]) -> String? {
+    dictionary["type"] as? String
+}
+
 /// Watch → iPhone: what the watch knows about its own pairing. Sent as the
 /// reply to a pairing instruction and kept current in the application
 /// context, so the iPhone shows the right state even after a restart.

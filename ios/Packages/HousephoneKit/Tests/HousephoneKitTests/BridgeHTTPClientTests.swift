@@ -172,4 +172,44 @@ struct BridgeHTTPClientTests {
             try await client.deleteDevice(credentials: credentials)
         }
     }
+
+    // MARK: - GET /v1/calls/{callId}
+
+    static let callId = CallID(UUID(uuidString: "3F0C2B4E-8A1D-4C6E-9B7A-2D5E8F1A0C93")!)
+
+    @Test(arguments: [
+        (#"{"callId":"3f0c2b4e-8a1d-4c6e-9b7a-2d5e8f1a0c93","state":"ringing"}"#, BridgeCallStatus.State.ringing),
+        (#"{"callId":"3f0c2b4e-8a1d-4c6e-9b7a-2d5e8f1a0c93","state":"connected"}"#, .connected),
+        (#"{"callId":"3f0c2b4e-8a1d-4c6e-9b7a-2d5e8f1a0c93","state":"ended","reason":"answered_elsewhere"}"#, .ended(.answeredElsewhere, sipCode: nil)),
+        (#"{"callId":"3f0c2b4e-8a1d-4c6e-9b7a-2d5e8f1a0c93","state":"ended","reason":"busy","sipCode":486}"#, .ended(.busy, sipCode: 486)),
+        (#"{"callId":"3f0c2b4e-8a1d-4c6e-9b7a-2d5e8f1a0c93","state":"ended"}"#, .ended(.failed, sipCode: nil)),
+        (#"{"callId":"3f0c2b4e-8a1d-4c6e-9b7a-2d5e8f1a0c93","state":"on_hold"}"#, .ringing),
+    ])
+    func callStatus(body: String, expected: BridgeCallStatus.State) async throws {
+        let log = RequestLog()
+        let client = BridgeHTTPClient(session: StubURLProtocol.session { request, requestBody in
+            log.record(request, requestBody)
+            return .init(status: 200, body: Data(body.utf8))
+        })
+        let status = try await client.callStatus(Self.callId, credentials: credentials)
+        #expect(status == BridgeCallStatus(callId: Self.callId, state: expected))
+        #expect(log.last?.method == "GET")
+        #expect(log.last?.url.absoluteString == "https://phone.example.com/v1/calls/3f0c2b4e-8a1d-4c6e-9b7a-2d5e8f1a0c93")
+        #expect(log.last?.headers["Authorization"] == credentials.authorizationHeader)
+    }
+
+    @Test func unknownCallIsReportedAsEnded() async throws {
+        let client = BridgeHTTPClient(session: StubURLProtocol.session { _, _ in
+            .init(status: 404, body: Data(#"{"code":"call_not_found","message":"unknown call"}"#.utf8))
+        })
+        let status = try await client.callStatus(Self.callId, credentials: credentials)
+        #expect(status.state == .ended(.notFound, sipCode: nil))
+    }
+
+    @Test func callStatusKeepsOtherErrors() async {
+        let client = BridgeHTTPClient(session: StubURLProtocol.session { _, _ in .init(status: 401, body: Data()) })
+        await #expect(throws: SignalingClientError.unauthorized) {
+            try await client.callStatus(Self.callId, credentials: credentials)
+        }
+    }
 }
