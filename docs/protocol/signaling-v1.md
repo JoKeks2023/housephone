@@ -1,5 +1,7 @@
 # Housephone Signalisierung v1
 
+> **Kopplung und Anmeldung sind durch v2 ersetzt** (`signaling-v2.md`, ADR-0004). Anruf-Nachrichten und -Abläufe dieses Dokuments gelten weiter.
+
 Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`: iPhone-App und Watch-App).
 Änderungen an diesem Dokument müssen in beiden Implementierungen nachgezogen werden.
 
