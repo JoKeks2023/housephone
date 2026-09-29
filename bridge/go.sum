@@ -53,10 +53,14 @@ github.com/pion/srtp/v3 v3.1.0/go.mod h1:RlTlj08MtRReQiVm/PMmMFUDNjZkoKuKJMHkl9+
 github.com/pion/stun v0.6.1 h1:8lp6YejULeHBF8NmV8e2787BogQhduZugh5PdhDyyN4=
 github.com/pion/stun/v3 v3.1.6 h1:WnhsD0eHCiwCfKNkVx0VJJwr2Y3eV4Ueih3KJ+dfZy8=
 github.com/pion/stun/v3 v3.1.6/go.mod h1:zRUghXSQU32Lx5orJsz3uYMkIihweXb3mu5gIns02fs=
+github.com/pion/stun/v3 v3.1.7 h1:uRXMTlGLf89WgItGNyZ6aR5jMTX0NBbybXADpQCzn+E=
+github.com/pion/stun/v3 v3.1.7/go.mod h1:Nq77RW4aRrSNrltf2ksUJLjxWeipj4lnlgdsYIxC8g8=
 github.com/pion/stun/v4 v4.0.1 h1:S2ggK4hsUJJKoZfpL90uIqIRTj6xJ0NOIEkXgcpQif0=
 github.com/pion/stun/v4 v4.0.1/go.mod h1:byktbPA8U7HjJ2H8w3moP7nzq0Q+kYNulvMLPaubQL4=
 github.com/pion/transport/v4 v4.0.2 h1:ifYlPqNwsy6aKQ9y8yzxXlHae5431ZrH2avkD/Rn6Tk=
 github.com/pion/transport/v4 v4.0.2/go.mod h1:06hFI+jCFcok2X2MekVufNZ/uzNZXivGBPfviSVcjgM=
+github.com/pion/transport/v4 v4.1.0 h1:8S+nF2reM2cJuqC6g78OVy2BBgmbdns+acx3jA97BvQ=
+github.com/pion/transport/v4 v4.1.0/go.mod h1:06hFI+jCFcok2X2MekVufNZ/uzNZXivGBPfviSVcjgM=
 github.com/pion/transport/v5 v5.1.1 h1:Sauq8YJqRopgRfIgnpfKpdpKG14g0N4jWlRgpWsEfN8=
 github.com/pion/transport/v5 v5.1.1/go.mod h1:Qxw6fCEjFWQkRDZOhS4Vf+neJBcihauvA3uyEa1J1F0=
 github.com/pion/turn/v5 v5.1.2 h1:acEOO+D5txJ52vKfcilmSMItfP23Q9K6pJ1LM5P2VV0=
