@@ -32,6 +32,10 @@ final class WatchLink: NSObject {
     private(set) var pairing: PairingPhase = .idle
 
     @ObservationIgnored private let bridge: BridgeConnection
+    @ObservationIgnored private var lastAutoPairAttempt: Date?
+    /// Minimum gap between automatic attempts; the bridge allows 5 companion
+    /// codes per hour.
+    static let autoPairInterval: TimeInterval = 15 * 60
     @ObservationIgnored private let logger = Logger(subsystem: "com.jorisconrad.housephone", category: "watch")
 
     init(bridge: BridgeConnection) {
@@ -45,6 +49,20 @@ final class WatchLink: NSObject {
     var isPairedWithBridge: Bool { watchState?.phase == .paired }
 
     // MARK: - Pairing
+
+    /// Pairs the watch without any tap once the iPhone is paired and online
+    /// and the watch app is installed. Called when the bridge connects and
+    /// whenever the watch's state changes (e.g. the app gets installed).
+    func autoPairIfNeeded() {
+        guard isSupported, isActivated, isWatchPaired, isAppInstalled,
+              bridge.isPaired, bridge.isOnline,
+              !isPairedWithBridge, watchState?.phase != .pairing, pairing == .idle
+        else { return }
+        if let last = lastAutoPairAttempt, Date().timeIntervalSince(last) < Self.autoPairInterval { return }
+        lastAutoPairAttempt = Date()
+        logger.info("Pairing the watch automatically")
+        Task { await pairWatch() }
+    }
 
     func pairWatch() async {
         guard isSupported, isActivated, isWatchPaired, isAppInstalled else { return }
@@ -76,6 +94,7 @@ final class WatchLink: NSObject {
         guard isSupported, isActivated, isWatchPaired, isAppInstalled else { return }
         cancelQueuedTransfers(ofType: CompanionPairingInstruction.messageType)
         pairing = .idle
+        lastAutoPairAttempt = nil
         let instruction = CompanionUnpairInstruction()
         let session = WCSession.default
         guard session.isReachable else {
@@ -163,6 +182,7 @@ final class WatchLink: NSObject {
 
     fileprivate func sessionChanged() {
         update(from: WCSession.default)
+        autoPairIfNeeded()
     }
 
     fileprivate func received(_ state: WatchPairingState) {
