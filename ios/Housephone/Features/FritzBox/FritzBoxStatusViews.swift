@@ -1,6 +1,9 @@
 import HousephoneKit
 import SwiftUI
 
+/// Where the setup of the FRITZ!Box access is explained.
+private let fritzBoxSetupGuide = URL(string: "https://github.com/JoKeks2023/housephone/blob/master/bridge/README.md")!
+
 /// One line above a FRITZ!Box list when the shown data is not current:
 /// what is wrong and how old the data is.
 struct FritzBoxStaleNotice: View {
@@ -9,7 +12,7 @@ struct FritzBoxStaleNotice: View {
 
     var body: some View {
         Label {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Theme.Space.hairline) {
                 Text(title)
                     .font(.subheadline.weight(.medium))
                 if let fetchedAt {
@@ -20,7 +23,7 @@ struct FritzBoxStaleNotice: View {
             }
         } icon: {
             Image(systemName: symbol)
-                .foregroundStyle(Theme.warning)
+                .foregroundStyle(Theme.warningText)
         }
         .accessibilityElement(children: .combine)
     }
@@ -43,9 +46,12 @@ struct FritzBoxStaleNotice: View {
 }
 
 /// Full-screen state when there is no FRITZ!Box data to show at all.
+/// Every case offers a way forward.
 struct FritzBoxFailureView: View {
     let failure: FritzBoxLoadFailure
     let retry: () -> Void
+
+    @Environment(AppModel.self) private var appModel
 
     var body: some View {
         ContentUnavailableView {
@@ -60,7 +66,16 @@ struct FritzBoxFailureView: View {
                 }
             }
         } actions: {
-            if failure != .unauthorized {
+            switch failure {
+            case .unauthorized:
+                Button("Zu den Einstellungen") {
+                    appModel.selectedTab = .settings
+                }
+                .buttonStyle(.glassProminent)
+            case .unavailable:
+                Button("Erneut versuchen", action: retry)
+                Link("Anleitung öffnen", destination: fritzBoxSetupGuide)
+            case .unreachable:
                 Button("Erneut versuchen", action: retry)
             }
         }
@@ -77,11 +92,11 @@ struct FritzBoxFailureView: View {
     private var message: LocalizedStringKey {
         switch failure {
         case .unavailable:
-            "Die Bridge hat keinen Zugang zur FRITZ!Box. Richte ihn wie in der Anleitung beschrieben ein (docs/setup.md, „Telefonbuch und Anrufliste“)."
+            "Die Bridge hat noch keinen Zugang zu Telefonbuch und Anrufliste der FRITZ!Box. Richte ihn in der Bridge ein."
         case .unreachable:
             "Prüfe die Internetverbindung. Telefonbuch und Anrufliste kommen über deine Bridge."
         case .unauthorized:
-            "Die Bridge kennt dieses iPhone nicht mehr. Koppel es in den Einstellungen neu."
+            "Die Bridge kennt dieses iPhone nicht mehr. Hebe in den Einstellungen die Kopplung auf und kopple es neu."
         }
     }
 
