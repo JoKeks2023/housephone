@@ -105,6 +105,22 @@ type call struct {
 	endReason  string
 	endSIPCode int
 	finished   bool
+
+	// dialer is the dialing device of an outgoing call (set before the
+	// actor starts, read by the manager).
+	dialer string
+	// offerTimer ends an outgoing call whose offer is never answered.
+	offerTimer *time.Timer
+	// dtmf feeds the call's single DTMF worker (bounded).
+	dtmf chan dtmfJob
+}
+
+// dtmfQueueSize bounds pending call.dtmf messages per call.
+const dtmfQueueSize = 8
+
+type dtmfJob struct {
+	media  SIPMedia
+	digits string
 }
 
 func newCall(m *Manager, id string, dir direction) *call {
@@ -159,6 +175,9 @@ func (c *call) run() {
 func (c *call) cleanup() {
 	if c.reattachTimer != nil {
 		c.reattachTimer.Stop()
+	}
+	if c.offerTimer != nil {
+		c.offerTimer.Stop()
 	}
 	if c.dialCancel != nil {
 		c.dialCancel()
@@ -451,12 +470,30 @@ func (c *call) onDTMF(conn DeviceConn, digits string) {
 		sendError(conn, protocol.ErrorBadRequest, "no connected call for DTMF", c.id)
 		return
 	}
-	media := c.sipMedia
-	go func() {
-		if err := media.SendDTMF(digits); err != nil {
-			c.log.Warn("sending DTMF failed", "error", err)
+	if c.dtmf == nil {
+		c.dtmf = make(chan dtmfJob, dtmfQueueSize)
+		go c.dtmfWorker(c.dtmf)
+	}
+	select {
+	case c.dtmf <- dtmfJob{media: c.sipMedia, digits: digits}:
+	default:
+		sendError(conn, protocol.ErrorBadRequest, "too many DTMF digits pending", c.id)
+	}
+}
+
+// dtmfWorker sends the call's DTMF digits one after another until the call
+// ends, instead of one goroutine per call.dtmf.
+func (c *call) dtmfWorker(jobs <-chan dtmfJob) {
+	for {
+		select {
+		case <-c.done:
+			return
+		case job := <-jobs:
+			if err := job.media.SendDTMF(job.digits); err != nil {
+				c.log.Warn("sending DTMF failed", "error", err)
+			}
 		}
-	}()
+	}
 }
 
 func (c *call) onPeerState(l *leg, peerGen int, s PeerState) {

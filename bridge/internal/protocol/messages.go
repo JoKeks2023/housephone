@@ -114,7 +114,10 @@ const (
 	// ErrorFritzBoxUnavailable (v1.2): TR-064 is not configured, the
 	// FRITZ!Box does not answer or rejects the login.
 	ErrorFritzBoxUnavailable = "fritzbox_unavailable"
-	ErrorInternal            = "internal"
+	// ErrorTooManyCalls: call.dial refused because the device (2) or the
+	// bridge (bridge.maxCalls) already has as many calls as allowed.
+	ErrorTooManyCalls = "too_many_calls"
+	ErrorInternal     = "internal"
 )
 
 // WebSocket close codes beyond RFC 6455.
@@ -122,6 +125,9 @@ const (
 	// CloseReplaced is used when a newer connection of the same device
 	// replaces this one.
 	CloseReplaced = 4001
+	// CloseRevoked is used when the device was removed at the bridge
+	// (devices remove) while it was connected.
+	CloseRevoked = 4003
 )
 
 // Envelope is a single WebSocket text message.

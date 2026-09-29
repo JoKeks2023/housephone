@@ -22,9 +22,13 @@ type Device struct {
 	// PushTopic overrides the configured APNs topic (e.g. the watch app's).
 	PushTopic string `json:"pushTopic,omitempty"`
 	// MediaCapabilities as reported by the device; empty means ["webrtc"].
-	MediaCapabilities []string  `json:"mediaCapabilities,omitempty"`
-	CreatedAt         time.Time `json:"createdAt"`
-	LastSeen          time.Time `json:"lastSeen,omitzero"`
+	MediaCapabilities []string `json:"mediaCapabilities,omitempty"`
+	// PairedBy is the device that requested the companion pairing code
+	// this device paired with (the iPhone of a watch). Empty for devices
+	// paired with a code from the pair command.
+	PairedBy  string    `json:"pairedBy,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
+	LastSeen  time.Time `json:"lastSeen,omitzero"`
 }
 
 // MediaWebSocketPCMA is the media capability of devices without WebRTC (the
@@ -161,6 +165,22 @@ func (d *Devices) Remove(id string) error {
 		f.Devices = kept
 		return writeJSON(d.path, f)
 	})
+}
+
+// Companions returns the devices paired through a code that parentID
+// requested (pair.companion.request).
+func (d *Devices) Companions(parentID string) ([]Device, error) {
+	all, err := d.List()
+	if err != nil {
+		return nil, err
+	}
+	var out []Device
+	for _, dev := range all {
+		if dev.PairedBy == parentID {
+			out = append(out, dev)
+		}
+	}
+	return out, nil
 }
 
 // ClearPushToken removes the push token if it still equals token, so a token

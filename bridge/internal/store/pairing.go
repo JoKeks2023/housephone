@@ -24,8 +24,14 @@ var ErrPairingInvalid = errors.New("pairing code invalid, expired or already use
 
 // PairingCode is a one-time code created by the pair command.
 type PairingCode struct {
-	Code      string    `json:"code"`
-	Name      string    `json:"name,omitempty"`
+	Code string `json:"code"`
+	Name string `json:"name,omitempty"`
+	// ParentID is set for companion codes: the paired device that
+	// requested the code (pair.companion.request).
+	ParentID string `json:"parentId,omitempty"`
+	// Platform restricts which platform may pair with the code (companion
+	// codes: "watchos"). Empty allows any platform.
+	Platform  string    `json:"platform,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 	ExpiresAt time.Time `json:"expiresAt"`
 }
@@ -60,6 +66,69 @@ func (p *Pairing) Create(name string, now time.Time) (PairingCode, error) {
 		return writeJSON(p.path, f)
 	})
 	return pc, err
+}
+
+// CreateCompanion adds a companion code for parentID that only platform may
+// use. It replaces any open code of the same parent, so a device has at most
+// one pending companion code.
+func (p *Pairing) CreateCompanion(parentID, name, platform string, now time.Time) (PairingCode, error) {
+	code, err := newPairingCode()
+	if err != nil {
+		return PairingCode{}, err
+	}
+	pc := PairingCode{Code: code, Name: name, ParentID: parentID, Platform: platform, CreatedAt: now.UTC(), ExpiresAt: now.UTC().Add(PairingTTL)}
+	err = withLock(p.path, func() error {
+		var f pairingFile
+		if err := readJSON(p.path, &f); err != nil {
+			return err
+		}
+		kept := pruneExpired(f.Codes, now)
+		out := kept[:0]
+		for _, existing := range kept {
+			if existing.ParentID != parentID {
+				out = append(out, existing)
+			}
+		}
+		f.Codes = append(out, pc)
+		return writeJSON(p.path, f)
+	})
+	return pc, err
+}
+
+// Pending returns the codes that are still valid at now.
+func (p *Pairing) Pending(now time.Time) ([]PairingCode, error) {
+	var out []PairingCode
+	err := withLock(p.path, func() error {
+		var f pairingFile
+		if err := readJSON(p.path, &f); err != nil {
+			return err
+		}
+		out = pruneExpired(f.Codes, now)
+		return nil
+	})
+	return out, err
+}
+
+// RemoveByParent drops the open companion codes of parentID, e.g. when the
+// parent device is removed.
+func (p *Pairing) RemoveByParent(parentID string) error {
+	return withLock(p.path, func() error {
+		var f pairingFile
+		if err := readJSON(p.path, &f); err != nil {
+			return err
+		}
+		kept := f.Codes[:0]
+		for _, pc := range f.Codes {
+			if pc.ParentID != parentID {
+				kept = append(kept, pc)
+			}
+		}
+		if len(kept) == len(f.Codes) {
+			return nil
+		}
+		f.Codes = kept
+		return writeJSON(p.path, f)
+	})
 }
 
 // Consume validates and removes a code. Comparison is case-insensitive and

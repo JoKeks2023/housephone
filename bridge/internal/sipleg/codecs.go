@@ -39,6 +39,9 @@ type offerChoice struct {
 	// as parsed, so diago's negotiation (struct equality) matches it.
 	offered        map[codec.Codec]media.Codec
 	telephoneEvent *media.Codec
+	// names lists every codec of the offer in order, as offered, for the
+	// log, e.g. [PCMA PCMU telephone-event].
+	names []string
 }
 
 // has reports whether the offer contains c.
@@ -66,6 +69,14 @@ func chooseFromOffer(body []byte) (offerChoice, error) {
 	parsed := make([]media.Codec, len(md.Formats))
 	n, _ := media.CodecsFromSDPRead(md.Formats, sd.Values("a"), parsed)
 	parsed = parsed[:n]
+	names := make([]string, 0, len(parsed))
+	for _, pc := range parsed {
+		name := pc.Name
+		if pc.SampleRate != codec.ClockRate {
+			name = fmt.Sprintf("%s/%d", pc.Name, pc.SampleRate)
+		}
+		names = append(names, name)
+	}
 
 	var (
 		offered []codec.Codec
@@ -91,9 +102,9 @@ func chooseFromOffer(body []byte) (offerChoice, error) {
 	}
 	chosen, ok := codec.ChooseFirst(offered)
 	if !ok {
-		return offerChoice{}, errNoCommonCodec
+		return offerChoice{names: names}, errNoCommonCodec
 	}
-	return offerChoice{codec: chosen, offered: byName, telephoneEvent: te}, nil
+	return offerChoice{codec: chosen, offered: byName, telephoneEvent: te, names: names}, nil
 }
 
 // diagoCodecs returns the answer codecs for c (plus telephone-event). c

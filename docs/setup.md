@@ -17,9 +17,8 @@ Einmal durchgearbeitet, klingeln dein iPhone und deine Apple Watch bei Festnetza
 
 Folge [`bridge/README.md`](../bridge/README.md), Schritte 1–5. Deine Werte:
 
-- **FRITZ!Box-Adresse:** `192.168.0.1`.
-  - `fritz.box` funktioniert, wenn dein Server die FRITZ!Box als DNS nutzt.
-  - Sonst `sip.registrar: "192.168.0.1"` in `config.yaml` eintragen.
+- **FRITZ!Box-Adresse:** `sip.registrar: "192.168.0.1"` in `config.yaml` eintragen, also die IP, nicht `fritz.box`.
+  - Über fremde DNS-Server löst `fritz.box` zu einem öffentlichen Server auf. Die Bridge prüft das beim Start und startet nur mit einer Adresse im Heimnetz.
 - **Team-ID:** `T9CA6D7T8N`, **Topic:** `com.jorisconrad.housephone.voip`. Beides steht schon so in `config.example.yaml`.
 - **Anschluss:** Vodafone Red Business hat eine öffentliche IPv4, die sich ändern kann. Die Bridge fragt sie alle 30 s bei der FRITZ!Box ab (UPnP), du musst nichts eintragen.
 

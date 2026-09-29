@@ -17,6 +17,8 @@ import (
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
 	"github.com/JoKeks2023/housephone/bridge/internal/fritzbox"
+	"github.com/JoKeks2023/housephone/bridge/internal/lan"
+	"github.com/JoKeks2023/housephone/bridge/internal/logsafe"
 	"github.com/JoKeks2023/housephone/bridge/internal/media"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/push"
@@ -61,6 +63,10 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 	for _, opt := range opts {
 		opt(&o)
 	}
+	logsafe.SetShowNumbers(cfg.Log.ShowNumbers)
+	if cfg.Log.ShowNumbers {
+		log.Warn("log.showNumbers is on: phone numbers and caller names are logged in full")
+	}
 	identity, err := store.LoadOrCreateIdentity(cfg.Bridge.DataDir)
 	if err != nil {
 		return nil, fmt.Errorf("bridge identity: %w", err)
@@ -73,9 +79,33 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		Pairing:  store.NewPairing(cfg.Bridge.DataDir),
 	}
 
+	// Credentials only go to the FRITZ!Box in the home network: resolve its
+	// name once, require a local address and use that address from now on,
+	// so a public "fritz.box" or a later DNS change cannot redirect logins.
+	registrarIP, err := lan.Resolve(ctx, cfg.SIP.Registrar)
+	if err != nil {
+		return nil, fmt.Errorf("sip.registrar: %w", err)
+	}
+	registrar := registrarIP.String()
+	if registrar != cfg.SIP.Registrar {
+		log.Info("FRITZ!Box address fixed", "registrar", cfg.SIP.Registrar, "ip", registrar)
+	}
+	trustedProxies, err := cfg.Bridge.TrustedProxyNets()
+	if err != nil {
+		return nil, err
+	}
+	fritzBoxHost := registrar
+	if cfg.FritzBox.Enabled() && cfg.FritzBox.Host != "" && cfg.FritzBox.Host != cfg.SIP.Registrar {
+		ip, err := lan.Resolve(ctx, cfg.FritzBox.Host)
+		if err != nil {
+			return nil, fmt.Errorf("fritzbox.host: %w", err)
+		}
+		fritzBoxHost = ip.String()
+	}
+
 	router := ""
 	if cfg.Media.PublicIPFromRouter {
-		router = cfg.SIP.Registrar
+		router = registrar
 	}
 	publicIP := media.NewPublicIPSource(ctx, media.PublicIPConfig{
 		Static: cfg.Media.PublicIP,
@@ -118,7 +148,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		}
 		b.directory = fritzbox.NewDirectory(fritzbox.DirectoryConfig{
 			Source: fritzbox.NewClient(fritzbox.ClientConfig{
-				Host:      cfg.FritzBoxHost(),
+				Host:      fritzBoxHost,
 				PlainPort: strconv.Itoa(cfg.FritzBox.Port),
 				Username:  cfg.FritzBox.Username,
 				Password:  cfg.FritzBox.Password,
@@ -144,9 +174,10 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		Devices:     b.Devices,
 		Logger:      log,
 		CallerNames: callerNames,
+		MaxCalls:    cfg.Bridge.MaxCalls,
 	})
 	b.sip, err = sipleg.New(sipleg.Config{
-		Registrar:      cfg.SIP.Registrar,
+		Registrar:      registrar,
 		Port:           cfg.SIP.Port,
 		Username:       cfg.SIP.Username,
 		Password:       cfg.SIP.Password,
@@ -170,6 +201,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		PublicURL:         cfg.Bridge.PublicURL,
 		PushTopic:         cfg.APNs.Topic,
 		TrustProxyHeaders: cfg.Bridge.TrustProxyHeaders,
+		TrustedProxies:    trustedProxies,
 		Devices:           b.Devices,
 		Pairing:           b.Pairing,
 		Hub:               b.manager,
@@ -196,6 +228,10 @@ func (b *Bridge) Run(ctx context.Context) error {
 	srv := &http.Server{
 		Handler:           b.signaling.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
+		// Keep-alive connections without a request are closed; WebSocket
+		// connections are hijacked and not affected.
+		IdleTimeout:    60 * time.Second,
+		MaxHeaderBytes: 16 << 10,
 	}
 	errCh := make(chan error, 2)
 	go func() {

@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/codec"
+	"github.com/JoKeks2023/housephone/bridge/internal/logsafe"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
@@ -23,6 +24,13 @@ const (
 	DefaultOfferTimeout    = 5 * time.Second
 	DefaultAnswerTimeout   = 35 * time.Second
 	DefaultPushTimeout     = 10 * time.Second
+	// DefaultOfferAnswerTimeout ends an outgoing call whose device never
+	// answers the offer.
+	DefaultOfferAnswerTimeout = 15 * time.Second
+	// DefaultMaxCalls bounds concurrent calls when dialing out.
+	DefaultMaxCalls = 8
+	// MaxOutgoingPerDevice bounds concurrent outgoing calls per device.
+	MaxOutgoingPerDevice = 2
 )
 
 var (
@@ -50,6 +58,11 @@ type Options struct {
 	OfferTimeout    time.Duration
 	AnswerTimeout   time.Duration
 	PushTimeout     time.Duration
+	// OfferAnswerTimeout ends an outgoing call if the device does not
+	// answer the offer in time.
+	OfferAnswerTimeout time.Duration
+	// MaxCalls bounds the concurrent calls; call.dial beyond it is refused.
+	MaxCalls int
 	// AudioFrameInterval paces websocket-pcma audio towards the FRITZ!Box
 	// (default 20 ms; tests may shorten it).
 	AudioFrameInterval time.Duration
@@ -93,6 +106,12 @@ func NewManager(opts Options) *Manager {
 	}
 	if opts.PushTimeout == 0 {
 		opts.PushTimeout = DefaultPushTimeout
+	}
+	if opts.OfferAnswerTimeout == 0 {
+		opts.OfferAnswerTimeout = DefaultOfferAnswerTimeout
+	}
+	if opts.MaxCalls == 0 {
+		opts.MaxCalls = DefaultMaxCalls
 	}
 	if opts.Now == nil {
 		opts.Now = time.Now
@@ -155,6 +174,18 @@ func (m *Manager) DeviceDisconnected(conn DeviceConn) {
 
 // usesWebSocketAudio reports whether the device takes calls over the
 // websocket-pcma media path (v1.1). Unknown devices use WebRTC.
+// DeviceRevoked ends a removed device's part in every call, as if it hung
+// up: a declined ringing call, a BYE/CANCEL where it is the active device.
+// It is called when the device was removed while still connected.
+func (m *Manager) DeviceRevoked(conn DeviceConn) {
+	m.mu.Lock()
+	calls := m.activeCallsLocked()
+	m.mu.Unlock()
+	for _, c := range calls {
+		c.do(func() { c.onRevoked(conn) })
+	}
+}
+
 func (m *Manager) usesWebSocketAudio(deviceID string) bool {
 	dev, err := m.opts.Devices.Get(deviceID)
 	return err == nil && dev.UsesWebSocketAudio()
@@ -311,6 +342,33 @@ func (m *Manager) CallStatus(deviceID, rawCallID string) (protocol.CallStatus, b
 	return protocol.CallStatus{}, false
 }
 
+var errTooManyCalls = errors.New("too many calls")
+
+// addOutgoingCall adds a call dialed by c.dialer unless that device already
+// has MaxOutgoingPerDevice outgoing calls or the bridge MaxCalls calls
+// (security review N3: a device could otherwise open calls without end).
+func (m *Manager) addOutgoingCall(c *call) error {
+	m.mu.Lock()
+	if len(m.calls) >= m.opts.MaxCalls {
+		m.mu.Unlock()
+		return errTooManyCalls
+	}
+	own := 0
+	for _, other := range m.calls {
+		if other.dir == directionOutgoing && other.dialer == c.dialer {
+			own++
+		}
+	}
+	m.mu.Unlock()
+	if own >= MaxOutgoingPerDevice {
+		return errTooManyCalls
+	}
+	if !m.addCall(c) {
+		return errors.New("call exists")
+	}
+	return nil
+}
+
 func (m *Manager) addCall(c *call) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -376,7 +434,7 @@ func (m *Manager) HandleIncoming(ctx context.Context, sip IncomingSIPCall) {
 		c.callerName = m.opts.CallerNames(c.caller)
 	}
 	c.sipIn = sip
-	log := c.log.With("caller", c.caller, "codec", c.codec)
+	log := c.log.With("caller", logsafe.Number(c.caller), logsafe.CallerName(c.callerName), "codec", c.codec)
 
 	devices, err := m.opts.Devices.List()
 	if err != nil {
@@ -473,7 +531,13 @@ func (m *Manager) startOutgoing(conn DeviceConn, id, number string) {
 	c := newCall(m, id, directionOutgoing)
 	c.number, c.caller = number, number
 	c.participants[conn.DeviceID()] = true
-	if !m.addCall(c) {
+	c.dialer = conn.DeviceID()
+	switch err := m.addOutgoingCall(c); {
+	case errors.Is(err, errTooManyCalls):
+		sendError(conn, protocol.ErrorTooManyCalls, "Zu viele gleichzeitige Anrufe", id)
+		conn.Send(protocol.MustEnvelope(protocol.TypeCallEnded, protocol.CallEnded{CallID: id, Reason: protocol.EndReasonFailed}))
+		return
+	case err != nil:
 		sendError(conn, protocol.ErrorBadRequest, "callId already used", id)
 		return
 	}

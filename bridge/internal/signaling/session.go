@@ -28,6 +28,7 @@ type session struct {
 	mu      sync.Mutex
 	closed  bool
 	closeCh chan struct{}
+	revoked bool
 
 	sinkMu sync.Mutex
 	sink   calls.AudioSink
@@ -94,6 +95,12 @@ func (s *session) audioSink() calls.AudioSink {
 	s.sinkMu.Lock()
 	defer s.sinkMu.Unlock()
 	return s.sink
+}
+
+func (s *session) isClosed() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.closed
 }
 
 // close marks the session closed and starts the close handshake without
@@ -170,7 +177,7 @@ func (srv *Server) runDevice(ctx context.Context, conn *websocket.Conn, dev stor
 		}
 	}()
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		srv.writeLoop(ctx, sess)
@@ -178,6 +185,10 @@ func (srv *Server) runDevice(ctx context.Context, conn *websocket.Conn, dev stor
 	go func() {
 		defer wg.Done()
 		srv.pingLoop(ctx, sess)
+	}()
+	go func() {
+		defer wg.Done()
+		srv.revalidateLoop(ctx, sess)
 	}()
 
 	sess.Send(protocol.MustEnvelope(protocol.TypeWelcome, protocol.Welcome{
@@ -209,11 +220,18 @@ func (srv *Server) runDevice(ctx context.Context, conn *websocket.Conn, dev stor
 	log.Info("device disconnected")
 }
 
+// readLoop handles device messages until the connection ends. Once the
+// session is closing (revoked, unpaired) it keeps reading but ignores
+// messages, so the close handshake can finish and the device receives the
+// close code; runDevice's grace period bounds the wait.
 func (srv *Server) readLoop(ctx context.Context, sess *session) {
 	for {
 		typ, data, err := sess.conn.Read(ctx)
 		if err != nil {
 			return
+		}
+		if sess.isClosed() {
+			continue
 		}
 		if typ == websocket.MessageBinary {
 			// websocket-pcma audio (v1.1); ignored without an active call.
@@ -225,6 +243,9 @@ func (srv *Server) readLoop(ctx context.Context, sess *session) {
 		env, err := protocol.ParseEnvelope(data)
 		if err != nil {
 			return
+		}
+		if changesState(env.Type) && srv.revokeIfRemoved(sess) {
+			continue
 		}
 		switch env.Type {
 		case protocol.TypeDeviceUpdate:
@@ -247,7 +268,6 @@ func (srv *Server) readLoop(ctx context.Context, sess *session) {
 			}
 			srv.log.Info("device unpaired itself", "device", sess.deviceID)
 			sess.close(websocket.StatusNormalClosure, "unpaired")
-			return
 		case protocol.TypePairCompanionRequest:
 			srv.pairCompanion(sess, env)
 		case protocol.TypeHello, protocol.TypePair:
@@ -258,15 +278,85 @@ func (srv *Server) readLoop(ctx context.Context, sess *session) {
 	}
 }
 
-// pairCompanion creates a pairing code on behalf of a paired device, e.g.
-// the iPhone pairing its watch (v1.1).
+// changesState reports whether a device message acts on calls or on the
+// device itself; before those the session checks the device still exists.
+func changesState(msgType string) bool {
+	return strings.HasPrefix(msgType, "call.") || msgType == protocol.TypeDeviceUpdate || msgType == protocol.TypePairCompanionRequest
+}
+
+// revokeIfRemoved closes the session and ends its calls if the device was
+// removed from the registry (devices remove) while connected. It reports
+// whether the session was revoked.
+func (srv *Server) revokeIfRemoved(sess *session) bool {
+	sess.mu.Lock()
+	if sess.revoked {
+		sess.mu.Unlock()
+		return true
+	}
+	sess.mu.Unlock()
+	_, err := srv.cfg.Devices.Get(sess.deviceID)
+	if err == nil {
+		return false
+	}
+	if !errors.Is(err, store.ErrDeviceNotFound) {
+		srv.log.Warn("checking device failed", "device", sess.deviceID, "error", err)
+		return false
+	}
+	sess.mu.Lock()
+	already := sess.revoked
+	sess.revoked = true
+	sess.mu.Unlock()
+	if !already {
+		srv.log.Info("device was removed while connected; closing", "device", sess.deviceID)
+		srv.cfg.Hub.DeviceRevoked(sess)
+		sess.close(websocket.StatusCode(protocol.CloseRevoked), "revoked")
+	}
+	return true
+}
+
+// revalidateLoop periodically checks that the device is still paired, so
+// devices remove also cuts off an idle connection.
+func (srv *Server) revalidateLoop(ctx context.Context, sess *session) {
+	ticker := time.NewTicker(srv.cfg.RevalidateInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-sess.closeCh:
+			return
+		case <-ticker.C:
+			if srv.revokeIfRemoved(sess) {
+				return
+			}
+		}
+	}
+}
+
+// pairCompanion creates a pairing code on behalf of a paired iPhone for its
+// Apple Watch (v1.1). A companion code only pairs a watch, stays bound to
+// the iPhone that requested it and replaces that iPhone's previous code.
 func (srv *Server) pairCompanion(sess *session, env protocol.Envelope) {
 	var req protocol.PairCompanionRequest
-	if err := env.Decode(&req); err != nil || !validPlatform(req.Platform) {
-		sess.Send(errorEnvelope(protocol.ErrorBadRequest, "deviceName and platform (ios|watchos) are required"))
+	if err := env.Decode(&req); err != nil || req.Platform != protocol.PlatformWatchOS {
+		sess.Send(errorEnvelope(protocol.ErrorBadRequest, "deviceName and platform watchos are required"))
 		return
 	}
-	pc, err := srv.cfg.Pairing.Create(truncateRunes(strings.TrimSpace(req.DeviceName), maxDeviceNameRunes), srv.cfg.Now())
+	parent, err := srv.cfg.Devices.Get(sess.deviceID)
+	if err != nil {
+		sess.Send(errorEnvelope(protocol.ErrorInternal, "Kopplungscode konnte nicht erzeugt werden"))
+		return
+	}
+	if parent.Platform != protocol.PlatformIOS {
+		sess.Send(errorEnvelope(protocol.ErrorBadRequest, "only an iPhone can pair a companion"))
+		return
+	}
+	if srv.companions.blocked(sess.deviceID) {
+		sess.Send(errorEnvelope(protocol.ErrorPairingRateLimited, "Zu viele Kopplungscodes, bitte später erneut probieren"))
+		return
+	}
+	srv.companions.fail(sess.deviceID)
+	pc, err := srv.cfg.Pairing.CreateCompanion(sess.deviceID, sanitizeName(req.DeviceName), protocol.PlatformWatchOS, srv.cfg.Now())
 	if err != nil {
 		srv.log.Error("creating companion pairing code failed", "device", sess.deviceID, "error", err)
 		sess.Send(errorEnvelope(protocol.ErrorInternal, "Kopplungscode konnte nicht erzeugt werden"))
@@ -381,8 +471,10 @@ func (srv *Server) applyDeviceChanges(id string, ch deviceChanges) {
 		if ch.pushEnvironment != nil && *ch.pushEnvironment != "" && validEnvironment(*ch.pushEnvironment) {
 			d.PushEnvironment = *ch.pushEnvironment
 		}
-		if ch.name != nil && *ch.name != "" {
-			d.Name = truncateRunes(*ch.name, maxDeviceNameRunes)
+		if ch.name != nil {
+			if name := sanitizeName(*ch.name); name != "" {
+				d.Name = name
+			}
 		}
 		if ch.mediaCapabilities != nil {
 			d.MediaCapabilities = knownCapabilities(*ch.mediaCapabilities)

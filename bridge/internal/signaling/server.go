@@ -8,12 +8,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/coder/websocket"
 	"github.com/google/uuid"
@@ -32,6 +34,9 @@ type Hub interface {
 	SIPRegistered() bool
 	// CallStatus answers GET /v1/calls/{callId} for one device (v1.1).
 	CallStatus(deviceID, callID string) (protocol.CallStatus, bool)
+	// DeviceRevoked ends the calls of a device that was removed while it
+	// was connected.
+	DeviceRevoked(calls.DeviceConn)
 }
 
 // Directory serves the FRITZ!Box phonebook and call list (v1.2,
@@ -53,8 +58,11 @@ type Config struct {
 	// PushTopic is the configured APNs topic; per-device topics must share
 	// its bundle prefix (v1.1).
 	PushTopic string
-	// TrustProxyHeaders uses CF-Connecting-IP / X-Forwarded-For.
+	// TrustProxyHeaders uses CF-Connecting-IP / X-Forwarded-For, but only
+	// from requests that come from loopback (cloudflared, a local proxy) or
+	// from TrustedProxies. Anyone else could set the headers freely.
 	TrustProxyHeaders bool
+	TrustedProxies    []*net.IPNet
 	Devices           *store.Devices
 	Pairing           *store.Pairing
 	Hub               Hub
@@ -64,7 +72,10 @@ type Config struct {
 
 	PingInterval     time.Duration
 	FirstMessageWait time.Duration
-	Now              func() time.Time
+	// RevalidateInterval is how often an open connection checks that its
+	// device is still paired (devices remove takes effect within it).
+	RevalidateInterval time.Duration
+	Now                func() time.Time
 }
 
 // Limits.
@@ -75,6 +86,17 @@ const (
 	closeGrace         = time.Second
 	maxDeviceNameRunes = 64
 	maxPushTokenLength = 200
+	// companionCodesPerHour bounds pair.companion.request per device.
+	companionCodesPerHour = 5
+	// maxPairingConns bounds concurrent unauthenticated WebSocket
+	// connections (each may stay open for FirstMessageWait).
+	maxPairingConns = 32
+	// httpReadTimeout bounds reading a request body of the plain HTTP
+	// endpoints (bodies are at most maxHTTPBody).
+	httpReadTimeout = 15 * time.Second
+	// httpWriteTimeout bounds answering; a phonebook fetch from the
+	// FRITZ!Box takes several TR-064 requests.
+	httpWriteTimeout = 60 * time.Second
 )
 
 // Server is the HTTP handler for /v1/*.
@@ -82,6 +104,12 @@ type Server struct {
 	cfg     Config
 	log     *slog.Logger
 	limiter *rateLimiter
+	// companions limits pair.companion.request per device ID.
+	companions *rateLimiter
+	// warnings throttles warnings about failed logins per client.
+	warnings *logThrottle
+	// pairingSlots bounds unauthenticated WebSocket connections.
+	pairingSlots chan struct{}
 
 	mu       sync.Mutex
 	sessions map[string]*session
@@ -96,6 +124,9 @@ func New(cfg Config) *Server {
 	if cfg.FirstMessageWait == 0 {
 		cfg.FirstMessageWait = 10 * time.Second
 	}
+	if cfg.RevalidateInterval == 0 {
+		cfg.RevalidateInterval = 10 * time.Second
+	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
@@ -103,25 +134,41 @@ func New(cfg Config) *Server {
 		cfg.Logger = slog.Default()
 	}
 	return &Server{
-		cfg:      cfg,
-		log:      cfg.Logger.With("component", "signaling"),
-		limiter:  newRateLimiter(5, time.Minute, cfg.Now),
-		sessions: map[string]*session{},
+		cfg:          cfg,
+		log:          cfg.Logger.With("component", "signaling"),
+		limiter:      newRateLimiter(5, time.Minute, cfg.Now),
+		companions:   newRateLimiter(companionCodesPerHour, time.Hour, cfg.Now),
+		warnings:     newLogThrottle(time.Minute, cfg.Now),
+		pairingSlots: make(chan struct{}, maxPairingConns),
+		sessions:     map[string]*session{},
 	}
 }
 
 // Handler returns the HTTP routes.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/health", s.health)
+	mux.HandleFunc("GET /v1/health", withDeadline(s.health))
 	mux.HandleFunc("GET /v1/ws", s.websocket)
-	mux.HandleFunc("POST /v1/pair", s.httpPair)
-	mux.HandleFunc("PUT /v1/device", s.httpUpdateDevice)
-	mux.HandleFunc("DELETE /v1/device", s.httpDeleteDevice)
-	mux.HandleFunc("GET /v1/calls/{callId}", s.httpCallStatus)
-	mux.HandleFunc("GET /v1/phonebook", s.httpPhonebook)
-	mux.HandleFunc("GET /v1/history", s.httpHistory)
+	mux.HandleFunc("POST /v1/pair", withDeadline(s.httpPair))
+	mux.HandleFunc("PUT /v1/device", withDeadline(s.httpUpdateDevice))
+	mux.HandleFunc("DELETE /v1/device", withDeadline(s.httpDeleteDevice))
+	mux.HandleFunc("GET /v1/calls/{callId}", withDeadline(s.httpCallStatus))
+	mux.HandleFunc("GET /v1/phonebook", withDeadline(s.httpPhonebook))
+	mux.HandleFunc("GET /v1/history", withDeadline(s.httpHistory))
 	return mux
+}
+
+// withDeadline bounds reading the body and writing the answer of a plain
+// HTTP request, so slow clients cannot hold connections open. The WebSocket
+// route is left out: its connection lives as long as the device is online.
+func withDeadline(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rc := http.NewResponseController(w)
+		now := time.Now()
+		_ = rc.SetReadDeadline(now.Add(httpReadTimeout))
+		_ = rc.SetWriteDeadline(now.Add(httpWriteTimeout))
+		h(w, r)
+	}
 }
 
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
@@ -140,6 +187,14 @@ func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 	ip := s.clientIP(r)
 	header := r.Header.Get("Authorization")
 	if header == "" {
+		select {
+		case s.pairingSlots <- struct{}{}:
+			defer func() { <-s.pairingSlots }()
+		default:
+			s.warnClient("too many unauthenticated connections", ip)
+			http.Error(w, "too many pairing attempts", http.StatusServiceUnavailable)
+			return
+		}
 		conn, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			return
@@ -151,7 +206,7 @@ func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 
 	dev, ok := s.authenticate(header)
 	if !ok {
-		s.log.Warn("rejected WebSocket authentication", "ip", ip)
+		s.warnClient("rejected WebSocket authentication", ip)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -175,21 +230,57 @@ func (s *Server) authenticate(header string) (store.Device, bool) {
 	return dev, auth.VerifySecret(secret, dev.SecretHash)
 }
 
+// clientIP is the address used for rate limits and logs. Proxy headers are
+// only believed from a trusted proxy; from X-Forwarded-For the rightmost
+// entry is used, the one the trusted proxy added itself.
 func (s *Server) clientIP(r *http.Request) string {
-	if s.cfg.TrustProxyHeaders {
-		if ip := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); ip != "" {
-			return ip
-		}
-		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-			first, _, _ := strings.Cut(fwd, ",")
-			return strings.TrimSpace(first)
+	remote := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		remote = host
+	}
+	if !s.cfg.TrustProxyHeaders || !s.trustedProxy(remote) {
+		return remote
+	}
+	if ip := net.ParseIP(strings.TrimSpace(r.Header.Get("CF-Connecting-IP"))); ip != nil {
+		return ip.String()
+	}
+	if fwd := r.Header.Values("X-Forwarded-For"); len(fwd) > 0 {
+		entries := strings.Split(fwd[len(fwd)-1], ",")
+		if ip := net.ParseIP(strings.TrimSpace(entries[len(entries)-1])); ip != nil {
+			return ip.String()
 		}
 	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
+	return remote
+}
+
+func (s *Server) trustedProxy(remote string) bool {
+	ip := net.ParseIP(remote)
+	if ip == nil {
+		return false
 	}
-	return host
+	if ip.IsLoopback() {
+		return true
+	}
+	for _, n := range s.cfg.TrustedProxies {
+		if n.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// warnClient logs a failed login or pairing attempt, at most once per
+// minute and client (/64 for IPv6) with the number of suppressed repeats.
+func (s *Server) warnClient(msg, ip string, attrs ...any) {
+	ok, suppressed := s.warnings.allow(msg + "|" + limiterKey(ip))
+	if !ok {
+		return
+	}
+	attrs = append([]any{"ip", ip}, attrs...)
+	if suppressed > 0 {
+		attrs = append(attrs, "suppressedSinceLast", suppressed)
+	}
+	s.log.Warn(msg, attrs...)
 }
 
 // readEnvelope reads one text message within timeout.
@@ -276,7 +367,7 @@ func (e *pairError) closeReason() string {
 // and HTTPS pairing.
 func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.PairOK, *pairError) {
 	if s.limiter.blocked(ip) {
-		s.log.Warn("pairing rate limited", "ip", ip)
+		s.warnClient("pairing rate limited", ip)
 		return protocol.PairOK{}, &pairError{protocol.ErrorPairingRateLimited, "Zu viele Versuche, bitte später erneut probieren", http.StatusTooManyRequests}
 	}
 	if decodeErr != nil || strings.TrimSpace(p.Code) == "" || !validPlatform(p.Platform) {
@@ -284,9 +375,12 @@ func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.Pai
 	}
 	now := s.cfg.Now()
 	pc, err := s.cfg.Pairing.Consume(p.Code, now)
+	if err == nil {
+		err = s.checkCompanionCode(pc, p.Platform)
+	}
 	if err != nil {
 		s.limiter.fail(ip)
-		s.log.Warn("pairing failed", "ip", ip, "error", err)
+		s.warnClient("pairing failed", ip, "error", err)
 		if errors.Is(err, store.ErrPairingInvalid) {
 			return protocol.PairOK{}, &pairError{protocol.ErrorPairingInvalid, "Der Kopplungscode ist ungültig oder abgelaufen", http.StatusForbidden}
 		}
@@ -297,19 +391,20 @@ func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.Pai
 	if err != nil {
 		return protocol.PairOK{}, &pairError{protocol.ErrorInternal, "internal error", http.StatusInternalServerError}
 	}
-	name := strings.TrimSpace(pc.Name)
+	name := sanitizeName(pc.Name)
 	if name == "" {
-		name = strings.TrimSpace(p.DeviceName)
+		name = sanitizeName(p.DeviceName)
 	}
 	if name == "" {
 		name = p.Platform
 	}
 	dev := store.Device{
 		ID:         uuid.NewString(),
-		Name:       truncateRunes(name, maxDeviceNameRunes),
+		Name:       name,
 		Platform:   p.Platform,
-		Model:      truncateRunes(p.Model, maxDeviceNameRunes),
+		Model:      sanitizeName(p.Model),
 		SecretHash: auth.HashSecret(secret),
+		PairedBy:   pc.ParentID,
 		CreatedAt:  now.UTC(),
 	}
 	if err := s.cfg.Devices.Add(dev); err != nil {
@@ -325,8 +420,47 @@ func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.Pai
 	}, nil
 }
 
+// checkCompanionCode enforces the restrictions of a companion code: only its
+// platform may use it, and the device that requested it must still be
+// paired, so a code requested just before that device was removed is void.
+func (s *Server) checkCompanionCode(pc store.PairingCode, platform string) error {
+	if pc.Platform != "" && pc.Platform != platform {
+		return fmt.Errorf("%w: code is for platform %s", store.ErrPairingInvalid, pc.Platform)
+	}
+	if pc.ParentID == "" {
+		return nil
+	}
+	if _, err := s.cfg.Devices.Get(pc.ParentID); err != nil {
+		if errors.Is(err, store.ErrDeviceNotFound) {
+			return fmt.Errorf("%w: requesting device was removed", store.ErrPairingInvalid)
+		}
+		return err
+	}
+	return nil
+}
+
 func validPlatform(p string) bool {
 	return p == protocol.PlatformIOS || p == protocol.PlatformWatchOS
+}
+
+// sanitizeName cleans a device name or model from a client: control
+// characters (terminal escapes, line breaks) and bidi overrides are removed,
+// so a device cannot hide or disguise entries in devices list or the logs;
+// the result is trimmed and cut to maxDeviceNameRunes.
+func sanitizeName(s string) string {
+	clean := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || isBidiControl(r) {
+			return -1
+		}
+		return r
+	}, s)
+	return truncateRunes(strings.TrimSpace(clean), maxDeviceNameRunes)
+}
+
+// isBidiControl reports embedding, override and isolate controls as well as
+// the directional marks.
+func isBidiControl(r rune) bool {
+	return (r >= 0x202A && r <= 0x202E) || (r >= 0x2066 && r <= 0x2069) || r == 0x200E || r == 0x200F || r == 0x061C
 }
 
 func truncateRunes(s string, n int) string {

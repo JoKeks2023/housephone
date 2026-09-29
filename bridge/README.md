@@ -60,13 +60,17 @@ Welches APNs-Environment ein Gerät braucht, meldet die App selbst:
 
 Der Tunnel trägt nur die Signalisierung (TCP/WebSocket). Der Ton läuft über die UDP-Freigabe aus Schritt 2, weil Cloudflare Tunnel kein UDP für öffentliche Hostnamen weiterleitet.
 
-**Ohne Cloudflare:** Ein Reverse Proxy mit TLS (z. B. Caddy) auf Port 443 → `localhost:8080`, dazu eine TCP-Portfreigabe 443. In `config.yaml` dann `trustProxyHeaders` nur aktivieren, wenn der Proxy `X-Forwarded-For` setzt.
+**Ohne Cloudflare:** Ein Reverse Proxy mit TLS (z. B. Caddy) auf Port 443 → `localhost:8080`, dazu eine TCP-Portfreigabe 443. `trustProxyHeaders` nur aktivieren, wenn der Proxy `X-Forwarded-For` setzt.
+- Die Bridge glaubt diesen Headern nur bei Anfragen von localhost.
+- Läuft der Proxy auf einem anderen Rechner, trag dessen IP unter `bridge.trustedProxies` ein und öffne `bridge.listen` für ihn.
+
+`bridge.listen` steht im Beispiel auf `127.0.0.1:8080`. Die Bridge ist damit nur über den Tunnel erreichbar und nicht im ganzen LAN.
 
 ## 5. Starten (Docker Compose)
 
 ```sh
 cd bridge
-cp config.example.yaml config.yaml          # registrar, username, publicUrl anpassen
+cp config.example.yaml config.yaml          # registrar (IP der FRITZ!Box), username, publicUrl anpassen
 cp docker-compose.example.yml docker-compose.yml
 mkdir -p data secrets
 printf '%s' 'SIP-KENNWORT' > secrets/sip_password
@@ -94,6 +98,8 @@ Für die Watch musst du auf dem Server und an der FRITZ!Box nichts einrichten:
 
 - **Keine neue Portfreigabe:** Die Watch hat kein WebRTC. Ihr Ton läuft als A-law (8 kHz) in 20-ms-Rahmen über dieselbe WebSocket-Verbindung wie die Signalisierung, also durch den Cloudflare Tunnel. Die UDP-Freigabe 50000 braucht nur das iPhone.
 - **Koppeln:** Die Watch wird über das gekoppelte iPhone gekoppelt (**Einstellungen → Apple Watch koppeln**). Das iPhone holt dafür einen frischen Code bei der Bridge und gibt ihn an die Uhr weiter. Die Uhr meldet sich danach selbst per HTTPS an (`POST /v1/pair`, `PUT /v1/device`).
+  - Der Code gilt nur für eine Watch und nur, solange das iPhone gekoppelt ist. `devices list` zeigt in der Spalte „ÜBER“, über welches iPhone eine Watch gekoppelt wurde.
+  - Entfernst du ein verlorenes iPhone, entfernt `devices remove` dessen Watches automatisch mit: Sie wurden mit den Zugangsdaten des iPhones gekoppelt und gelten deshalb als mitbetroffen.
   - watchOS erlaubt WebSocket nur während eines Anrufs. Die Uhr öffnet sie deshalb erst, wenn der VoIP-Push kommt.
 - **Push:** Die Watch-App hat ein eigenes APNs-Topic (`com.jorisconrad.housephone.watchkitapp.voip`). Derselbe APNs-Key aus Schritt 3 gilt für alle Apps deines Teams.
   - Die Bridge akzeptiert nur Topics, die mit dem Bundle aus `apns.topic` beginnen (hier `com.jorisconrad.housephone.`) und auf `.voip` enden.
@@ -138,9 +144,11 @@ Technik:
 | Aufgabe | Befehl |
 |---|---|
 | Geräte anzeigen | `housephone-bridge devices list` |
-| Gerät entfernen | `housephone-bridge devices remove <id>` |
+| Gerät entfernen | `housephone-bridge devices remove <id>` – entfernt auch die Watches, die über dieses iPhone gekoppelt wurden (`-keep-companions` behält sie). Verbundene Geräte trennt die laufende Bridge innerhalb von 10 s. |
 | Version | `housephone-bridge version` |
-| Mehr Logs | `log.level: debug` bzw. `HOUSEPHONE_LOG_LEVEL=debug` |
+| Mehr Logs | `log.level: debug` bzw. `HOUSEPHONE_LOG_LEVEL=debug`. Auf Debug-Stufe kann die SIP-Bibliothek Details der SIP-Nachrichten mitschreiben, also auch Nummern. |
+| Nummern im Log | Standardmäßig maskiert: nur die letzten 3 Ziffern (`…563`); von Anrufernamen nur, ob einer da ist (`hasCallerName`). `log.showNumbers: true` schreibt beides im Klartext, nur kurz zur Fehlersuche. |
+| HD-Fehlersuche | Jeder eingehende Anruf loggt `incoming INVITE … offered=[…] chosen=…`. Fehlt `G722` in `offered`, bietet die FRITZ!Box für diesen Anruf kein HD an (z. B. oft bei Anrufen aus dem Mobilfunk). |
 
 Daten liegen in `data/`:
 - `bridge.json`: Bridge-ID
@@ -155,6 +163,7 @@ Sichere diesen Ordner. Verlierst du ihn, müssen alle Geräte neu gekoppelt werd
 |---|---|
 | `registration failed … 401/403` | Benutzername/Kennwort des IP-Telefons prüfen. Das IP-Telefon muss in der FRITZ!Box existieren. |
 | `find local IP towards fritz.box` | `fritz.box` wird auf dem Server nicht aufgelöst → `sip.registrar` auf die IP der FRITZ!Box setzen (Standard `192.168.178.1`, bei manchen Anschlüssen z. B. `192.168.0.1`). |
+| `sip.registrar: fritz.box löst auf … auf – das ist keine Adresse in deinem Heimnetz` | Dein Server fragt einen fremden DNS-Server (Pi-hole ohne Weiterleitung, 1.1.1.1 …). Dort gehört `fritz.box` einem Dritten; die Bridge würde ihm ihre Anmeldedaten schicken und startet deshalb nicht. → Die IP der FRITZ!Box eintragen. Die Bridge legt die Adresse beim Start fest und fragt DNS danach nicht mehr. |
 | iPhone klingelt nicht, wenn die App geschlossen ist | APNs-Key/Key-ID prüfen. Log `push failed … 403 InvalidProviderToken` = Key/Team falsch. `BadDeviceToken` = Environment passt nicht (Debug vs. TestFlight); die App einmal öffnen, dann meldet sie das richtige Token. |
 | Anruf wird angenommen, aber kein Ton (unterwegs) | UDP-Freigabe 50000 fehlt oder öffentliche IP falsch: Log `public IP` prüfen, ggf. `media.publicIp` setzen. |
 | Kein Ton zu Hause | Server und iPhone müssen sich im LAN erreichen (kein Gast-WLAN, keine Client-Isolation). |

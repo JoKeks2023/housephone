@@ -24,6 +24,7 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`: iPhone-App
 - Bei ungültigem Token antwortet die Bridge mit HTTP `401`; es findet kein Upgrade statt.
 - Ohne Header ist nur `pair` erlaubt. Jede andere Nachricht → `error{code:"unauthorized"}`, danach wird die Verbindung geschlossen.
 - Pro Gerät ist höchstens **eine** Verbindung aktiv. Eine neue Verbindung desselben Geräts schließt die alte mit Close-Code `4001` („replaced“).
+- Wird ein Gerät auf der Bridge entfernt (`housephone-bridge devices remove`), während es verbunden ist, schließt die Bridge die Verbindung spätestens nach 10 s mit Close-Code `4003` („revoked“) und beendet die Anrufe des Geräts wie bei `call.hangup`. Zustandsändernde Nachrichten (`call.*`, `device.update`, `pair.companion.request`) eines entfernten Geräts werden nicht mehr ausgeführt.
 
 ## Nachrichtenformat
 
@@ -82,7 +83,7 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`: iPhone-App
 
 ### Fehlercodes in `error`
 
-`unauthorized`, `bad_request`, `pairing_invalid` (Code falsch, abgelaufen oder bereits benutzt), `pairing_rate_limited`, `sip_unavailable` (nicht an der FRITZ!Box registriert), `call_not_found`, `invalid_number`, `fritzbox_unavailable` (v1.2: TR-064 nicht eingerichtet oder FRITZ!Box nicht erreichbar/Anmeldung abgelehnt), `internal`.
+`unauthorized`, `bad_request`, `pairing_invalid` (Code falsch, abgelaufen oder bereits benutzt), `pairing_rate_limited`, `sip_unavailable` (nicht an der FRITZ!Box registriert), `call_not_found`, `invalid_number`, `fritzbox_unavailable` (v1.2: TR-064 nicht eingerichtet oder FRITZ!Box nicht erreichbar/Anmeldung abgelehnt), `too_many_calls` (zu viele gleichzeitige Anrufe, siehe „Ausgehender Anruf“), `internal`.
 
 - `call.answer` und `call.dtmf` für unbekannte Anrufe → `error{call_not_found}`.
 - `call.attach`, `call.accept` und `call.hangup` für unbekannte Anrufe → `call.ended` (siehe „Späte Nachrichten“).
@@ -161,6 +162,9 @@ Gerät                           Bridge                        FRITZ!Box
 - Fehlerantworten der FRITZ!Box werden gemappt: 486/600 → `busy`, 603 → `rejected`, 404/484 → `invalid_number`-Fehler plus `call.ended{failed}`, sonst `failed` mit `sipCode`.
 - Eine ungültige `number` (nicht `^\+?[0-9*#]{1,32}$`) → `error{invalid_number}` plus `call.ended{failed}`, ohne dass gewählt wird.
 - Ist die Bridge nicht an der FRITZ!Box registriert → `error{sip_unavailable, callId}` plus `call.ended{failed}`.
+- Grenzen: Ein Gerät darf höchstens **2** eigene ausgehende Anrufe gleichzeitig führen, die Bridge insgesamt höchstens `bridge.maxCalls` (Standard 8) Anrufe. Darüber → `error{too_many_calls, callId}` plus `call.ended{failed}`.
+- Beantwortet ein WebRTC-Gerät das `call.offer` eines ausgehenden Anrufs nicht innerhalb von **15 s**, endet der Anruf mit `call.ended{failed}`.
+- `call.dtmf` wird pro Anruf der Reihe nach gesendet; sind mehr als 8 Nachrichten offen, antwortet die Bridge mit `error{bad_request}`.
 
 ### Auflegen
 
@@ -252,11 +256,14 @@ Eine klingelnde Watch hat evtl. noch keine WebSocket-Verbindung und erfährt so 
 
 | type | Richtung | payload |
 |---|---|---|
-| `pair.companion.request` | Gerät → Bridge | `{deviceName, platform}`, `platform` ist in der Regel `"watchos"` |
+| `pair.companion.request` | Gerät → Bridge | `{deviceName, platform}`, `platform` muss `"watchos"` sein |
 | `pair.companion` | Bridge → Gerät | `{code, url, expiresAt}` |
 
-- Nur ein bereits gekoppeltes Gerät darf einen Code anfordern.
+- Nur ein bereits gekoppeltes **iPhone** (`platform: ios` bei der Kopplung) darf einen Code anfordern, und nur für eine Watch; sonst `error{bad_request}`.
 - Der Code folgt denselben Regeln wie `housephone-bridge pair`: 10 Minuten gültig, einmalig. `deviceName` wird wie `pair -name` behandelt.
+- Pro iPhone gibt es höchstens **einen** offenen Code; ein neuer ersetzt den alten. Höchstens 5 Codes pro Stunde und iPhone, danach `error{pairing_rate_limited}`.
+- Der Code koppelt nur ein Gerät mit `platform: watchos`, und nur solange das anfordernde iPhone noch gekoppelt ist; sonst `pairing_invalid` (der Code ist damit verbraucht).
+- Die Bridge merkt sich, über welches iPhone eine Watch gekoppelt wurde. `devices remove` für das iPhone entfernt dessen Watches mit.
 - Das iPhone gibt `{url, code}` per WatchConnectivity an die Watch weiter. Die Watch koppelt sich per `POST /v1/pair`.
 
 ### Medien über WebSocket (`websocket-pcma`)

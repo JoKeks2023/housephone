@@ -94,7 +94,7 @@ func (s *Server) httpCallStatus(w http.ResponseWriter, r *http.Request) {
 func (s *Server) httpAuthenticate(w http.ResponseWriter, r *http.Request) (store.Device, bool) {
 	dev, ok := s.authenticate(r.Header.Get("Authorization"))
 	if !ok {
-		s.log.Warn("rejected HTTPS authentication", "ip", s.clientIP(r), "path", r.URL.Path)
+		s.warnClient("rejected HTTPS authentication", s.clientIP(r), "path", r.URL.Path)
 		writeJSON(w, http.StatusUnauthorized, protocol.Error{Code: protocol.ErrorUnauthorized, Message: "unauthorized"})
 		return store.Device{}, false
 	}

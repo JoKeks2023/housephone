@@ -38,6 +38,11 @@ type env struct {
 
 func setup(t *testing.T, boxCodecs []media.Codec) *env {
 	t.Helper()
+	return setupWithLogger(t, boxCodecs, quiet())
+}
+
+func setupWithLogger(t *testing.T, boxCodecs []media.Codec, legLog *slog.Logger) *env {
+	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	box, err := fakefritz.Start(ctx, "620", "geheim", boxCodecs, quiet())
@@ -53,7 +58,7 @@ func setup(t *testing.T, boxCodecs []media.Codec) *env {
 		Username: "620", Password: "geheim",
 		BindHost: "127.0.0.1", BindPort: port,
 		RegisterExpiry: time.Minute,
-		Logger:         quiet(),
+		Logger:         legLog,
 	})
 	if err != nil {
 		t.Fatal(err)

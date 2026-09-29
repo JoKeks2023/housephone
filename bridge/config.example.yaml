@@ -8,17 +8,28 @@ bridge:
   # Name, den die App anzeigt.
   name: "Zuhause"
   # HTTP/WebSocket-Port. Cloudflare Tunnel (oder ein Reverse Proxy) zeigt hierauf.
-  listen: ":8080"
+  # Nur lokal lauschen: cloudflared läuft auf demselben Host (Host-Netzwerk).
+  # ":8080" würde die Bridge im ganzen LAN öffnen.
+  listen: "127.0.0.1:8080"
   # Öffentliche WebSocket-URL für die App (landet im Kopplungs-QR-Code).
   publicUrl: "wss://phone.example.com/v1/ws"
   # Geräte, Kopplungscodes und Bridge-ID.
   dataDir: "/data"
   # CF-Connecting-IP / X-Forwarded-For als Client-IP verwenden (nur hinter Tunnel/Proxy).
+  # Die Header gelten nur für Anfragen von localhost und von trustedProxies.
   trustProxyHeaders: true
+  # Weitere Proxys (IP oder CIDR), z. B. ein Reverse Proxy auf einem anderen Rechner.
+  trustedProxies: []
+  # Höchstens so viele Anrufe gleichzeitig; ein Gerät kann zusätzlich höchstens
+  # 2 eigene ausgehende Anrufe gleichzeitig führen.
+  maxCalls: 8
 
 sip:
   # FRITZ!Box: Telefonie → Telefoniegeräte → Neues Gerät → Telefon → LAN/WLAN (IP-Telefon)
-  registrar: "fritz.box"
+  # IP deiner FRITZ!Box, z. B. 192.168.178.1 oder 192.168.0.1. Die Bridge startet
+  # nur, wenn die Adresse im Heimnetz liegt ("fritz.box" kann über fremde DNS-Server
+  # zu einem öffentlichen Server auflösen).
+  registrar: "192.168.178.1"
   port: 5060
   # Benutzername des IP-Telefons, z. B. "620".
   username: "620"
@@ -68,3 +79,6 @@ fritzbox:
 
 log:
   level: "info"
+  # Telefonnummern im Log nur mit den letzten 3 Ziffern (…563), Anrufernamen gar
+  # nicht. true nur kurz zur Fehlersuche.
+  showNumbers: false
