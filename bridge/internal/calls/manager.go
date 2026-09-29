@@ -63,6 +63,9 @@ type Options struct {
 	OfferAnswerTimeout time.Duration
 	// MaxCalls bounds the concurrent calls; call.dial beyond it is refused.
 	MaxCalls int
+	// OnEvent receives call events (statistics, admin TUI). It must not
+	// block; nil disables them.
+	OnEvent func(Event)
 	// AudioFrameInterval paces websocket-pcma audio towards the FRITZ!Box
 	// (default 20 ms; tests may shorten it).
 	AudioFrameInterval time.Duration
@@ -471,6 +474,7 @@ func (m *Manager) HandleIncoming(ctx context.Context, sip IncomingSIPCall) {
 		}
 	}
 	log.Info("incoming call", "devices", len(devices), "reachable", reachable)
+	m.emit(c.event(EventStarted))
 	if reachable == 0 {
 		c.endReason = protocol.EndReasonFailed
 		_ = sip.Reject(480, "Temporarily Unavailable")
@@ -505,8 +509,10 @@ func (m *Manager) push(c *call, dev store.Device) {
 		defer cancel()
 		err := m.opts.Pusher.PushIncomingCall(ctx, dev, payload)
 		if err == nil {
+			m.emit(Event{Kind: EventPushOK, CallID: c.id, DeviceID: dev.ID})
 			return
 		}
+		m.emit(Event{Kind: EventPushFailed, CallID: c.id, DeviceID: dev.ID, Error: err.Error()})
 		m.log.Warn("push failed", "device", dev.ID, "call", c.id, "error", err)
 		if isInvalidToken(err) {
 			if clearErr := m.opts.Devices.ClearPushToken(dev.ID, dev.PushToken); clearErr != nil {

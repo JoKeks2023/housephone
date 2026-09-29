@@ -191,6 +191,9 @@ func (c *call) cleanup() {
 		}
 	}
 	c.log.Info("call ended", "reason", c.endReason, "sipCode", c.endSIPCode, "duration", time.Since(c.startedAt).Round(time.Second))
+	e := c.event(EventEnded)
+	e.Reason, e.SIPCode, e.DeviceID = c.endReason, c.endSIPCode, c.acceptedBy
+	c.m.emit(e)
 }
 
 // finish ends the call and tells every remaining participant.
@@ -519,6 +522,9 @@ func (c *call) onPeerState(l *leg, peerGen int, s PeerState) {
 		if l.conn != nil && l.answered && l.iceRestarts < maxICERestarts {
 			l.iceRestarts++
 			c.log.Info("ICE failed, restarting", "device", l.deviceID, "attempt", l.iceRestarts)
+			e := c.event(EventMediaFailed)
+			e.DeviceID = l.deviceID
+			c.m.emit(e)
 			c.offer(l, nil, true)
 		}
 	}

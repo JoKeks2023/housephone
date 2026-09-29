@@ -111,6 +111,9 @@ func (c *call) onAccept(conn DeviceConn) {
 	c.acceptedBy = id
 	c.phase = phaseAnswering
 	c.log.Info("accepted", "device", id, "codec", c.codec)
+	ev := c.event(EventAccepted)
+	ev.DeviceID = id
+	c.m.emit(ev)
 
 	for otherID, other := range c.legs {
 		if otherID == id {
@@ -149,6 +152,7 @@ func (c *call) onAnswered(media SIPMedia, err error) {
 	}
 	c.sipMedia = media
 	c.phase = phaseConnected
+	c.m.emit(c.event(EventConnected))
 	c.lastState = protocol.CallStateConnected
 	if c.hangupRequested {
 		c.hangupSIP()
