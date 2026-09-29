@@ -97,6 +97,12 @@ func (s *session) audioSink() calls.AudioSink {
 	return s.sink
 }
 
+func (s *session) isClosed() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.closed
+}
+
 // close marks the session closed and starts the close handshake without
 // waiting for an unresponsive peer (runDevice force-closes on exit).
 func (s *session) close(code websocket.StatusCode, reason string) {
@@ -214,11 +220,18 @@ func (srv *Server) runDevice(ctx context.Context, conn *websocket.Conn, dev stor
 	log.Info("device disconnected")
 }
 
+// readLoop handles device messages until the connection ends. Once the
+// session is closing (revoked, unpaired) it keeps reading but ignores
+// messages, so the close handshake can finish and the device receives the
+// close code; runDevice's grace period bounds the wait.
 func (srv *Server) readLoop(ctx context.Context, sess *session) {
 	for {
 		typ, data, err := sess.conn.Read(ctx)
 		if err != nil {
 			return
+		}
+		if sess.isClosed() {
+			continue
 		}
 		if typ == websocket.MessageBinary {
 			// websocket-pcma audio (v1.1); ignored without an active call.
@@ -232,7 +245,7 @@ func (srv *Server) readLoop(ctx context.Context, sess *session) {
 			return
 		}
 		if changesState(env.Type) && srv.revokeIfRemoved(sess) {
-			return
+			continue
 		}
 		switch env.Type {
 		case protocol.TypeDeviceUpdate:
@@ -255,7 +268,6 @@ func (srv *Server) readLoop(ctx context.Context, sess *session) {
 			}
 			srv.log.Info("device unpaired itself", "device", sess.deviceID)
 			sess.close(websocket.StatusNormalClosure, "unpaired")
-			return
 		case protocol.TypePairCompanionRequest:
 			srv.pairCompanion(sess, env)
 		case protocol.TypeHello, protocol.TypePair:
