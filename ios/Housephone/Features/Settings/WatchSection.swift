@@ -6,9 +6,20 @@ import SwiftUI
 struct WatchSection: View {
     @Environment(WatchLink.self) private var watch
     @Environment(BridgeConnection.self) private var bridge
+    @Environment(DirectPhone.self) private var direct
 
     var body: some View {
-        if watch.isSupported, watch.isWatchPaired {
+        if watch.isSupported, watch.isWatchPaired, direct.isEnabled {
+            Section {
+                LabeledContent("Status") {
+                    StatusIndicator(tone: .neutral, label: "Ohne Bridge nicht verfügbar")
+                }
+            } header: {
+                Text("Apple Watch")
+            } footer: {
+                Text("Die Apple Watch telefoniert nur über eine Bridge. Im Direktmodus klingelt sie nicht mit.")
+            }
+        } else if watch.isSupported, watch.isWatchPaired {
             Section {
                 statusRow
                 action

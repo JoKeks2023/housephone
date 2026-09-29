@@ -6,6 +6,7 @@ struct OnboardingView: View {
     @Environment(AppModel.self) private var appModel
     @State private var showsScanner = false
     @State private var scannedLink: PairingLink?
+    @State private var setsUpDirect = false
 
     var body: some View {
         ScrollView {
@@ -35,6 +36,9 @@ struct OnboardingView: View {
                 showsScanner = false
             }
         }
+        .sheet(isPresented: $setsUpDirect) {
+            DirectSetupView()
+        }
     }
 
     private var header: some View {
@@ -60,6 +64,11 @@ struct OnboardingView: View {
 
     private var actions: some View {
         VStack(spacing: Theme.Space.s3) {
+            Text("Mit Bridge")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
             Button {
                 showsScanner = true
             } label: {
@@ -87,6 +96,19 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.top, Theme.Space.s1)
+
+            Button {
+                setsUpDirect = true
+            } label: {
+                Label("Direkt mit FRITZ!Box (nur zu Hause)", systemImage: "house")
+                    .font(.body.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Space.s1)
+            }
+            .buttonStyle(.glass)
+            .controlSize(.large)
+            .padding(.top, Theme.Space.s3)
+            .accessibilityHint(Text("Ohne Bridge, nur im Heim-WLAN, ohne Apple Watch."))
         }
         .padding(.horizontal, Theme.Space.s6)
         .padding(.bottom, Theme.Space.s4)

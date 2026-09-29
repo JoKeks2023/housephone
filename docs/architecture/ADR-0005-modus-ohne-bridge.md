@@ -25,7 +25,7 @@
    - **Die Extension steht hinter einem Feature-Flag.** Das Target ist in `project.yml` definiert, wird aber standardmäßig **nicht eingebettet**. Sonst bräche jeder signierte Build, solange Apple das Entitlement nicht freigegeben hat. CI baut sie separat.
    - Freischalten: Entitlement beantragen → Profile anlegen → in `project.yml` die Abhängigkeit `HousephoneLocalPush` am App-Target aktivieren und `HOUSEPHONE_LOCAL_PUSH` setzen.
 4. **Heim-WLAN per SSID-Eingabe.** Die SSID automatisch auszulesen verlangte das Entitlement „Access WiFi Information“ und die Standortfreigabe. Das ist für eine Telefon-App unverhältnismäßig.
-5. **TR-064 direkt:** Telefonbuch und Anrufliste lädt die App im Direktmodus selbst von der FRITZ!Box (Digest-Auth, gleiche Parser wie die Bridge). Die Funktion ist optional; ohne TR-064-Zugang telefoniert die App trotzdem.
+5. **TR-064 direkt:** Telefonbuch und Anrufliste lädt die App im Direktmodus selbst von der FRITZ!Box (`TR064Client`: TLS auf dem Security-Port, Digest-Auth). Die Abbildung ist die der Bridge, in Swift nachgebaut. Die Funktion ist optional; ohne TR-064-Zugang telefoniert die App trotzdem.
 6. **Apple Watch ist im Direktmodus aus.** Die Watch spricht nur mit der Bridge (ADR-0002). Die Einstellungen sagen das offen.
 7. **Zugangsdaten** (SIP-Passwort, TR-064-Passwort) liegen nur im Schlüsselbund, nie in `UserDefaults` oder Logs.
 
@@ -36,6 +36,12 @@
 - Keine Apple Watch.
 - Nur G.711 A-law (kein G.722/HD).
 - Die FRITZ!Box muss ein IP-Telefon mit Benutzername und Passwort für Housephone haben (Telefonie → Telefoniegeräte → Neues Gerät → „Telefon (mit und ohne Anrufbeantworter)“ → LAN/WLAN (IP-Telefon)).
+
+## Offene Punkte
+
+- **Übergabe eines Anrufs von der Extension an die App.** Die Extension registriert sich und meldet eingehende Anrufe per `reportIncomingCall`. Den klingelnden SIP-Dialog hält aber sie, nicht der User-Agent der App. Geplant ist, dass die Extension als SIP-Relay für die App dient (App ↔ Extension über localhost, Extension ↔ FRITZ!Box über UDP) und RTP direkt aus der App läuft. Das ist noch nicht gebaut.
+- **Passwort für die Extension:** Sie liest den Schlüsselbund-Eintrag der App über eine gemeinsame Access Group (`keychainGroup` in der Provider-Konfiguration). Die Access Group wird beim Freischalten eingerichtet.
+- **Nicht am echten Gerät getestet:** Registrierung, Anrufe und TR-064 gegen eine echte FRITZ!Box. Die Unit-Tests spielen die FRITZ!Box nach.
 
 ## Folgen
 

@@ -77,6 +77,25 @@ jobs:
             | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
 
+      - name: Build Local Push extension (mode without bridge, not embedded)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Housephone.xcodeproj \
+            -scheme HousephoneLocalPush \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            -clonedSourcePackagesDirPath .spm \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            | tee extension.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" extension.log
+          test -x DerivedData/Build/Products/Debug-iphoneos/HousephoneLocalPush.appex/HousephoneLocalPush
+          # Not embedded until Apple grants the entitlement (ADR-0005).
+          test ! -e DerivedData/Build/Products/Debug-iphoneos/Housephone.app/PlugIns/HousephoneLocalPush.appex
+
       - name: Check embedded watch app
         working-directory: ios
         run: |
@@ -108,4 +127,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-build-log
-          path: ios/build.log
+          path: |
+            ios/build.log
+            ios/extension.log

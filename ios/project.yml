@@ -45,6 +45,10 @@ targets:
       - package: HousephoneKit
       # Companion Apple Watch app, embedded in the iPhone app.
       - target: HousephoneWatch
+      # Mode without bridge, ringing in the background (ADR-0005). Needs
+      # Apple's app-push-provider entitlement; once granted, uncomment and
+      # add HOUSEPHONE_LOCAL_PUSH to SWIFT_ACTIVE_COMPILATION_CONDITIONS.
+      # - target: HousephoneLocalPush
     entitlements:
       path: Housephone/Housephone.entitlements
       properties:
@@ -91,6 +95,39 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         INFOPLIST_FILE: Housephone/Info.plist
+
+  # Local Push Connectivity extension for the mode without bridge
+  # (ADR-0005). Built on its own (scheme HousephoneLocalPush), not embedded:
+  # a signed build with this entitlement fails until Apple grants it.
+  HousephoneLocalPush:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: HousephoneLocalPush
+        excludes:
+          - "Info.plist"
+    dependencies:
+      - package: HousephoneKit
+      - sdk: NetworkExtension.framework
+    entitlements:
+      path: HousephoneLocalPush/HousephoneLocalPush.entitlements
+      properties:
+        com.apple.developer.networking.networkextension:
+          - app-push-provider
+    info:
+      path: HousephoneLocalPush/Info.plist
+      properties:
+        CFBundleDisplayName: Housephone Local Push
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.networkextension.app-push
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).LocalPushProvider
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jorisconrad.housephone.localpush
+        PRODUCT_NAME: HousephoneLocalPush
+        INFOPLIST_FILE: HousephoneLocalPush/Info.plist
 
   HousephoneWatch:
     type: application
@@ -140,3 +177,7 @@ schemes:
       config: Debug
     archive:
       config: Release
+  HousephoneLocalPush:
+    build:
+      targets:
+        HousephoneLocalPush: all

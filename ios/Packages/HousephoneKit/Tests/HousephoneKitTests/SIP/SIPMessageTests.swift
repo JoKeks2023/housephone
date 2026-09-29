@@ -246,6 +246,15 @@ struct RTPTests {
         #expect(second.timestamp == 1160)
     }
 
+    @Test func rawAudioIsCutInto20msFrames() {
+        let frames = CallAudio.frames(fromRaw: Data(repeating: 0x2A, count: 240))
+        #expect(frames.count == 2)
+        #expect(frames.allSatisfy { $0.count == 160 })
+        #expect(frames[1].prefix(80) == Data(repeating: 0x2A, count: 80))
+        #expect(frames[1].suffix(80) == Data(repeating: G711.aLawSilence, count: 80))
+        #expect(CallAudio.frames(fromRaw: Data()).isEmpty)
+    }
+
     @Test func dtmfFollowsRFC4733() throws {
         var sender = RTPSender(payloadType: 8, telephoneEventPayloadType: 101, ssrc: 1, sequenceNumber: 10, timestamp: 0)
         let digit = sender.dtmf("#", milliseconds: 60)
