@@ -149,6 +149,15 @@ func (srv *Server) readLoop(ctx context.Context, sess *session) {
 				continue
 			}
 			srv.applyDeviceUpdate(sess.deviceID, u.PushToken, u.PushEnvironment, u.DeviceName)
+		case protocol.TypeDeviceUnpair:
+			if err := srv.cfg.Devices.Remove(sess.deviceID); err != nil && !errors.Is(err, store.ErrDeviceNotFound) {
+				srv.log.Error("unpairing device failed", "device", sess.deviceID, "error", err)
+				sess.Send(errorEnvelope(protocol.ErrorInternal, "Gerät konnte nicht entfernt werden"))
+				continue
+			}
+			srv.log.Info("device unpaired itself", "device", sess.deviceID)
+			sess.close(websocket.StatusNormalClosure, "unpaired")
+			return
 		case protocol.TypeHello, protocol.TypePair:
 			sess.Send(errorEnvelope(protocol.ErrorBadRequest, env.Type+" is not allowed here"))
 		default:

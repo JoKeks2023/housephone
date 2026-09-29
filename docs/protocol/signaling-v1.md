@@ -34,7 +34,7 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`, später wa
 - `type`: String, siehe Tabellen unten. Unbekannte Typen werden ignoriert (Vorwärtskompatibilität).
 - `payload`: Objekt, immer vorhanden (ggf. `{}`). Unbekannte Felder werden ignoriert.
 - Feldnamen: camelCase.
-- Zeitstempel: ISO-8601 in UTC **ohne Sekundenbruchteile**, z. B. `2026-09-29T18:04:05Z`.
+- Zeitstempel: RFC 3339 in UTC **ohne Sekundenbruchteile**, z. B. `2026-09-29T18:04:05Z`.
 - `callId`: UUID, klein geschrieben. Wird bei **eingehenden** Anrufen von der Bridge erzeugt und bei **ausgehenden** vom Gerät (CallKit-UUID). Das Gerät verwendet die `callId` direkt als CallKit-UUID.
   - Die Bridge akzeptiert auch groß geschriebene UUIDs (Swift `UUID().uuidString`) und normalisiert sie; **alle Antworten tragen die klein geschriebene Form**. Geräte vergleichen `callId`s daher über `UUID`, nicht als String.
 
@@ -45,7 +45,8 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`, später wa
 | `pair` | `{code, deviceName, platform, model?}` | Erste Nachricht einer Kopplungsverbindung. `platform`: `"ios"` \| `"watchos"`. |
 | `hello` | `{appVersion, platform, pushToken?, pushEnvironment?}` | Erste Nachricht jeder normalen Verbindung. `pushToken`: VoIP-Token als Hex-String (klein). `pushEnvironment`: `"development"` \| `"production"`. |
 | `device.update` | `{pushToken?, pushEnvironment?, deviceName?}` | Wenn sich z. B. das Push-Token ändert. Ungültige Werte (Token nicht klein geschriebenes Hex) werden ignoriert. |
-| `call.attach` | `{callId}` | Nach einem VoIP-Push: Gerät hängt sich an den eingehenden Anruf. |
+| `device.unpair` | `{}` | Gerät entkoppelt sich selbst. Die Bridge löscht das Gerät samt Push-Token und schließt die Verbindung mit Close-Code `1000`. |
+| `call.attach` | `{callId}` | Gerät hängt sich an einen Anruf – nach einem VoIP-Push, nach unaufgefordertem `call.incoming` und nach jedem Wiederverbinden. **Idempotent** und in jeder aktiven Phase erlaubt (klingelnd, Early Media, verbunden), siehe „Anhängen“. |
 | `call.dial` | `{callId, number}` | Ausgehender Anruf. `number`: gewählte Ziffern, erlaubt `0-9 * # +`. |
 | `call.answer` | `{callId, sdp}` | WebRTC-SDP-Answer auf ein `call.offer` (vollständige Kandidaten, kein Trickle-ICE). |
 | `call.accept` | `{callId}` | Nutzer hat einen **eingehenden** Anruf angenommen. |
@@ -59,7 +60,7 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`, später wa
 | `pair.ok` | `{deviceId, deviceSecret, bridgeId, bridgeName}` | Kopplung erfolgreich. Danach schließt die Bridge die Kopplungsverbindung (Close-Code `1000`). |
 | `welcome` | `{bridgeId, bridgeName, bridgeVersion, sipRegistered}` | Antwort auf `hello`. |
 | `status` | `{sipRegistered}` | Wenn sich der Registrierungsstatus an der FRITZ!Box ändert. |
-| `call.incoming` | `{callId, caller, callerName?, startedAt}` | Antwort auf `call.attach`, solange der Anruf noch klingelt. Wird auch ohne Push an verbundene Geräte gesendet (App im Vordergrund). |
+| `call.incoming` | `{callId, caller, callerName?, startedAt}` | Antwort auf `call.attach`, **nur solange der Anruf klingelt**. Wird außerdem unaufgefordert an bereits verbundene Geräte gesendet – das ist nur eine Benachrichtigung; ein `call.offer` kommt erst nach `call.attach`. |
 | `call.offer` | `{callId, sdp, iceServers}` | WebRTC-SDP-Offer. Die Bridge ist **immer** der Offerer. `iceServers`: `[{urls:[String], username?, credential?}]`, darf leer sein. Kann während eines laufenden Anrufs **erneut** kommen (ICE-Restart nach Re-Attach oder ICE-Fehler) – das Gerät antwortet jedes Mal mit `call.answer` auf derselben PeerConnection. |
 | `call.state` | `{callId, state}` | `state`: `"ringing"` (Gegenstelle klingelt, nur ausgehend), `"early_media"` (Gegenstelle sendet Ton vor Annahme), `"connected"`. |
 | `call.ended` | `{callId, reason, sipCode?}` | Anruf ist für dieses Gerät beendet. Siehe Gründe unten. |
@@ -101,6 +102,17 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`, später wa
 3. Die Bridge antwortet mit `pair.ok` und schließt die Verbindung. Die App speichert `deviceId`, `deviceSecret` und `url` im Schlüsselbund.
    - Als Gerätename speichert die Bridge den Namen aus `pair -name`, sonst `deviceName` aus der `pair`-Nachricht.
 4. Rate-Limit: höchstens 5 fehlgeschlagene `pair`-Versuche pro Minute und Quell-IP → `pairing_rate_limited`. Als Quell-IP gilt bei Cloudflare der Header `CF-Connecting-IP`.
+
+### Anhängen (`call.attach`)
+
+- Das Gerät sendet **immer** `call.attach`, auch wenn es `call.incoming` schon ohne Push bekommen hat.
+- Die Bridge antwortet auf jedes `call.attach` mit `call.incoming` (nur solange es klingelt) und einem `call.offer`; in verbundenen bzw. ausgehenden Anrufen zusätzlich mit dem aktuellen `call.state`.
+- Pro Gerät und Anruf gibt es **genau eine** PeerConnection. Ein wiederholtes `call.attach` – auch mehrfach in derselben WebSocket-Verbindung – erzeugt nie eine zweite:
+  - Offer wird gerade erzeugt → es geht an die aktuelle Verbindung, sobald es fertig ist.
+  - Offer gesendet, aber noch nicht beantwortet → **dasselbe** Offer wird unverändert erneut gesendet (gleiche ICE-Zugangsdaten, jede der beiden Answers passt).
+  - Offer beantwortet → neues Offer von **derselben** PeerConnection mit ICE-Restart (gleicher DTLS-Fingerprint). Das Gerät behandelt ein weiteres Offer zum selben Anruf als ICE-Restart seiner bestehenden Verbindung.
+- Eine `call.answer` auf ein bereits beantwortetes Offer (Duplikat) ignoriert die Bridge ohne Fehler.
+- Verliert ein **klingelndes** Gerät die WebSocket-Verbindung, behält die Bridge dessen PeerConnection; beim nächsten `call.attach` folgt ein ICE-Restart-Offer.
 
 ### Eingehender Anruf
 
@@ -155,7 +167,7 @@ Gerät                           Bridge                        FRITZ!Box
 - Gerät: `call.hangup` → Bridge sendet BYE (verbunden) bzw. CANCEL (ausgehend, noch nicht verbunden) und bestätigt mit `call.ended{local_hangup}`.
 - FRITZ!Box: BYE → `call.ended{remote_hangup}`.
 - Bricht die WebSocket-Verbindung eines **verbundenen** Anrufs ab, hält die Bridge den Anruf **30 s** offen. So lange darf sich das Gerät mit `call.attach` erneut anhängen (Netzwechsel). Danach legt die Bridge auf.
-  - Beim Wieder-Anhängen sendet die Bridge `call.incoming` (nur eingehend), ein neues `call.offer` mit ICE-Restart und den aktuellen `call.state`. Das Gerät antwortet mit `call.answer`.
+  - Beim Wieder-Anhängen sendet die Bridge ein neues `call.offer` (ICE-Restart auf derselben PeerConnection, siehe „Anhängen“) und den aktuellen `call.state`. Das Gerät antwortet mit `call.answer`.
 - Meldet die PeerConnection des aktiven Geräts einen ICE-Fehler, während die WebSocket-Verbindung steht, sendet die Bridge von sich aus bis zu 3-mal ein neues `call.offer` mit ICE-Restart. Erholt sich die Verbindung nicht innerhalb von 30 s, legt sie auf.
 
 ### Späte Nachrichten

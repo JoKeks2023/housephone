@@ -13,6 +13,7 @@ const (
 	TypePair         = "pair"
 	TypeHello        = "hello"
 	TypeDeviceUpdate = "device.update"
+	TypeDeviceUnpair = "device.unpair"
 	TypeCallAttach   = "call.attach"
 	TypeCallDial     = "call.dial"
 	TypeCallAnswer   = "call.answer"
@@ -171,6 +172,9 @@ type DeviceUpdate struct {
 	PushEnvironment *string `json:"pushEnvironment,omitempty"`
 	DeviceName      *string `json:"deviceName,omitempty"`
 }
+
+// DeviceUnpair asks the bridge to forget the device. It has no fields.
+type DeviceUnpair struct{}
 
 type CallAttach struct {
 	CallID string `json:"callId"`

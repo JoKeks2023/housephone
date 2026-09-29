@@ -22,6 +22,8 @@ func payloadFor(t *testing.T, msgType string) any {
 		return &Hello{}
 	case TypeDeviceUpdate:
 		return &DeviceUpdate{}
+	case TypeDeviceUnpair:
+		return &DeviceUnpair{}
 	case TypeCallAttach:
 		return &CallAttach{}
 	case TypeCallDial:
@@ -72,8 +74,8 @@ func TestFixturesRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) < 18 {
-		t.Fatalf("expected at least 18 fixtures, found %d in %s", len(files), fixturesDir)
+	if len(files) < 19 {
+		t.Fatalf("expected at least 19 fixtures, found %d in %s", len(files), fixturesDir)
 	}
 
 	for _, file := range files {

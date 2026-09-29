@@ -406,6 +406,28 @@ func TestRemovedDeviceCannotConnect(t *testing.T) {
 	}
 }
 
+func TestDeviceUnpairRemovesDeviceAndCloses(t *testing.T) {
+	ts := newTestServer(t)
+	ok := ts.pairDevice(t)
+	c, _, err := ts.dial(t, bearer(ok))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+	send(t, c, protocol.TypeHello, protocol.Hello{PushToken: "abcd", PushEnvironment: protocol.PushEnvironmentProduction})
+	receive(t, c, protocol.TypeWelcome, nil)
+	send(t, c, protocol.TypeDeviceUnpair, protocol.DeviceUnpair{})
+	if status := closeStatus(t, c); status != websocket.StatusNormalClosure {
+		t.Fatalf("close %v, want 1000", status)
+	}
+	if _, err := ts.devices.Get(ok.DeviceID); err == nil {
+		t.Fatal("device (and its push token) still stored")
+	}
+	if _, res, err := ts.dial(t, bearer(ok)); err == nil || res == nil || res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("unpaired device can still connect: %v %v", res, err)
+	}
+}
+
 func TestRateLimiterWindow(t *testing.T) {
 	now := time.Now()
 	l := newRateLimiter(2, time.Minute, func() time.Time { return now })
