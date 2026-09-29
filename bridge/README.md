@@ -66,7 +66,7 @@ Der Tunnel trägt nur die Signalisierung (TCP/WebSocket). Der Ton läuft über d
 
 ```sh
 cd bridge
-cp config.example.yaml config.yaml          # registrar, username, publicUrl anpassen
+cp config.example.yaml config.yaml          # registrar (IP der FRITZ!Box), username, publicUrl anpassen
 cp docker-compose.example.yml docker-compose.yml
 mkdir -p data secrets
 printf '%s' 'SIP-KENNWORT' > secrets/sip_password
@@ -157,6 +157,7 @@ Sichere diesen Ordner. Verlierst du ihn, müssen alle Geräte neu gekoppelt werd
 |---|---|
 | `registration failed … 401/403` | Benutzername/Kennwort des IP-Telefons prüfen. Das IP-Telefon muss in der FRITZ!Box existieren. |
 | `find local IP towards fritz.box` | `fritz.box` wird auf dem Server nicht aufgelöst → `sip.registrar` auf die IP der FRITZ!Box setzen (Standard `192.168.178.1`, bei manchen Anschlüssen z. B. `192.168.0.1`). |
+| `sip.registrar: fritz.box löst auf … auf – das ist keine Adresse in deinem Heimnetz` | Dein Server fragt einen fremden DNS-Server (Pi-hole ohne Weiterleitung, 1.1.1.1 …). Dort gehört `fritz.box` einem Dritten; die Bridge würde ihm ihre Anmeldedaten schicken und startet deshalb nicht. → Die IP der FRITZ!Box eintragen. Die Bridge legt die Adresse beim Start fest und fragt DNS danach nicht mehr. |
 | iPhone klingelt nicht, wenn die App geschlossen ist | APNs-Key/Key-ID prüfen. Log `push failed … 403 InvalidProviderToken` = Key/Team falsch. `BadDeviceToken` = Environment passt nicht (Debug vs. TestFlight); die App einmal öffnen, dann meldet sie das richtige Token. |
 | Anruf wird angenommen, aber kein Ton (unterwegs) | UDP-Freigabe 50000 fehlt oder öffentliche IP falsch: Log `public IP` prüfen, ggf. `media.publicIp` setzen. |
 | Kein Ton zu Hause | Server und iPhone müssen sich im LAN erreichen (kein Gast-WLAN, keine Client-Isolation). |

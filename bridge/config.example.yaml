@@ -18,7 +18,10 @@ bridge:
 
 sip:
   # FRITZ!Box: Telefonie → Telefoniegeräte → Neues Gerät → Telefon → LAN/WLAN (IP-Telefon)
-  registrar: "fritz.box"
+  # IP deiner FRITZ!Box, z. B. 192.168.178.1 oder 192.168.0.1. Die Bridge startet
+  # nur, wenn die Adresse im Heimnetz liegt ("fritz.box" kann über fremde DNS-Server
+  # zu einem öffentlichen Server auflösen).
+  registrar: "192.168.178.1"
   port: 5060
   # Benutzername des IP-Telefons, z. B. "620".
   username: "620"
