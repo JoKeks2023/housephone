@@ -1,0 +1,159 @@
+import HousephoneKit
+import SwiftUI
+
+/// First screen when no bridge is paired.
+struct OnboardingView: View {
+    @Environment(AppModel.self) private var appModel
+    @State private var showsScanner = false
+    @State private var scannedLink: PairingLink?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Space.s10) {
+                header
+                features
+            }
+            .padding(.horizontal, Theme.Space.s6)
+            .padding(.top, Theme.Space.s16)
+            .padding(.bottom, Theme.Space.s8)
+            .frame(maxWidth: 520, alignment: .leading)
+            .frame(maxWidth: .infinity)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .background(alignment: .top) { AmbientGlow() }
+        .safeAreaInset(edge: .bottom) { actions }
+        .sheet(isPresented: $showsScanner, onDismiss: {
+            // Present the pairing sheet only after the scanner is gone;
+            // two sheets can't transition at the same time.
+            if let scannedLink {
+                self.scannedLink = nil
+                appModel.pairingLink = scannedLink
+            }
+        }) {
+            QRScannerSheet { link in
+                scannedLink = link
+                showsScanner = false
+            }
+        }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s4) {
+            AppGlyph()
+            Text("Housephone")
+                .font(.system(size: 40, weight: .semibold))
+                .tracking(-0.8)
+            Text("Dein Festnetz auf dem iPhone – über deine FRITZ!Box, zu Hause und unterwegs.")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var features: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s6) {
+            FeatureRow(symbol: "phone.badge.waveform", title: "Klingelt wie ein echter Anruf", detail: "Mit CallKit – auch im Sperrbildschirm und in der Anrufliste.")
+            FeatureRow(symbol: "antenna.radiowaves.left.and.right", title: "Überall erreichbar", detail: "Ohne VPN, über deine eigene Bridge.")
+            FeatureRow(symbol: "waveform", title: "HD-Sprachqualität", detail: "G.722 von der FRITZ!Box bis ins Ohr.")
+        }
+    }
+
+    private var actions: some View {
+        VStack(spacing: Theme.Space.s3) {
+            Button {
+                showsScanner = true
+            } label: {
+                Label("QR-Code der Bridge scannen", systemImage: "qrcode.viewfinder")
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Space.s2)
+            }
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+
+            PasteButton(payloadType: String.self) { strings in
+                guard let text = strings.first else { return }
+                do throws(PairingLinkError) {
+                    appModel.pairingLink = try PairingLink(string: text)
+                } catch {
+                    appModel.pairingLinkError = error
+                }
+            }
+            .buttonBorderShape(.capsule)
+            .tint(.secondary)
+
+            Text("Den QR-Code zeigt dein Server mit `housephone-bridge pair` an.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.top, Theme.Space.s1)
+        }
+        .padding(.horizontal, Theme.Space.s6)
+        .padding(.bottom, Theme.Space.s4)
+        .frame(maxWidth: 520)
+    }
+}
+
+private struct FeatureRow: View {
+    let symbol: String
+    let title: LocalizedStringKey
+    let detail: LocalizedStringKey
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Theme.Space.s4) {
+            Image(systemName: symbol)
+                .font(.title2)
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 32)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.headline)
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// House with a handset: the app's mark.
+struct AppGlyph: View {
+    var size: CGFloat = 64
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            Image(systemName: "house.fill")
+                .font(.system(size: size * 0.62, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: size, height: size)
+                .background(Color.accentColor.opacity(0.14), in: .rect(cornerRadius: Theme.Radius.xl))
+            Image(systemName: "phone.fill")
+                .font(.system(size: size * 0.22, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: size * 0.4, height: size * 0.4)
+                .background(Theme.call, in: .circle)
+                .overlay(Circle().strokeBorder(Color(.systemBackground), lineWidth: 3))
+                .offset(x: size * 0.12, y: size * 0.12)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// Soft accent glow behind hero content (ambient material, low opacity).
+struct AmbientGlow: View {
+    var body: some View {
+        RadialGradient(
+            colors: [Color.accentColor.opacity(0.22), .clear],
+            center: .top,
+            startRadius: 0,
+            endRadius: 420
+        )
+        .frame(height: 520)
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}

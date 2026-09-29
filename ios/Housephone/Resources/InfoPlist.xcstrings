@@ -1,0 +1,91 @@
+{
+  "sourceLanguage": "de",
+  "version": "1.0",
+  "strings": {
+    "CFBundleDisplayName": {
+      "shouldTranslate": false,
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone"
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription": {
+      "shouldTranslate": true,
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit der Kamera scannst du den QR-Code deiner Bridge, um dieses iPhone zu koppeln."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the camera to scan your bridge's QR code and pair this iPhone."
+          }
+        }
+      }
+    },
+    "NSContactsUsageDescription": {
+      "shouldTranslate": true,
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone zeigt deine Kontakte an, damit du sie direkt anrufen kannst, und erkennt Anrufer an ihrem Namen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone shows your contacts so you can call them directly, and shows callers by name."
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription": {
+      "shouldTranslate": true,
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu Hause spricht Housephone direkt mit deiner Bridge, damit Gespräche im WLAN bleiben."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At home, Housephone talks to your bridge directly so calls stay on your Wi-Fi."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "shouldTranslate": true,
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone braucht das Mikrofon, damit dich dein Gegenüber beim Telefonieren hört."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone needs the microphone so the other person can hear you during calls."
+          }
+        }
+      }
+    }
+  }
+}

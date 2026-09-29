@@ -1,0 +1,43 @@
+import Intents
+import SwiftUI
+
+@main
+struct HousephoneApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
+
+    private let services = AppServices.shared
+
+    var body: some Scene {
+        WindowGroup {
+            RootView()
+                .environment(services.bridge)
+                .environment(services.callCenter)
+                .environment(services.contacts)
+                .environment(services.appModel)
+                .modelContainer(services.modelContainer)
+                .onOpenURL { url in
+                    services.appModel.open(url)
+                }
+                .onContinueUserActivity(NSStringFromClass(INStartCallIntent.self)) { activity in
+                    startCall(from: activity)
+                }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            services.bridge.refresh()
+            services.contacts.reload()
+        }
+    }
+
+    /// Calls started from the iPhone's recents or contacts arrive as an
+    /// `INStartCallIntent`.
+    private func startCall(from activity: NSUserActivity) {
+        guard let intent = activity.interaction?.intent as? INStartCallIntent,
+              let person = intent.contacts?.first,
+              let number = person.personHandle?.value
+        else { return }
+        let name = person.displayName.isEmpty ? nil : person.displayName
+        Task { await services.callCenter.startCall(to: number, name: name) }
+    }
+}

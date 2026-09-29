@@ -19,3 +19,6 @@ ios/**/.swiftpm/
 bridge/bin/
 bridge/data/
 *.p8
+
+# Claude Code worktrees
+.claude/worktrees/

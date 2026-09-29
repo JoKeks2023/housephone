@@ -1,0 +1,98 @@
+name: Housephone
+
+options:
+  bundleIdPrefix: com.jorisconrad
+  deploymentTarget:
+    iOS: "26.0"
+  developmentLanguage: de
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    DEVELOPMENT_TEAM: T9CA6D7T8N
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+
+packages:
+  WebRTC:
+    url: https://github.com/stasel/WebRTC.git
+    exactVersion: 153.0.0
+  HousephoneKit:
+    path: Packages/HousephoneKit
+
+targets:
+  Housephone:
+    type: application
+    platform: iOS
+    sources:
+      - path: Housephone
+        excludes:
+          - "Info.plist"
+    dependencies:
+      - package: WebRTC
+      - package: HousephoneKit
+    entitlements:
+      path: Housephone/Housephone.entitlements
+      properties:
+        aps-environment: development
+    info:
+      path: Housephone/Info.plist
+      properties:
+        CFBundleDisplayName: Housephone
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: de
+        CFBundleAllowMixedLocalizations: true
+        LSRequiresIPhoneOS: true
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiredDeviceCapabilities:
+          - arm64
+          - microphone
+        UIBackgroundModes:
+          - voip
+          - audio
+        NSMicrophoneUsageDescription: Housephone braucht das Mikrofon, damit dich dein Gegenüber beim Telefonieren hört.
+        NSCameraUsageDescription: Mit der Kamera scannst du den QR-Code deiner Bridge, um dieses iPhone zu koppeln.
+        NSContactsUsageDescription: Housephone zeigt deine Kontakte an, damit du sie direkt anrufen kannst, und erkennt Anrufer an ihrem Namen.
+        NSLocalNetworkUsageDescription: Zu Hause spricht Housephone direkt mit deiner Bridge, damit Gespräche im WLAN bleiben.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSUserActivityTypes:
+          - INStartCallIntent
+        CFBundleURLTypes:
+          - CFBundleURLName: com.jorisconrad.housephone.pairing
+            CFBundleURLSchemes:
+              - housephone
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jorisconrad.housephone
+        PRODUCT_NAME: Housephone
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        INFOPLIST_FILE: Housephone/Info.plist
+
+schemes:
+  Housephone:
+    build:
+      targets:
+        Housephone: all
+    run:
+      config: Debug
+    archive:
+      config: Release

@@ -1,0 +1,84 @@
+name: iOS
+
+on:
+  push:
+    paths:
+      - "ios/**"
+      - "docs/protocol/**"
+      - ".github/workflows/ios.yml"
+  pull_request:
+    paths:
+      - "ios/**"
+      - "docs/protocol/**"
+      - ".github/workflows/ios.yml"
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kit:
+    name: HousephoneKit tests
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          xcode="$(ls -1d /Applications/Xcode_[0-9]*.app | grep -iv beta | sort -V | tail -1)"
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+          swift --version
+
+      - name: swift test
+        working-directory: ios/Packages/HousephoneKit
+        run: swift test
+
+  app:
+    name: App build (unsigned, iOS device)
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          xcode="$(ls -1d /Applications/Xcode_[0-9]*.app | grep -iv beta | sort -V | tail -1)"
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: ios/.spm
+          key: spm-${{ runner.os }}-${{ hashFiles('ios/project.yml') }}
+
+      - name: Build
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Housephone.xcodeproj \
+            -scheme Housephone \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            -clonedSourcePackagesDirPath .spm \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ios/build.log
