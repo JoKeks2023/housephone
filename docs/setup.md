@@ -1,7 +1,7 @@
 # Housephone einrichten – bis zum ersten Anruf
 
 Diese Schritte gehen nur mit dir, weil sie deinen Server, deine FRITZ!Box, dein iPhone und deine Accounts brauchen.
-Einmal durchgearbeitet, klingelt dein iPhone bei Festnetzanrufen – zu Hause und unterwegs.
+Einmal durchgearbeitet, klingeln dein iPhone und deine Apple Watch bei Festnetzanrufen – zu Hause und unterwegs.
 
 | Wo | Was | Dauer |
 |---|---|---|
@@ -10,6 +10,7 @@ Einmal durchgearbeitet, klingelt dein iPhone bei Festnetzanrufen – zu Hause un
 | Cloudflare | Tunnel für `phone.<deine-domain>` anlegen | 5 min |
 | Server | Bridge per Docker starten | 10 min |
 | Mac + iPhone | App bauen, installieren und koppeln | 10 min |
+| iPhone + Watch | Apple Watch koppeln | 2 min |
 
 ## 1. Bridge einrichten
 
@@ -37,7 +38,9 @@ open Housephone.xcodeproj
 2. **Beim ersten Mal:**
    - auf dem iPhone **Einstellungen → Datenschutz & Sicherheit → Entwicklermodus** einschalten,
    - in Xcode unter *Signing & Capabilities* prüfen, dass Team `T9CA6D7T8N` gesetzt ist.
-3. **Falls Xcode „Push Notifications“ bemängelt:** [developer.apple.com → Identifiers](https://developer.apple.com/account/resources/identifiers/list) → `com.jorisconrad.housephone` → *Push Notifications* aktivieren und erneut bauen.
+3. **Falls Xcode „Push Notifications“ bemängelt:** [developer.apple.com → Identifiers](https://developer.apple.com/account/resources/identifiers/list) → `com.jorisconrad.housephone` → *Push Notifications* aktivieren und erneut bauen. Dasselbe gilt für die Watch-App `com.jorisconrad.housephone.watchkitapp`.
+
+Die Watch-App steckt in der iPhone-App und wird mitgebaut. Auf die Uhr kommt sie automatisch, wenn in der Watch-App des iPhones *Apps automatisch installieren* aktiv ist. Sonst: *Watch-App → Verfügbare Apps → Housephone → Installieren*.
 
 Aus Xcode installierte Builds nutzen die APNs-Sandbox. Die App meldet das der Bridge selbst, du musst nichts einstellen.
 
@@ -56,6 +59,18 @@ In der App öffnet sich beim ersten Start die Kopplung:
 
 Unter **Einstellungen** steht danach **Verbunden** (grün). Steht dort „FRITZ!Box nicht angemeldet“, stimmt Schritt 1 noch nicht.
 
+### Apple Watch koppeln
+
+Voraussetzung: Housephone ist auf der Watch installiert und das iPhone ist mit der Bridge gekoppelt (**Verbunden**).
+
+1. iPhone: **Einstellungen → Apple Watch koppeln**.
+2. Ist Housephone auf der Watch offen, koppelt sie sich sofort. Sonst zeigt das iPhone „Öffne Housephone auf deiner Apple Watch“ – dann die App auf der Uhr öffnen. Der Code gilt 10 Minuten.
+3. Auf der Watch **Mikrofon erlauben** antippen.
+
+Unter **Einstellungen → Apple Watch** steht danach **Gekoppelt** (grün). Auf der Uhr zeigt die Startseite **Bereit für Anrufe**.
+
+Die Uhr spricht mit der Bridge nur über den Cloudflare Tunnel – ohne zusätzliche Portfreigabe. Der Ton läuft während eines Anrufs über dieselbe verschlüsselte Verbindung (G.711, Schmalband).
+
 ## 4. Ausprobieren
 
 - [ ] **Ausgehend (WLAN):** Nummer im Tastenfeld wählen → Freiton → Gespräch → Auflegen.
@@ -64,13 +79,22 @@ Unter **Einstellungen** steht danach **Verbunden** (grün). Steht dort „FRITZ!
 - [ ] **Rückruf aus der iPhone-Telefon-App:** Den Anruf in *Telefon → Anrufliste* antippen → startet über Housephone.
 - [ ] **Anderes Telefon nimmt an:** Festnetz anrufen und am Schnurlostelefon abheben → iPhone hört auf zu klingeln („an anderem Gerät angenommen“).
 
+**Apple Watch:**
+
+- [ ] **Eingehend:** Festnetz anrufen → iPhone **und** Watch klingeln → an der Watch annehmen → Gespräch über Lautsprecher und Mikrofon der Uhr in beide Richtungen → das iPhone hört auf zu klingeln.
+- [ ] **Ohne iPhone:** iPhone ausschalten oder außer Reichweite, Watch im WLAN oder mit LTE → Festnetz anrufen → Watch klingelt → Gespräch.
+- [ ] **Ausgehend:** Auf der Watch **Wählen** → Nummer → grüner Hörer → Freiton → Gespräch → Auflegen.
+- [ ] **Lautstärke:** Während des Gesprächs die Digital Crown drehen.
+
 ## 5. Wenn etwas nicht klappt
 
 - **Server-Seite:** siehe Tabelle *Fehlersuche* in [`bridge/README.md`](../bridge/README.md).
   - `docker compose logs -f housephone-bridge` zeigt Registrierung, Pushes, Anrufe und ICE.
   - Mit `HOUSEPHONE_LOG_LEVEL=debug` wird es ausführlicher.
 - **App-Seite:** Konsole.app auf dem Mac, iPhone auswählen, nach Subsystem `com.jorisconrad.housephone` filtern.
-  - Kategorien: `calls` (CallKit/PushKit), `media` (WebRTC/ICE), `bridge` (Verbindung).
+  - Kategorien: `calls` (CallKit/PushKit), `media` (WebRTC/ICE), `bridge` (Verbindung), `watch` (Kopplung der Uhr).
+- **Watch-Seite:** In Konsole.app die Watch auswählen, Subsystem `com.jorisconrad.housephone.watch`.
+  - Kategorien: `calls`, `audio`, `bridge`, `phone`.
 - **Typische Ursachen:**
 
 | Symptom | Ursache |
@@ -78,3 +102,6 @@ Unter **Einstellungen** steht danach **Verbunden** (grün). Steht dort „FRITZ!
 | Klingelt nur bei offener App | APNs-Key, Key-ID oder Team falsch; Log `push failed` auf der Bridge |
 | Klingelt, aber kein Ton unterwegs | UDP-Freigabe 50000 fehlt oder öffentliche IP falsch |
 | „Bridge nicht erreichbar“ | Cloudflare Tunnel läuft nicht, oder `publicUrl` in `config.yaml` stimmt nicht mit dem Hostnamen überein |
+| Watch zeigt „Wartet auf Push-Freigabe“ | Die Uhr hat noch kein VoIP-Token. Watch-App einmal öffnen; *Push Notifications* für `com.jorisconrad.housephone.watchkitapp` prüfen |
+| Watch zeigt „Bridge nicht erreichbar“ | Die Uhr erreicht `phone.<deine-domain>` nicht. Sie versucht es automatisch erneut, auch beim nächsten Öffnen der App |
+| Watch klingelt, Annehmen endet mit „Fehlgeschlagen“ | Die Uhr konnte in 10 s keine Verbindung aufbauen. Logs der Bridge (`call.media`) und der Uhr (`calls`) prüfen |
