@@ -34,6 +34,15 @@ type Hub interface {
 	CallStatus(deviceID, callID string) (protocol.CallStatus, bool)
 }
 
+// Directory serves the FRITZ!Box phonebook and call list (v1.2,
+// implemented by fritzbox.Directory). Errors may implement
+// UserMessage() string for the error message sent to the app.
+type Directory interface {
+	Phonebook(ctx context.Context) (body []byte, etag string, err error)
+	History(ctx context.Context, limit int) ([]byte, error)
+	Features() []string
+}
+
 // Config configures the server.
 type Config struct {
 	BridgeID      string
@@ -49,7 +58,9 @@ type Config struct {
 	Devices           *store.Devices
 	Pairing           *store.Pairing
 	Hub               Hub
-	Logger            *slog.Logger
+	// Directory is nil when fritzbox.username is not configured.
+	Directory Directory
+	Logger    *slog.Logger
 
 	PingInterval     time.Duration
 	FirstMessageWait time.Duration
@@ -108,6 +119,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /v1/device", s.httpUpdateDevice)
 	mux.HandleFunc("DELETE /v1/device", s.httpDeleteDevice)
 	mux.HandleFunc("GET /v1/calls/{callId}", s.httpCallStatus)
+	mux.HandleFunc("GET /v1/phonebook", s.httpPhonebook)
+	mux.HandleFunc("GET /v1/history", s.httpHistory)
 	return mux
 }
 

@@ -151,7 +151,9 @@ func (m *fakeMedia) Close()                       { m.once.Do(func() { close(m.c
 // fakeSIPIn is an incoming INVITE.
 type fakeSIPIn struct {
 	caller string
-	codec  codec.Codec
+	// callerName is the display name of the From header ("Oma" by default).
+	callerName string
+	codec      codec.Codec
 	// offered lists the codecs of the INVITE; nil means [codec, PCMA].
 	offered []codec.Codec
 	media   *fakeMedia
@@ -174,11 +176,11 @@ type fakeSIPIn struct {
 }
 
 func newFakeSIPIn(caller string, c codec.Codec) *fakeSIPIn {
-	return &fakeSIPIn{caller: caller, codec: c, media: newFakeMedia(), done: make(chan struct{}), events: make(chan string, 20)}
+	return &fakeSIPIn{caller: caller, callerName: "Oma", codec: c, media: newFakeMedia(), done: make(chan struct{}), events: make(chan string, 20)}
 }
 
 func (s *fakeSIPIn) Caller() string     { return s.caller }
-func (s *fakeSIPIn) CallerName() string { return "Oma" }
+func (s *fakeSIPIn) CallerName() string { return s.callerName }
 func (s *fakeSIPIn) Codec() codec.Codec { return s.codec }
 func (s *fakeSIPIn) Offers(c codec.Codec) bool {
 	offered := s.offered

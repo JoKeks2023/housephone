@@ -60,7 +60,9 @@ type world struct {
 	url    string
 }
 
-func startWorld(t *testing.T) *world {
+// startWorld starts a fake FRITZ!Box and a bridge; opts adjust the bridge
+// config before it starts.
+func startWorld(t *testing.T, opts ...func(*config.Config)) *world {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	box, err := fakefritz.Start(ctx, "620", "geheim", nil, logger())
@@ -81,6 +83,9 @@ func startWorld(t *testing.T) *world {
 	cfg.Media.STUN = nil
 	cfg.Media.IncludeLoopback = true
 	cfg.Media.Interfaces = []string{"lo0", "lo"}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	pusher := &recordingPusher{pushes: make(chan protocol.PushIncomingCall, 10)}
 	bridge, err := app.New(ctx, cfg, logger(), app.WithPusher(pusher))
 	if err != nil {
@@ -117,6 +122,10 @@ type device struct {
 	t    *testing.T
 	conn *websocket.Conn
 	msgs chan protocol.Envelope
+	// auth is the Authorization header value (Bearer) of this device.
+	auth string
+	// welcome is the bridge's answer to hello.
+	welcome protocol.Welcome
 }
 
 func (w *world) pairAndConnect(t *testing.T) *device {
@@ -144,13 +153,12 @@ func (w *world) pairAndConnect(t *testing.T) *device {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d := &device{t: t, conn: conn, msgs: make(chan protocol.Envelope, 50)}
+	d := &device{t: t, conn: conn, msgs: make(chan protocol.Envelope, 50), auth: "Bearer " + ok.DeviceID + "." + ok.DeviceSecret}
 	go d.readLoop()
 	t.Cleanup(func() { conn.CloseNow() })
 	d.send(protocol.TypeHello, protocol.Hello{AppVersion: "e2e", Platform: protocol.PlatformIOS, PushToken: "a1b2c3d4", PushEnvironment: protocol.PushEnvironmentDevelopment})
-	var welcome protocol.Welcome
-	d.expect(protocol.TypeWelcome, &welcome)
-	if !welcome.SIPRegistered {
+	d.expect(protocol.TypeWelcome, &d.welcome)
+	if !d.welcome.SIPRegistered {
 		t.Fatal("welcome reports no SIP registration")
 	}
 	return d
