@@ -9,6 +9,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
+	// fritzbox.timezone is validated in the Docker image without zoneinfo.
+	_ "time/tzdata"
 
 	"gopkg.in/yaml.v3"
 )
@@ -25,18 +28,42 @@ const (
 	EnvAPNsTeamID      = "HOUSEPHONE_APNS_TEAM_ID"
 	EnvPublicIP        = "HOUSEPHONE_PUBLIC_IP"
 	EnvLogLevel        = "HOUSEPHONE_LOG_LEVEL"
+
+	EnvFritzBoxPassword     = "HOUSEPHONE_FRITZBOX_PASSWORD"
+	EnvFritzBoxPasswordFile = "HOUSEPHONE_FRITZBOX_PASSWORD_FILE"
 )
 
 // DefaultConfigPath is used when neither a flag nor HOUSEPHONE_CONFIG is set.
 const DefaultConfigPath = "config.yaml"
 
 type Config struct {
-	Bridge Bridge `yaml:"bridge"`
-	SIP    SIP    `yaml:"sip"`
-	Media  Media  `yaml:"media"`
-	APNs   APNs   `yaml:"apns"`
-	Log    Log    `yaml:"log"`
+	Bridge   Bridge   `yaml:"bridge"`
+	SIP      SIP      `yaml:"sip"`
+	Media    Media    `yaml:"media"`
+	APNs     APNs     `yaml:"apns"`
+	FritzBox FritzBox `yaml:"fritzbox"`
+	Log      Log      `yaml:"log"`
 }
+
+// FritzBox configures TR-064 access for the phonebook and call list
+// (signaling v1.2). It needs a FRITZ!Box user with the right "Sprachnachrichten,
+// Faxnachrichten, FRITZ!App Fon und Anrufliste".
+type FritzBox struct {
+	// Host of the FRITZ!Box. Empty: sip.registrar.
+	Host string `yaml:"host"`
+	// Port is the unencrypted TR-064 port, only used to ask for the TLS
+	// port (49000 on every FRITZ!Box).
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	// Timezone of the FRITZ!Box; the call list uses local time.
+	Timezone string `yaml:"timezone"`
+	// CountryCode without "+", for matching caller numbers ("49").
+	CountryCode string `yaml:"countryCode"`
+}
+
+// Enabled reports whether phonebook and call list are configured.
+func (f FritzBox) Enabled() bool { return f.Username != "" }
 
 type Bridge struct {
 	// Name is shown in the app, e.g. "Zuhause".
@@ -138,6 +165,11 @@ func Default() Config {
 			TeamID: "T9CA6D7T8N",
 			Topic:  "com.jorisconrad.housephone.voip",
 		},
+		FritzBox: FritzBox{
+			Port:        49000,
+			Timezone:    "Europe/Berlin",
+			CountryCode: "49",
+		},
 		Log: Log{Level: "info"},
 	}
 }
@@ -176,14 +208,28 @@ func (c *Config) applyEnv(lookup func(string) (string, bool)) error {
 	set(EnvAPNsTeamID, &c.APNs.TeamID)
 	set(EnvPublicIP, &c.Media.PublicIP)
 	set(EnvLogLevel, &c.Log.Level)
-	if path, ok := lookup(EnvSIPPasswordFile); ok && path != "" {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("read %s: %w", EnvSIPPasswordFile, err)
+	set(EnvFritzBoxPassword, &c.FritzBox.Password)
+	for _, f := range []struct {
+		env string
+		dst *string
+	}{{EnvSIPPasswordFile, &c.SIP.Password}, {EnvFritzBoxPasswordFile, &c.FritzBox.Password}} {
+		if path, ok := lookup(f.env); ok && path != "" {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("read %s: %w", f.env, err)
+			}
+			*f.dst = strings.TrimSpace(string(data))
 		}
-		c.SIP.Password = strings.TrimSpace(string(data))
 	}
 	return nil
+}
+
+// FritzBoxHost is the TR-064 host: fritzbox.host or sip.registrar.
+func (c Config) FritzBoxHost() string {
+	if c.FritzBox.Host != "" {
+		return c.FritzBox.Host
+	}
+	return c.SIP.Registrar
 }
 
 // ValidateServe checks everything the serve command needs.
@@ -225,6 +271,20 @@ func (c Config) ValidateServe() error {
 	if c.Bridge.PublicURL != "" {
 		if err := ValidatePublicURL(c.Bridge.PublicURL); err != nil {
 			errs = append(errs, err)
+		}
+	}
+	if c.FritzBox.Enabled() {
+		if c.FritzBox.Password == "" {
+			errs = append(errs, fmt.Errorf("fritzbox.password is required when fritzbox.username is set (or %s / %s)", EnvFritzBoxPassword, EnvFritzBoxPasswordFile))
+		}
+		if err := validPort("fritzbox.port", c.FritzBox.Port); err != nil {
+			errs = append(errs, err)
+		}
+		if _, err := time.LoadLocation(c.FritzBox.Timezone); err != nil || c.FritzBox.Timezone == "" {
+			errs = append(errs, fmt.Errorf("fritzbox.timezone %q is not a known time zone", c.FritzBox.Timezone))
+		}
+		if !isDigits(c.FritzBox.CountryCode) {
+			errs = append(errs, fmt.Errorf("fritzbox.countryCode must be digits without \"+\", got %q", c.FritzBox.CountryCode))
 		}
 	}
 	apnsPartial := c.APNs.KeyFile != "" || c.APNs.KeyID != ""
@@ -275,6 +335,18 @@ func isIPv4(s string) bool {
 	for _, p := range parts {
 		n, err := strconv.Atoi(p)
 		if err != nil || n < 0 || n > 255 || strconv.Itoa(n) != p {
+			return false
+		}
+	}
+	return true
+}
+
+func isDigits(s string) bool {
+	if s == "" || len(s) > 4 {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
 			return false
 		}
 	}

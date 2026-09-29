@@ -111,7 +111,10 @@ const (
 	ErrorSIPUnavailable     = "sip_unavailable"
 	ErrorCallNotFound       = "call_not_found"
 	ErrorInvalidNumber      = "invalid_number"
-	ErrorInternal           = "internal"
+	// ErrorFritzBoxUnavailable (v1.2): TR-064 is not configured, the
+	// FRITZ!Box does not answer or rejects the login.
+	ErrorFritzBoxUnavailable = "fritzbox_unavailable"
+	ErrorInternal            = "internal"
 )
 
 // WebSocket close codes beyond RFC 6455.
@@ -262,7 +265,16 @@ type Welcome struct {
 	BridgeName    string `json:"bridgeName"`
 	BridgeVersion string `json:"bridgeVersion"`
 	SIPRegistered bool   `json:"sipRegistered"`
+	// Features lists optional bridge functions (v1.2), e.g.
+	// FeatureFritzBoxPhonebook. Omitted when there are none.
+	Features []string `json:"features,omitempty"`
 }
+
+// Features announced in welcome (v1.2).
+const (
+	FeatureFritzBoxPhonebook = "fritzbox.phonebook"
+	FeatureFritzBoxHistory   = "fritzbox.history"
+)
 
 type Status struct {
 	SIPRegistered bool `json:"sipRegistered"`
@@ -373,3 +385,72 @@ func NewPushIncomingCall(callID, caller, callerName, bridgeID string) PushIncomi
 		BridgeID:   bridgeID,
 	}
 }
+
+// Phonebook is the answer of GET /v1/phonebook (v1.2): all FRITZ!Box
+// phonebooks merged.
+type Phonebook struct {
+	UpdatedAt time.Time `json:"updatedAt"`
+	Contacts  []Contact `json:"contacts"`
+}
+
+// Contact is one phonebook entry.
+type Contact struct {
+	// ID is "<phonebook id>-<uniqueid>".
+	ID        string          `json:"id"`
+	Name      string          `json:"name"`
+	Favorite  bool            `json:"favorite"`
+	Phonebook string          `json:"phonebook"`
+	Numbers   []ContactNumber `json:"numbers"`
+}
+
+// ContactNumber is a dialable number of a contact.
+type ContactNumber struct {
+	Number    string `json:"number"`
+	Type      string `json:"type"`
+	Preferred bool   `json:"preferred"`
+}
+
+// Number types in phonebook entries.
+const (
+	NumberTypeHome    = "home"
+	NumberTypeMobile  = "mobile"
+	NumberTypeWork    = "work"
+	NumberTypeFaxWork = "fax_work"
+	NumberTypeIntern  = "intern"
+	NumberTypeMemo    = "memo"
+	NumberTypeOther   = "other"
+)
+
+// History is the answer of GET /v1/history (v1.2): the FRITZ!Box call list,
+// newest first.
+type History struct {
+	UpdatedAt time.Time     `json:"updatedAt"`
+	Calls     []HistoryCall `json:"calls"`
+}
+
+// HistoryCall is one call list entry.
+type HistoryCall struct {
+	ID        string `json:"id"`
+	Direction string `json:"direction"`
+	Result    string `json:"result"`
+	// Number is the remote party; empty when withheld.
+	Number string `json:"number"`
+	Name   string `json:"name,omitempty"`
+	Device string `json:"device"`
+	// AnsweredBy is set for answered incoming calls only.
+	AnsweredBy      string    `json:"answeredBy,omitempty"`
+	StartedAt       time.Time `json:"startedAt"`
+	DurationSeconds int       `json:"durationSeconds"`
+}
+
+// Values of HistoryCall fields.
+const (
+	HistoryIncoming            = "incoming"
+	HistoryOutgoing            = "outgoing"
+	HistoryAnswered            = "answered"
+	HistoryMissed              = "missed"
+	HistoryRejected            = "rejected"
+	HistoryActive              = "active"
+	AnsweredByPhone            = "phone"
+	AnsweredByAnsweringMachine = "answering_machine"
+)
