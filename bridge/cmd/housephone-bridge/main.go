@@ -253,13 +253,13 @@ func reportPaired(cfg config.Config, used store.UsedCode, out io.Writer) error {
 }
 
 // identity shows the bridge's fingerprint, which the apps pin when
-// pairing (Einstellungen › Bridge).
+// pairing (the fp parameter of the pairing link).
 func identity(cfg config.Config, out io.Writer) error {
 	key, err := app.LoadIdentityKey(cfg.Bridge.DataDir, false)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(out, "Fingerabdruck der Bridge (so zeigt ihn die App unter Einstellungen › Bridge):")
+	fmt.Fprintln(out, "Fingerabdruck der Bridge (steht als fp= in jedem Kopplungslink):")
 	fmt.Fprintf(out, "  %s\n", key.Fingerprint())
 	fmt.Fprintf(out, "  %s\n", hp2.FingerprintHex(key.PublicKey()))
 	fmt.Fprintln(out)
