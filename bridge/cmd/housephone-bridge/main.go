@@ -28,10 +28,13 @@ import (
 
 	"github.com/mdp/qrterminal/v3"
 
+	"github.com/JoKeks2023/housephone/bridge/internal/admin"
 	"github.com/JoKeks2023/housephone/bridge/internal/app"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
 	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
+	"github.com/JoKeks2023/housephone/bridge/internal/signaling"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
+	"github.com/JoKeks2023/housephone/bridge/internal/tui"
 	"github.com/JoKeks2023/housephone/bridge/internal/version"
 )
 
@@ -49,9 +52,11 @@ Befehle:
   serve                     Bridge starten
   pair [-name NAME]         Kopplungscode + QR-Code für ein neues Gerät erzeugen
                             und warten, bis es gekoppelt ist (Strg-C: Code ungültig)
+  tui                       Admin-Oberfläche (Status, Geräte, Kopplung, Anrufe, Logs, Selbsttest)
   identity                  Fingerabdruck der Bridge anzeigen
   devices list              Gekoppelte Geräte anzeigen
-  devices remove <id>       Gerät entfernen
+  devices remove <id>       Gerät entfernen (bei laufender Bridge sofort getrennt)
+  devices rename <id> NAME  Gerät umbenennen
   version                   Version anzeigen
 
 Globale Optionen:
@@ -119,6 +124,19 @@ func run(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 		return devices(cfg, rest[1:], stdout)
+	case "tui":
+		cfg, err := config.Load(*configPath, true)
+		if err != nil {
+			return err
+		}
+		client, err := admin.Dial(cfg.Bridge.DataDir)
+		if err != nil {
+			return fmt.Errorf("%w – erst `serve` starten (im Container läuft sie automatisch)", err)
+		}
+		if !isTerminal(stdout) {
+			return tui.Snapshot(client, stdout)
+		}
+		return tui.Run(client)
 	case "help", "-h", "--help":
 		usage(stdout)
 		return nil
@@ -143,11 +161,12 @@ func newLogger(level string, w io.Writer) *slog.Logger {
 }
 
 func serve(cfg config.Config, logOut io.Writer) error {
-	log := newLogger(cfg.Log.Level, logOut)
+	ring := admin.NewLogRing(1000)
+	log := slog.New(ring.Handler(newLogger(cfg.Log.Level, logOut).Handler()))
 	slog.SetDefault(log)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	bridge, err := app.New(ctx, cfg, log)
+	bridge, err := app.New(ctx, cfg, log, app.WithLogRing(ring))
 	if err != nil {
 		return err
 	}
@@ -309,10 +328,72 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 		}
 		return tw.Flush()
 	}
-	if args[0] == "remove" {
+	client, _ := admin.Dial(cfg.Bridge.DataDir)
+	switch args[0] {
+	case "remove":
+		if client != nil {
+			return removeDeviceLive(client, args[1:], out)
+		}
 		return removeDevice(reg, store.NewPairing(cfg.Bridge.DataDir), args[1:], out)
+	case "rename":
+		if len(args) != 3 {
+			return errors.New("usage: devices rename <device-id> NAME")
+		}
+		if client != nil {
+			d, err := client.RenameDevice(context.Background(), args[1], args[2])
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(out, "Umbenannt: %s (%s)\n", d.ID, displayName(d.Name))
+			return nil
+		}
+		d, err := reg.Update(args[1], func(d *store.Device) { d.Name = signaling.SanitizeName(args[2]) })
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "Umbenannt: %s (%s)\n", d.ID, displayName(d.Name))
+		return nil
 	}
-	return fmt.Errorf("unbekannter devices-Befehl %q (list|remove)", args[0])
+	return fmt.Errorf("unbekannter devices-Befehl %q (list|remove|rename)", args[0])
+}
+
+// removeDeviceLive removes a device through the running bridge, which
+// cuts off its connection and calls immediately.
+func removeDeviceLive(client *admin.Client, args []string, out io.Writer) error {
+	fs := flag.NewFlagSet("devices remove", flag.ContinueOnError)
+	fs.SetOutput(out)
+	keep := fs.Bool("keep-companions", false, "über dieses Gerät gekoppelte Uhren behalten")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() != 1 {
+		return errors.New("usage: devices remove [-keep-companions] <device-id>")
+	}
+	res, err := client.RemoveDevice(context.Background(), fs.Arg(0), *keep)
+	if errors.Is(err, admin.ErrNotFound) {
+		return fmt.Errorf("gerät %s nicht gefunden", fs.Arg(0))
+	}
+	if err != nil {
+		return err
+	}
+	for _, d := range res.Removed {
+		fmt.Fprintf(out, "Entfernt und getrennt: %s (%s)\n", d.ID, displayName(d.Name))
+	}
+	for _, d := range res.Kept {
+		fmt.Fprintf(out, "Behalten: %s (%s)\n", d.ID, displayName(d.Name))
+	}
+	return nil
+}
+
+// isTerminal reports whether out is an interactive terminal; without one,
+// `tui` prints a text snapshot instead.
+func isTerminal(out io.Writer) bool {
+	f, ok := out.(*os.File)
+	if !ok {
+		return false
+	}
+	info, err := f.Stat()
+	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
 
 // displayName prints stored names safely: names with characters that are
