@@ -72,12 +72,32 @@
         }
       }
     },
+    "Alle Anrufe löschen?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all calls?"
+          }
+        }
+      }
+    },
     "Alle Einträge löschen": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Clear all"
+          }
+        }
+      }
+    },
+    "Alle löschen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all"
           }
         }
       }
@@ -108,6 +128,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Answered"
+          }
+        }
+      }
+    },
+    "Anleitung öffnen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open guide"
           }
         }
       }
@@ -212,6 +242,16 @@
         }
       }
     },
+    "Auto": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Car"
+          }
+        }
+      }
+    },
     "Beendet": {
       "localizations": {
         "en": {
@@ -242,6 +282,16 @@
         }
       }
     },
+    "Bluetooth": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth"
+          }
+        }
+      }
+    },
     "Bridge": {
       "localizations": {
         "en": {
@@ -258,16 +308,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bridge reachable, but not registered with the FRITZ!Box"
-          }
-        }
-      }
-    },
-    "Bridge kennt dieses iPhone nicht mehr – bitte neu koppeln": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge no longer knows this iPhone – please pair again"
           }
         }
       }
@@ -378,6 +418,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "The link doesn't contain a valid bridge address."
+          }
+        }
+      }
+    },
+    "Die Anrufliste in Housephone wird geleert. Die Anrufliste der Telefon-App bleibt, wie sie ist.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clears the call list in Housephone. The call history in the Phone app stays as it is."
+          }
+        }
+      }
+    },
+    "Die Bridge hat noch keinen Zugang zu Telefonbuch und Anrufliste der FRITZ!Box. Richte ihn in der Bridge ein.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The bridge doesn't have access to the FRITZ!Box phonebook and call list yet. Set it up in the bridge."
+          }
+        }
+      }
+    },
+    "Die Bridge kennt dieses iPhone nicht mehr. Hebe in den Einstellungen die Kopplung auf und kopple es neu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The bridge no longer knows this iPhone. Unpair it in Settings and pair it again."
+          }
+        }
+      }
+    },
+    "Die Bridge kennt dieses iPhone nicht mehr. Zum Neu-Koppeln tippen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The bridge no longer knows this iPhone. Tap to pair again."
           }
         }
       }
@@ -542,16 +622,6 @@
         }
       }
     },
-    "Erlauben": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allow"
-          }
-        }
-      }
-    },
     "Erlaubt": {
       "localizations": {
         "en": {
@@ -652,6 +722,16 @@
         }
       }
     },
+    "Gestern": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday"
+          }
+        }
+      }
+    },
     "HD-Sprachqualität": {
       "localizations": {
         "en": {
@@ -668,6 +748,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Housephone"
+          }
+        }
+      }
+    },
+    "Im Tastenfeld öffnen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in Keypad"
+          }
+        }
+      }
+    },
+    "In Einstellungen erlauben": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow in Settings"
           }
         }
       }
@@ -762,7 +862,17 @@
         }
       }
     },
-    "Koppel zuerst deine Bridge, dann kannst du telefonieren.": {
+    "Kopfhörer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Headphones"
+          }
+        }
+      }
+    },
+    "Kopple zuerst deine Bridge, dann kannst du telefonieren.": {
       "localizations": {
         "en": {
           "stringUnit": {
@@ -832,6 +942,16 @@
         }
       }
     },
+    "Lautsprecher": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker"
+          }
+        }
+      }
+    },
     "Link nicht erkannt": {
       "localizations": {
         "en": {
@@ -882,6 +1002,16 @@
         }
       }
     },
+    "Minimieren": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimize"
+          }
+        }
+      }
+    },
     "Mit CallKit – auch im Sperrbildschirm und in der Anrufliste.": {
       "localizations": {
         "en": {
@@ -922,6 +1052,16 @@
         }
       }
     },
+    "Nicht erlaubt": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not allowed"
+          }
+        }
+      }
+    },
     "Nicht erreichbar": {
       "localizations": {
         "en": {
@@ -952,12 +1092,62 @@
         }
       }
     },
+    "Noch keine Tastentöne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No tones yet"
+          }
+        }
+      }
+    },
     "Noch nicht bereit": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Not ready yet"
+          }
+        }
+      }
+    },
+    "Noch nicht gefragt": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not asked yet"
+          }
+        }
+      }
+    },
+    "Nummer kopieren": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Number"
+          }
+        }
+      }
+    },
+    "Nummer kopieren: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Number: %@"
+          }
+        }
+      }
+    },
+    "Nummer löschen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear Number"
           }
         }
       }
@@ -982,6 +1172,16 @@
         }
       }
     },
+    "Plus": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus"
+          }
+        }
+      }
+    },
     "QR-Code der Bridge scannen": {
       "localizations": {
         "en": {
@@ -1002,6 +1202,16 @@
         }
       }
     },
+    "Raute": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pound"
+          }
+        }
+      }
+    },
     "Richte die Kamera auf den QR-Code deiner Bridge.": {
       "localizations": {
         "en": {
@@ -1018,6 +1228,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Status"
+          }
+        }
+      }
+    },
+    "Stern": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Star"
           }
         }
       }
@@ -1122,12 +1342,22 @@
         }
       }
     },
-    "Verweigert – in Einstellungen ändern": {
+    "Zeigt die App; der Anruf läuft weiter": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Denied – change in Settings"
+            "value": "Shows the app; the call continues"
+          }
+        }
+      }
+    },
+    "Zu den Einstellungen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to Settings"
           }
         }
       }
@@ -1152,12 +1382,42 @@
         }
       }
     },
+    "Zurück zum Anruf": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Call"
+          }
+        }
+      }
+    },
     "Zurückrufen": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Call back"
+          }
+        }
+      }
+    },
+    "iOS hat Housephone noch nicht für Anrufe im Hintergrund freigegeben. Das passiert automatisch, sobald die App mit Internet geöffnet ist. Bleibt es dabei, prüfe den Push-Schlüssel (APNs) der Bridge.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS hasn't enabled Housephone for background calls yet. This happens automatically once the app is opened with an internet connection. If it stays this way, check the bridge's push key (APNs)."
+          }
+        }
+      }
+    },
+    "Öffnet die Einstellungen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens Settings"
           }
         }
       }
@@ -1522,32 +1782,12 @@
         }
       }
     },
-    "Die Bridge hat keinen Zugang zur FRITZ!Box. Richte ihn wie in der Anleitung beschrieben ein (docs/setup.md, „Telefonbuch und Anrufliste“).": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge has no access to the FRITZ!Box. Set it up as described in the guide (docs/setup.md, “Telefonbuch und Anrufliste”)."
-          }
-        }
-      }
-    },
     "Prüfe die Internetverbindung. Telefonbuch und Anrufliste kommen über deine Bridge.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Check the internet connection. The phonebook and call list come through your bridge."
-          }
-        }
-      }
-    },
-    "Die Bridge kennt dieses iPhone nicht mehr. Koppel es in den Einstellungen neu.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge no longer knows this iPhone. Pair it again in Settings."
           }
         }
       }

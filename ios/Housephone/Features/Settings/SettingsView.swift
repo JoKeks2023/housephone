@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(BridgeConnection.self) private var bridge
     @Environment(WatchLink.self) private var watch
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @State private var confirmsUnpair = false
     @State private var microphone = AVAudioApplication.shared.recordPermission
 
@@ -42,14 +43,20 @@ struct SettingsView: View {
                     Text("Die Bridge läuft auf deinem Server und ist für die FRITZ!Box ein IP-Telefon.")
                 }
 
-                Section("Dieses iPhone") {
+                Section {
                     LabeledContent("Anrufe im Hintergrund") {
                         StatusIndicator(
                             tone: bridge.pushToken == nil ? .warning : .positive,
                             label: bridge.pushToken == nil ? "Noch nicht bereit" : "Bereit"
                         )
                     }
-                    microphoneRow
+                    microphoneRows
+                } header: {
+                    Text("Dieses iPhone")
+                } footer: {
+                    if bridge.pushToken == nil {
+                        Text("iOS hat Housephone noch nicht für Anrufe im Hintergrund freigegeben. Das passiert automatisch, sobald die App mit Internet geöffnet ist. Bleibt es dabei, prüfe den Push-Schlüssel (APNs) der Bridge.")
+                    }
                 }
 
                 WatchSection()
@@ -92,6 +99,10 @@ struct SettingsView: View {
             .onAppear {
                 microphone = AVAudioApplication.shared.recordPermission
             }
+            .onChange(of: scenePhase) { _, phase in
+                // Coming back from the Settings app with a changed permission.
+                if phase == .active { microphone = AVAudioApplication.shared.recordPermission }
+            }
         }
     }
 
@@ -115,30 +126,30 @@ struct SettingsView: View {
         }
     }
 
+    /// Status in one row, the fix as its own action below: a status value
+    /// stays short and never doubles as a button.
     @ViewBuilder
-    private var microphoneRow: some View {
+    private var microphoneRows: some View {
         switch microphone {
         case .granted:
             LabeledContent("Mikrofon") {
                 StatusIndicator(tone: .positive, label: "Erlaubt")
             }
         case .denied:
-            Button {
+            LabeledContent("Mikrofon") {
+                StatusIndicator(tone: .negative, label: "Nicht erlaubt")
+            }
+            Button("In Einstellungen erlauben") {
                 if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-            } label: {
-                LabeledContent("Mikrofon") {
-                    StatusIndicator(tone: .negative, label: "Verweigert – in Einstellungen ändern")
-                }
             }
         default:
-            Button {
+            LabeledContent("Mikrofon") {
+                StatusIndicator(tone: .neutral, label: "Noch nicht gefragt")
+            }
+            Button("Mikrofon erlauben") {
                 Task {
                     _ = await AVAudioApplication.requestRecordPermission()
                     microphone = AVAudioApplication.shared.recordPermission
-                }
-            } label: {
-                LabeledContent("Mikrofon") {
-                    Text("Erlauben").foregroundStyle(Color.accentColor)
                 }
             }
         }
