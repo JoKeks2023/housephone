@@ -11,3 +11,11 @@ ThirdParty/LibreSSL/*
 !ThirdParty/LibreSSL/patches
 ThirdParty/PJSIP/*
 !ThirdParty/PJSIP/patches
+
+# Housephone (new iOS app + bridge)
+ios/*.xcodeproj/
+ios/**/.build/
+ios/**/.swiftpm/
+bridge/bin/
+bridge/data/
+*.p8
