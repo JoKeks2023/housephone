@@ -86,7 +86,7 @@ Ohne Docker: `go build -o housephone-bridge ./cmd/housephone-bridge`, dann `HOUS
 docker compose exec housephone-bridge housephone-bridge pair -name "iPhone Joris"
 ```
 
-Die Bridge zeigt einen QR-Code, einen Link und einen 10-stelligen Code an. Gültig sind sie 10 Minuten und nur einmal. In der App: **Einstellungen → Bridge koppeln** → QR-Code scannen.
+Die Bridge zeigt einen QR-Code, einen Link und einen 10-stelligen Code an. Gültig sind sie 10 Minuten und nur einmal. In der App erscheint die Kopplung beim ersten Start (und nach „Kopplung aufheben“): **QR-Code scannen** oder den Link einfügen.
 
 ## 7. Apple Watch
 
