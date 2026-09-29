@@ -170,6 +170,23 @@ Sichere diesen Ordner. Verlierst du ihn, müssen alle Geräte neu gekoppelt werd
 
 ## Entwicklung
 
+### Probetelefon (`housephone-probe`)
+
+Ein minimales „Telefon“ für den Rechner. Damit lassen sich echte Anrufe über die echte FRITZ!Box testen, ohne iPhone, APNs oder Tunnel. Es verbindet sich wie die Watch (`websocket-pcma`, A-law über WebSocket).
+
+```sh
+go build -o housephone-probe ./cmd/housephone-probe
+housephone-bridge pair -name "Probe"                                   # Code merken
+./housephone-probe -url ws://127.0.0.1:8080/v1/ws -pair <CODE>         # einmal koppeln
+./housephone-probe                                                     # auf Anrufe warten, Echo
+./housephone-probe -mode tone -record anruf.wav                        # 425-Hz-Ton senden, Empfang aufnehmen
+./housephone-probe -dial 0170123456                                    # selbst anrufen
+```
+
+- **Echo:** Der Anrufer hört sich selbst. Damit ist der Ton in beide Richtungen belegt.
+- **Pegel:** Einmal pro Sekunde erscheint der Pegel des empfangenen Tons.
+
+
 ```sh
 go test -race ./...                              # alles außer dem Early-Media-Test
 go test -run EarlyMedia ./internal/sipleg/       # ohne -race (Upstream-Race in diago)
