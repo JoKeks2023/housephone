@@ -5,11 +5,11 @@ import Testing
 // MARK: - Fakes
 
 actor Mailbox {
-    private var buffer: [String] = []
-    private var waiter: CheckedContinuation<String, any Error>?
+    private var buffer: [WebSocketMessage] = []
+    private var waiter: CheckedContinuation<WebSocketMessage, any Error>?
     private var closed = false
 
-    func push(_ text: String) {
+    func push(_ text: WebSocketMessage) {
         if let waiter {
             self.waiter = nil
             waiter.resume(returning: text)
@@ -18,7 +18,7 @@ actor Mailbox {
         }
     }
 
-    func next() async throws -> String {
+    func next() async throws -> WebSocketMessage {
         if !buffer.isEmpty { return buffer.removeFirst() }
         if closed { throw WebSocketTransportError.closed }
         return try await withCheckedThrowingContinuation { waiter = $0 }
@@ -38,10 +38,14 @@ final class FakeTransport: WebSocketTransport {
     let outbox = Mailbox()
 
     func send(_ text: String) async throws {
-        await outbox.push(text)
+        await outbox.push(.text(text))
     }
 
-    func receive() async throws -> String {
+    func send(binary data: Data) async throws {
+        await outbox.push(.binary(data))
+    }
+
+    func receive() async throws -> WebSocketMessage {
         try await inbox.next()
     }
 
@@ -52,11 +56,27 @@ final class FakeTransport: WebSocketTransport {
     }
 
     func bridgeSends(_ message: SignalingMessage) async throws {
-        await inbox.push(try SignalingCoding.encode(message))
+        await inbox.push(.text(try SignalingCoding.encode(message)))
     }
 
+    func bridgeSendsBinary(_ data: Data) async {
+        await inbox.push(.binary(data))
+    }
+
+    /// The next JSON message the device sent; skips binary audio.
     func nextSent() async throws -> SignalingMessage {
-        try SignalingCoding.decode(try await outbox.next())
+        while true {
+            if case .text(let text) = try await outbox.next() {
+                return try SignalingCoding.decode(text)
+            }
+        }
+    }
+
+    /// The next binary message the device sent; skips JSON.
+    func nextSentBinary() async throws -> Data {
+        while true {
+            if case .binary(let data) = try await outbox.next() { return data }
+        }
     }
 }
 
@@ -204,6 +224,57 @@ struct SignalingClientTests {
         newHello.pushToken = "ffff"
         await client.updateHello(newHello)
         #expect(try await transport.nextSent() == .deviceUpdate(DeviceUpdate(pushToken: "ffff", pushEnvironment: .development)))
+        await client.stop()
+    }
+
+    @Test func audioTravelsBothWaysAsBinaryMessages() async throws {
+        let transport = FakeTransport()
+        let client = SignalingClient(credentials: credentials, hello: hello, factory: FakeFactory(transports: [transport]), configuration: fastConfiguration)
+        await client.start()
+        _ = try await transport.nextSent()
+        try await transport.bridgeSends(.welcome(welcome))
+        _ = try await client.waitUntilConnected(timeout: .seconds(2))
+
+        let fromBridge = try #require(AudioFrame.encode(aLaw: Data(repeating: 0x2A, count: 160)))
+        await transport.bridgeSendsBinary(fromBridge)
+        // JSON keeps flowing on its own stream while audio arrives.
+        try await transport.bridgeSends(.status(BridgeStatus(sipRegistered: true)))
+
+        var iterator = client.audio.makeAsyncIterator()
+        let received = await iterator.next()
+        #expect(received == fromBridge)
+
+        let toBridge = try #require(AudioFrame.encode(aLaw: AudioFrame.silence))
+        try await client.sendAudio(toBridge)
+        #expect(try await transport.nextSentBinary() == toBridge)
+        await client.stop()
+    }
+
+    @Test func sendingAudioWhileDisconnectedFails() async {
+        let client = SignalingClient(credentials: credentials, hello: hello, factory: FakeFactory(transports: []), configuration: fastConfiguration)
+        await #expect(throws: SignalingClientError.notConnected) {
+            try await client.sendAudio(Data([0x01]))
+        }
+    }
+
+    @Test func capabilityChangeSendsDeviceUpdate() async throws {
+        let transport = FakeTransport()
+        let client = SignalingClient(credentials: credentials, hello: hello, factory: FakeFactory(transports: [transport]), configuration: fastConfiguration)
+        await client.start()
+        _ = try await transport.nextSent()
+        try await transport.bridgeSends(.welcome(welcome))
+        _ = try await client.waitUntilConnected(timeout: .seconds(2))
+
+        var newHello = hello
+        newHello.mediaCapabilities = [.webRTC]
+        newHello.pushTopic = "com.jorisconrad.housephone.voip"
+        await client.updateHello(newHello)
+        #expect(try await transport.nextSent() == .deviceUpdate(DeviceUpdate(
+            pushToken: "abcd",
+            pushEnvironment: .development,
+            mediaCapabilities: [.webRTC],
+            pushTopic: "com.jorisconrad.housephone.voip"
+        )))
         await client.stop()
     }
 

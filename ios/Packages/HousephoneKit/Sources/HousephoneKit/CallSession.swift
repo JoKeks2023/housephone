@@ -47,6 +47,12 @@ public enum CallPhase: Sendable, Equatable {
     case ended
 }
 
+/// How this device carries the call's audio.
+public enum CallMediaMode: Sendable, Equatable {
+    case webRTC
+    case webSocket
+}
+
 /// How a call looks in the recents list.
 public enum CallOutcome: String, Codable, Sendable {
     case answered
@@ -63,6 +69,9 @@ public enum CallEvent: Sendable, Equatable {
     case bridgeConfirmedIncoming(IncomingCall)
     /// `call.offer` from the bridge (first offer or ICE restart).
     case offer(SessionOffer)
+    /// `call.media` from the bridge: audio runs as binary WebSocket frames,
+    /// there is no SDP answer (signaling v1.1, Apple Watch).
+    case webSocketMedia(CallMedia)
     /// The media engine created an answer and it went out as `call.answer`.
     case localAnswerSent
     /// `call.state` from the bridge.
@@ -85,6 +94,8 @@ public enum CallEffect: Sendable, Equatable {
     case sendHangup(HangupReason)
     /// Hand the offer to the media engine, which answers with `call.answer`.
     case negotiate(SessionOffer)
+    /// Start (or keep running) WebSocket audio in the announced format.
+    case startWebSocketMedia(CallMedia)
     case updateRemoteParty(number: String, name: String?)
     case reportOutgoingConnected
     case reportEnded(CallKitEndReason)
@@ -107,6 +118,7 @@ public struct CallSession: Sendable, Equatable, Identifiable {
     public private(set) var endReason: CallEndReason?
     public private(set) var outcome: CallOutcome?
 
+    public private(set) var mediaMode: CallMediaMode?
     public private(set) var userAnswered = false
     public private(set) var answerSent = false
     public private(set) var acceptSent = false
@@ -170,7 +182,15 @@ public struct CallSession: Sendable, Equatable, Identifiable {
 
         case (_, .offer(let offer)):
             if direction == .incoming, phase == .waitingForBridge { phase = .ringing }
+            mediaMode = .webRTC
             return [.negotiate(offer)]
+
+        case (_, .webSocketMedia(let media)):
+            if direction == .incoming, phase == .waitingForBridge { phase = .ringing }
+            mediaMode = .webSocket
+            // No SDP answer in this mode: the device may accept right away.
+            answerSent = true
+            return [.startWebSocketMedia(media)] + acceptIfReady()
 
         case (_, .localAnswerSent):
             answerSent = true

@@ -43,6 +43,11 @@ public actor SignalingClient {
 
     public nonisolated let events: AsyncStream<Event>
     private let eventContinuation: AsyncStream<Event>.Continuation
+    /// Binary audio messages from the bridge (`websocket-pcma`), in order.
+    /// Separate from `events` so audio never waits behind UI work. Keeps at
+    /// most one second; a slow consumer loses the oldest frames.
+    public nonisolated let audio: AsyncStream<Data>
+    private let audioContinuation: AsyncStream<Data>.Continuation
 
     public let credentials: BridgeCredentials
     private let factory: any WebSocketTransportFactory
@@ -67,11 +72,13 @@ public actor SignalingClient {
         self.factory = factory
         self.configuration = configuration
         (events, eventContinuation) = AsyncStream.makeStream(of: Event.self, bufferingPolicy: .unbounded)
+        (audio, audioContinuation) = AsyncStream.makeStream(of: Data.self, bufferingPolicy: .bufferingNewest(50))
     }
 
     deinit {
         runTask?.cancel()
         eventContinuation.finish()
+        audioContinuation.finish()
     }
 
     // MARK: - Lifecycle
@@ -126,13 +133,27 @@ public actor SignalingClient {
         try await transport.send(text)
     }
 
+    /// Sends one binary audio message (`websocket-pcma`).
+    public func sendAudio(_ message: Data) async throws {
+        guard case .connected = state, let transport else { throw SignalingClientError.notConnected }
+        try await transport.send(binary: message)
+    }
+
     /// Updates the data sent in `hello`. If connected, tells the bridge
     /// right away via `device.update`.
     public func updateHello(_ newHello: Hello) async {
-        let changed = newHello.pushToken != hello.pushToken || newHello.pushEnvironment != hello.pushEnvironment
+        let changed = newHello.pushToken != hello.pushToken
+            || newHello.pushEnvironment != hello.pushEnvironment
+            || newHello.mediaCapabilities != hello.mediaCapabilities
+            || newHello.pushTopic != hello.pushTopic
         hello = newHello
         guard changed, case .connected = state else { return }
-        let update = DeviceUpdate(pushToken: newHello.pushToken, pushEnvironment: newHello.pushEnvironment)
+        let update = DeviceUpdate(
+            pushToken: newHello.pushToken,
+            pushEnvironment: newHello.pushEnvironment,
+            mediaCapabilities: newHello.mediaCapabilities,
+            pushTopic: newHello.pushTopic
+        )
         try? await send(.deviceUpdate(update))
     }
 
@@ -231,8 +252,9 @@ public actor SignalingClient {
     private func awaitWelcome(on transport: any WebSocketTransport) async throws -> Welcome {
         try await withTimeout(configuration.welcomeTimeout, onTimeout: { transport.close() }) {
             while true {
-                let text = try await transport.receive()
-                guard let message = try? SignalingCoding.decode(text) else { continue }
+                guard case .text(let text) = try await transport.receive(),
+                      let message = try? SignalingCoding.decode(text)
+                else { continue }
                 switch message {
                 case .welcome(let welcome):
                     return welcome
@@ -266,11 +288,15 @@ public actor SignalingClient {
         defer { pinger.cancel() }
 
         while true {
-            let text = try await transport.receive()
-            do {
-                deliver(try SignalingCoding.decode(text))
-            } catch {
-                logger.error("Undecodable message: \(String(describing: error), privacy: .public)")
+            switch try await transport.receive() {
+            case .text(let text):
+                do {
+                    deliver(try SignalingCoding.decode(text))
+                } catch {
+                    logger.error("Undecodable message: \(String(describing: error), privacy: .public)")
+                }
+            case .binary(let data):
+                audioContinuation.yield(data)
             }
         }
     }
@@ -319,7 +345,8 @@ public actor SignalingClient {
             while true {
                 let text: String
                 do {
-                    text = try await transport.receive()
+                    guard case .text(let received) = try await transport.receive() else { continue }
+                    text = received
                 } catch {
                     throw SignalingClientError.connectionClosed
                 }

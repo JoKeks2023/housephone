@@ -24,7 +24,7 @@ struct FixtureRoundTripTests {
     }
 
     @Test func fixturesExist() {
-        #expect(Self.messageFixtures.count == 18)
+        #expect(Self.messageFixtures.count == 21)
     }
 
     @Test(arguments: messageFixtures)
@@ -49,7 +49,7 @@ struct FixtureRoundTripTests {
             try SignalingCoding.makeDecoder().decode(SignalingMessage.self, from: Self.data($0)).type
         })
         let expected: Set = [
-            "pair", "hello", "device.update", "device.unpair", "call.attach", "call.dial", "call.answer", "call.accept",
+            "pair", "hello", "device.update", "device.unpair", "pair.companion.request", "pair.companion", "call.media", "call.attach", "call.dial", "call.answer", "call.accept",
             "call.hangup", "call.dtmf", "pair.ok", "welcome", "status", "call.incoming", "call.offer",
             "call.state", "call.ended", "error",
         ]

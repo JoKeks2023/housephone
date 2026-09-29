@@ -14,6 +14,30 @@ public enum PushEnvironment: String, Codable, Sendable {
     case production
 }
 
+/// How a device can carry call audio (signaling v1.1). Unknown values are
+/// kept verbatim so newer bridges and devices stay compatible.
+public struct MediaCapability: RawRepresentable, Codable, Sendable, Hashable {
+    public var rawValue: String
+
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public init(from decoder: any Decoder) throws {
+        rawValue = try decoder.singleValueContainer().decode(String.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
+    /// WebRTC with `call.offer`/`call.answer` (iPhone).
+    public static let webRTC = Self(rawValue: "webrtc")
+    /// A-law frames as binary WebSocket messages after `call.media` (Watch).
+    public static let webSocketPCMA = Self(rawValue: "websocket-pcma")
+}
+
 // MARK: - Device → bridge
 
 public struct PairRequest: Codable, Sendable, Equatable {
@@ -35,12 +59,25 @@ public struct Hello: Codable, Sendable, Equatable {
     public var platform: DevicePlatform
     public var pushToken: String?
     public var pushEnvironment: PushEnvironment?
+    /// Missing means `["webrtc"]` (v1 devices).
+    public var mediaCapabilities: [MediaCapability]?
+    /// APNs topic for this device's VoIP pushes. Missing means the bridge's default.
+    public var pushTopic: String?
 
-    public init(appVersion: String, platform: DevicePlatform, pushToken: String? = nil, pushEnvironment: PushEnvironment? = nil) {
+    public init(
+        appVersion: String,
+        platform: DevicePlatform,
+        pushToken: String? = nil,
+        pushEnvironment: PushEnvironment? = nil,
+        mediaCapabilities: [MediaCapability]? = nil,
+        pushTopic: String? = nil
+    ) {
         self.appVersion = appVersion
         self.platform = platform
         self.pushToken = pushToken
         self.pushEnvironment = pushEnvironment
+        self.mediaCapabilities = mediaCapabilities
+        self.pushTopic = pushTopic
     }
 }
 
@@ -48,11 +85,33 @@ public struct DeviceUpdate: Codable, Sendable, Equatable {
     public var pushToken: String?
     public var pushEnvironment: PushEnvironment?
     public var deviceName: String?
+    public var mediaCapabilities: [MediaCapability]?
+    public var pushTopic: String?
 
-    public init(pushToken: String? = nil, pushEnvironment: PushEnvironment? = nil, deviceName: String? = nil) {
+    public init(
+        pushToken: String? = nil,
+        pushEnvironment: PushEnvironment? = nil,
+        deviceName: String? = nil,
+        mediaCapabilities: [MediaCapability]? = nil,
+        pushTopic: String? = nil
+    ) {
         self.pushToken = pushToken
         self.pushEnvironment = pushEnvironment
         self.deviceName = deviceName
+        self.mediaCapabilities = mediaCapabilities
+        self.pushTopic = pushTopic
+    }
+}
+
+/// `pair.companion.request`: a paired device asks for a pairing code for
+/// another device, e.g. the iPhone for its Apple Watch.
+public struct CompanionPairingRequest: Codable, Sendable, Equatable {
+    public var deviceName: String
+    public var platform: DevicePlatform
+
+    public init(deviceName: String, platform: DevicePlatform) {
+        self.deviceName = deviceName
+        self.platform = platform
     }
 }
 
@@ -137,6 +196,41 @@ public struct Welcome: Codable, Sendable, Equatable {
         self.bridgeName = bridgeName
         self.bridgeVersion = bridgeVersion
         self.sipRegistered = sipRegistered
+    }
+}
+
+/// `pair.companion`: a fresh one-time pairing code for a companion device.
+public struct CompanionPairing: Codable, Sendable, Equatable {
+    public var code: String
+    public var url: URL
+    public var expiresAt: Date
+
+    public init(code: String, url: URL, expiresAt: Date) {
+        self.code = code
+        self.url = url
+        self.expiresAt = expiresAt
+    }
+}
+
+/// `call.media`: the call's audio runs as binary WebSocket frames.
+public struct CallMedia: Codable, Sendable, Equatable {
+    public var callId: CallID
+    public var transport: String
+    public var codec: String
+    public var sampleRate: Int
+    public var frameMs: Int
+
+    public init(callId: CallID, transport: String = "websocket", codec: String = "PCMA", sampleRate: Int = 8000, frameMs: Int = 20) {
+        self.callId = callId
+        self.transport = transport
+        self.codec = codec
+        self.sampleRate = sampleRate
+        self.frameMs = frameMs
+    }
+
+    /// Whether this device can play and record the offered format.
+    public var isSupported: Bool {
+        transport == "websocket" && codec.uppercased() == "PCMA" && sampleRate == 8000 && frameMs == 20
     }
 }
 
@@ -315,6 +409,7 @@ public enum SignalingMessage: Sendable, Equatable {
     case deviceUpdate(DeviceUpdate)
     /// Removes this device from the bridge. The bridge closes the connection.
     case deviceUnpair
+    case pairCompanionRequest(CompanionPairingRequest)
     case callAttach(CallReference)
     case callDial(DialRequest)
     case callAnswer(SessionAnswer)
@@ -324,10 +419,12 @@ public enum SignalingMessage: Sendable, Equatable {
 
     // Bridge → device
     case pairOK(PairingResult)
+    case pairCompanion(CompanionPairing)
     case welcome(Welcome)
     case status(BridgeStatus)
     case callIncoming(IncomingCall)
     case callOffer(SessionOffer)
+    case callMedia(CallMedia)
     case callState(CallStateChange)
     case callEnded(CallEnded)
     case error(SignalingErrorPayload)
@@ -341,6 +438,7 @@ public enum SignalingMessage: Sendable, Equatable {
         case .hello: "hello"
         case .deviceUpdate: "device.update"
         case .deviceUnpair: "device.unpair"
+        case .pairCompanionRequest: "pair.companion.request"
         case .callAttach: "call.attach"
         case .callDial: "call.dial"
         case .callAnswer: "call.answer"
@@ -348,10 +446,12 @@ public enum SignalingMessage: Sendable, Equatable {
         case .callHangup: "call.hangup"
         case .callDTMF: "call.dtmf"
         case .pairOK: "pair.ok"
+        case .pairCompanion: "pair.companion"
         case .welcome: "welcome"
         case .status: "status"
         case .callIncoming: "call.incoming"
         case .callOffer: "call.offer"
+        case .callMedia: "call.media"
         case .callState: "call.state"
         case .callEnded: "call.ended"
         case .error: "error"
@@ -369,10 +469,11 @@ public enum SignalingMessage: Sendable, Equatable {
         case .callDTMF(let payload): payload.callId
         case .callIncoming(let payload): payload.callId
         case .callOffer(let payload): payload.callId
+        case .callMedia(let payload): payload.callId
         case .callState(let payload): payload.callId
         case .callEnded(let payload): payload.callId
         case .error(let payload): payload.callId
-        case .pair, .hello, .deviceUpdate, .deviceUnpair, .pairOK, .welcome, .status, .unknown: nil
+        case .pair, .hello, .deviceUpdate, .deviceUnpair, .pairCompanionRequest, .pairOK, .pairCompanion, .welcome, .status, .unknown: nil
         }
     }
 }
@@ -398,6 +499,7 @@ extension SignalingMessage: Codable {
         case "hello": self = .hello(try payload(Hello.self))
         case "device.update": self = .deviceUpdate(try payload(DeviceUpdate.self))
         case "device.unpair": self = .deviceUnpair
+        case "pair.companion.request": self = .pairCompanionRequest(try payload(CompanionPairingRequest.self))
         case "call.attach": self = .callAttach(try payload(CallReference.self))
         case "call.dial": self = .callDial(try payload(DialRequest.self))
         case "call.answer": self = .callAnswer(try payload(SessionAnswer.self))
@@ -405,10 +507,12 @@ extension SignalingMessage: Codable {
         case "call.hangup": self = .callHangup(try payload(Hangup.self))
         case "call.dtmf": self = .callDTMF(try payload(DTMFDigits.self))
         case "pair.ok": self = .pairOK(try payload(PairingResult.self))
+        case "pair.companion": self = .pairCompanion(try payload(CompanionPairing.self))
         case "welcome": self = .welcome(try payload(Welcome.self))
         case "status": self = .status(try payload(BridgeStatus.self))
         case "call.incoming": self = .callIncoming(try payload(IncomingCall.self))
         case "call.offer": self = .callOffer(try payload(SessionOffer.self))
+        case "call.media": self = .callMedia(try payload(CallMedia.self))
         case "call.state": self = .callState(try payload(CallStateChange.self))
         case "call.ended": self = .callEnded(try payload(CallEnded.self))
         case "error": self = .error(try payload(SignalingErrorPayload.self))
@@ -430,10 +534,13 @@ extension SignalingMessage: Codable {
         case .callHangup(let payload): try container.encode(payload, forKey: .payload)
         case .callDTMF(let payload): try container.encode(payload, forKey: .payload)
         case .pairOK(let payload): try container.encode(payload, forKey: .payload)
+        case .pairCompanion(let payload): try container.encode(payload, forKey: .payload)
+        case .pairCompanionRequest(let payload): try container.encode(payload, forKey: .payload)
         case .welcome(let payload): try container.encode(payload, forKey: .payload)
         case .status(let payload): try container.encode(payload, forKey: .payload)
         case .callIncoming(let payload): try container.encode(payload, forKey: .payload)
         case .callOffer(let payload): try container.encode(payload, forKey: .payload)
+        case .callMedia(let payload): try container.encode(payload, forKey: .payload)
         case .callState(let payload): try container.encode(payload, forKey: .payload)
         case .callEnded(let payload): try container.encode(payload, forKey: .payload)
         case .error(let payload): try container.encode(payload, forKey: .payload)
