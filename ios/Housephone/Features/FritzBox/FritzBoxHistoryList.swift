@@ -43,12 +43,20 @@ struct FritzBoxHistoryList: View {
                         FritzBoxStaleNotice(failure: failure, fetchedAt: resource.fetchedAt)
                     }
                     ForEach(calls) { call in
-                        FritzBoxCallRow(call: call, name: displayName(for: call)) {
+                        CallHistoryRow(
+                            name: displayName(for: call),
+                            number: call.number,
+                            symbol: call.symbol,
+                            detail: [call.outcomeText, call.durationText].compactMap(\.self).joined(separator: " · "),
+                            isMissed: call.isMissed,
+                            date: call.startedAt
+                        ) {
                             callBack(call)
                         }
                     }
                 }
                 .listStyle(.plain)
+                .motion(Theme.Motion.standard, value: missedOnly)
             }
         }
         .refreshable { await fritzBox.refreshHistory() }
@@ -65,70 +73,5 @@ struct FritzBoxHistoryList: View {
         guard !call.number.isEmpty else { return }
         let name = displayName(for: call)
         Task { await callCenter.startCall(to: call.number, name: name) }
-    }
-}
-
-private struct FritzBoxCallRow: View {
-    let call: FritzBoxCall
-    let name: String?
-    let onCall: () -> Void
-
-    private var title: String {
-        if let name { return name }
-        return call.number.isEmpty ? String(localized: "Unbekannt") : call.number
-    }
-
-    private var subtitle: String {
-        var parts: [String] = []
-        if name != nil, !call.number.isEmpty { parts.append(call.number) }
-        parts.append(call.outcomeText)
-        if let duration = call.durationText { parts.append(duration) }
-        return parts.joined(separator: " · ")
-    }
-
-    private var tint: Color {
-        call.isMissed ? Theme.danger : .primary
-    }
-
-    var body: some View {
-        Button(action: onCall) {
-            HStack(spacing: Theme.Space.s3) {
-                AvatarView(name: name, size: 40)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(tint)
-                        .lineLimit(1)
-                    HStack(spacing: Theme.Space.s1) {
-                        Image(systemName: call.symbol)
-                            .imageScale(.small)
-                            .accessibilityHidden(true)
-                        Text(subtitle)
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                }
-
-                Spacer(minLength: Theme.Space.s2)
-
-                Text(call.startedAt, format: Self.dateFormat(for: call.startedAt))
-                    .font(.subheadline)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(call.number.isEmpty)
-        .accessibilityElement(children: .combine)
-        .accessibilityHint(Text("Zurückrufen"))
-    }
-
-    private static func dateFormat(for date: Date) -> Date.FormatStyle {
-        Calendar.current.isDateInToday(date)
-            ? .dateTime.hour().minute()
-            : .dateTime.day().month(.abbreviated)
     }
 }

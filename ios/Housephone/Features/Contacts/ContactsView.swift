@@ -3,36 +3,25 @@ import HousephoneKit
 import SwiftUI
 
 struct ContactsView: View {
-    enum Source: String {
-        case fritzBox
-        case iPhone
-    }
-
     @Environment(FritzBoxData.self) private var fritzBox
-    @AppStorage("contacts.source") private var source: Source = .fritzBox
+    @AppStorage("contacts.source") private var source: ListSource = .fritzBox
+
+    private var showsFritzBox: Bool { fritzBox.showsPhonebook && source == .fritzBox }
 
     var body: some View {
         NavigationStack {
             Group {
-                if fritzBox.showsPhonebook, source == .fritzBox {
+                if showsFritzBox {
                     FritzBoxContactsList()
+                        .transition(.opacity)
                 } else {
                     DeviceContactsContent()
+                        .transition(.opacity)
                 }
             }
+            .motion(Theme.Motion.snappy, value: showsFritzBox)
             .navigationTitle("Kontakte")
-            .toolbar {
-                if fritzBox.showsPhonebook {
-                    ToolbarItem(placement: .principal) {
-                        Picker("Quelle", selection: $source) {
-                            Text("FRITZ!Box").tag(Source.fritzBox)
-                            Text("iPhone").tag(Source.iPhone)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 200)
-                    }
-                }
-            }
+            .listSourceMenu($source, isAvailable: fritzBox.showsPhonebook)
         }
     }
 }
@@ -156,7 +145,7 @@ private struct ContactRow: View {
         Button(action: onCall) {
             HStack(spacing: Theme.Space.s3) {
                 AvatarView(name: contact.name, size: 36)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Theme.Space.hairline) {
                     Text(contact.name)
                         .font(.body.weight(.medium))
                         .foregroundStyle(.primary)
@@ -169,16 +158,26 @@ private struct ContactRow: View {
                             .font(.subheadline)
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
+                            .accessibilityLabel(Text.spokenNumber(number.value))
                     }
                 }
                 Spacer()
                 Image(systemName: "phone")
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowButtonStyle())
+        .accessibilityElement(children: .combine)
         .accessibilityHint(Text("Anrufen"))
+        .contextMenu {
+            if contact.numbers.count == 1, let number = contact.numbers.first {
+                Button("Anrufen", systemImage: "phone", action: onCall)
+                Button("Nummer kopieren", systemImage: "doc.on.doc") {
+                    UIPasteboard.general.string = number.value
+                }
+            }
+        }
     }
 }

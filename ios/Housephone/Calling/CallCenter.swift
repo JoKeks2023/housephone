@@ -19,7 +19,7 @@ enum CallFailure: Identifiable, Equatable {
 
     var message: LocalizedStringResource {
         switch self {
-        case .notPaired: "Koppel zuerst deine Bridge, dann kannst du telefonieren."
+        case .notPaired: "Kopple zuerst deine Bridge, dann kannst du telefonieren."
         case .bridgeOffline: "Die Bridge ist gerade nicht erreichbar. Prüfe die Internetverbindung und versuche es erneut."
         case .invalidNumber: "Diese Nummer kann nicht gewählt werden."
         case .callInProgress: "Es läuft bereits ein Anruf."

@@ -36,22 +36,27 @@ struct WatchKeypadView: View {
                 .minimumScaleFactor(0.5)
                 .truncationMode(.head)
                 .frame(maxWidth: .infinity)
-                .contentTransition(.numericText())
+                .accessibilityLabel(number.isEmpty ? Text("Keine Nummer eingegeben") : Text(AttributedString.spokenNumber(number)))
             if !number.isEmpty {
                 Button {
+                    guard !number.isEmpty else { return }
                     number.removeLast()
                     WKInterfaceDevice.current().play(.click)
                 } label: {
                     Image(systemName: "delete.left")
                         .font(.body)
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(WatchPressStyle())
                 .foregroundStyle(.secondary)
                 .accessibilityLabel(Text("Löschen"))
+                .accessibilityAction(named: Text("Nummer löschen")) { number = "" }
+                .transition(.opacity)
             }
         }
-        .frame(height: 26)
-        .animation(WatchTheme.Motion.snappy, value: number)
+        .frame(height: 32)
+        .motion(WatchTheme.Motion.snappy, value: number.isEmpty)
     }
 
     private func append(_ key: String) {
@@ -75,7 +80,17 @@ struct WatchKeypadView: View {
     }
 }
 
-/// The 12 keys, sized to the watch.
+extension AttributedString {
+    /// A phone number read digit by digit by VoiceOver.
+    static func spokenNumber(_ number: String) -> AttributedString {
+        var spoken = AttributedString(number)
+        spoken.accessibilitySpeechSpellsOutCharacters = true
+        return spoken
+    }
+}
+
+/// The 12 keys, filling the height the watch has. On a 41 mm watch that
+/// is about 53 × 30 pt per key; bigger watches get taller keys.
 struct WatchKeyGrid: View {
     let onKey: (String) -> Void
     let onLongPressZero: () -> Void
@@ -87,7 +102,11 @@ struct WatchKeyGrid: View {
             ForEach(rows, id: \.self) { row in
                 GridRow {
                     ForEach(row, id: \.self) { key in
-                        key == "0" ? AnyView(zeroKey) : AnyView(button(for: key))
+                        if key == "0" {
+                            ZeroKey(onKey: onKey, onPlus: onLongPressZero)
+                        } else {
+                            button(for: key)
+                        }
                     }
                 }
             }
@@ -98,24 +117,59 @@ struct WatchKeyGrid: View {
         Button {
             onKey(key)
         } label: {
-            keyLabel(key)
+            WatchKeyLabel(key: key)
         }
-        .buttonStyle(KeyButtonStyle())
-        .accessibilityLabel(Text(key))
+        .buttonStyle(WatchPressStyle())
+        .accessibilityLabel(Text(Self.spokenName(key)))
     }
 
-    private var zeroKey: some View {
-        keyLabel("0", subtitle: "+")
+    static func spokenName(_ key: String) -> LocalizedStringKey {
+        switch key {
+        case "*": "Stern"
+        case "#": "Raute"
+        default: LocalizedStringKey(key)
+        }
+    }
+}
+
+/// "0", or "+" when held — pressed state like the other keys.
+private struct ZeroKey: View {
+    let onKey: (String) -> Void
+    let onPlus: () -> Void
+
+    @State private var isPressed = false
+    @State private var firedPlus = false
+
+    var body: some View {
+        WatchKeyLabel(key: "0", subtitle: "+")
+            .scaleEffect(isPressed ? 0.95 : 1)
+            .opacity(isPressed ? 0.7 : 1)
+            .animation(isPressed ? nil : WatchTheme.Motion.release, value: isPressed)
             .contentShape(Rectangle())
-            .onTapGesture { onKey("0") }
-            .onLongPressGesture(minimumDuration: 0.5) { onLongPressZero() }
+            .onLongPressGesture(minimumDuration: 0.5) {
+                firedPlus = true
+                onPlus()
+            } onPressingChanged: { pressing in
+                isPressed = pressing
+                if pressing {
+                    firedPlus = false
+                } else if !firedPlus {
+                    onKey("0")
+                }
+            }
             .accessibilityElement()
             .accessibilityLabel(Text("0"))
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction(named: Text("Plus")) { onLongPressZero() }
+            .accessibilityAction { onKey("0") }
+            .accessibilityAction(named: Text("Plus")) { onPlus() }
     }
+}
 
-    private func keyLabel(_ key: String, subtitle: String? = nil) -> some View {
+private struct WatchKeyLabel: View {
+    let key: String
+    var subtitle: String?
+
+    var body: some View {
         VStack(spacing: 0) {
             Text(key)
                 .font(.title3.weight(.medium).monospacedDigit())
@@ -125,16 +179,7 @@ struct WatchKeyGrid: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 30)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.12)))
-    }
-}
-
-private struct KeyButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .opacity(configuration.isPressed ? 0.6 : 1)
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .animation(WatchTheme.Motion.snappy, value: configuration.isPressed)
+        .frame(maxWidth: .infinity, minHeight: 30, maxHeight: .infinity)
+        .background(RoundedRectangle(cornerRadius: WatchTheme.Radius.md).fill(Color.white.opacity(0.12)))
     }
 }
