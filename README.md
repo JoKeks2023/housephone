@@ -33,6 +33,8 @@ FRITZ!Box ◄─SIP/RTP (LAN)─► Bridge (Heimserver) ◄── WSS (Cloudflar
 | Bridge betreiben | [`bridge/README.md`](bridge/README.md) |
 | Apps bauen | [`ios/README.md`](ios/README.md) |
 | Aufgaben und Berichte | [`docs/tasks/`](docs/tasks/) |
+| Zukunftsplan | [`docs/roadmap.md`](docs/roadmap.md) |
+| Veröffentlichung | [`docs/veroeffentlichung.md`](docs/veroeffentlichung.md) |
 
 ## Entwicklung
 
