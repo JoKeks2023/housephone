@@ -1,147 +1,169 @@
+<div align="center">
+
+<img src="docs/assets/icon.png" width="112" alt="Housephone-Icon" />
+
 # Housephone
 
-**Mit iPhone und Apple Watch über deine FRITZ!Box telefonieren – zu Hause und unterwegs, ohne VPN.**
-Anrufe klingeln wie normale Anrufe (CallKit), auch bei gesperrtem iPhone und direkt an der Watch.
+**Dein Festnetz auf iPhone und Apple Watch – über deine FRITZ!Box.**<br/>
+Zu Hause und unterwegs, ohne VPN, mit echtem Anruf-Bildschirm.
 
+[![Bridge](https://github.com/JoKeks2023/housephone/actions/workflows/bridge.yml/badge.svg)](https://github.com/JoKeks2023/housephone/actions/workflows/bridge.yml)
+[![iOS](https://github.com/JoKeks2023/housephone/actions/workflows/ios.yml/badge.svg)](https://github.com/JoKeks2023/housephone/actions/workflows/ios.yml)
+[![Image](https://github.com/JoKeks2023/housephone/actions/workflows/bridge-image.yml/badge.svg)](https://github.com/JoKeks2023/housephone/pkgs/container/housephone-bridge)
+<br/>
+![iOS 26](https://img.shields.io/badge/iOS-26-0D9488?logo=apple&logoColor=white)
+![watchOS 26](https://img.shields.io/badge/watchOS-26-0D9488?logo=apple&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-amd64%20%7C%20arm64-0D9488?logo=docker&logoColor=white)
+![FRITZ!Box](https://img.shields.io/badge/FRITZ!Box-FRITZ!OS%208-0D9488)
+
+[Einrichtung](#-einrichtung-in-9-schritten) · [Alltag](#-alltag) · [Hilfe](#-wenn-etwas-nicht-klappt) · [Sicherheit](#-wie-sicher-ist-das) · [Entwicklung](#-entwicklung)
+
+</div>
+
+---
+
+## ✨ Was Housephone kann
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 📞 Wie ein echtes Telefon
+Anrufe klingeln über **CallKit** wie normale Anrufe, auch bei gesperrtem iPhone. Rückruf direkt aus der iPhone-Anrufliste.
+
+</td>
+<td width="33%" valign="top">
+
+### ⌚ Watch klingelt selbst
+Annehmen und Sprechen **am Handgelenk**, auch ohne iPhone in der Nähe. Die Watch koppelt sich automatisch.
+
+</td>
+<td width="33%" valign="top">
+
+### 🌍 Überall, ohne VPN
+Zu Hause und unterwegs, im WLAN und im Mobilfunk. Ein laufendes Gespräch übersteht auch einen Netzwechsel.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### 📒 FRITZ!Box-Telefonbuch
+Kontakte und Anrufliste deines **ganzen Anschlusses**, auch was am Schnurlostelefon lief. Namen erscheinen auch bei eingehenden Anrufen.
+
+</td>
+<td valign="top">
+
+### 🔐 Ende-zu-Ende gesichert
+Schlüssel im **Secure Enclave**, gepinnte Bridge, verschlüsselte Steuerung, auch gegenüber Cloudflare.
+
+</td>
+<td valign="top">
+
+### 🐳 Ein Container
+Die Bridge läuft als gehärteter **Docker-Container** mit Admin-Oberfläche im Terminal (`./housephone tui`).
+
+</td>
+</tr>
+</table>
+
+## 🧭 So funktioniert's
+
+```mermaid
+flowchart LR
+    FB["📠 FRITZ!Box"] <-- "SIP · Heimnetz" --> BR["🐳 Bridge<br/>(dein Server)"]
+    BR -- "VoIP-Push" --> APNS["☁️ Apple Push"]
+    APNS -- "weckt" --> DEV["📱 iPhone · ⌚ Watch"]
+    BR <-- "Steuerung · Cloudflare Tunnel<br/>Ende-zu-Ende verschlüsselt" --> DEV
+    BR <-- "Ton · UDP 50000" --> DEV
 ```
-                      Heimnetz                                    Unterwegs / WLAN
-┌───────────────────────────────────────────────┐
-│  FRITZ!Box ◄── SIP (LAN) ──► Bridge (Docker)  │ ◄── Steuerung: Cloudflare Tunnel ──► iPhone · Apple Watch
-│                                   │           │ ◄══ Ton: UDP 50000 (Portfreigabe) ══►
-│                                   └── Push (Apple APNs) ──────────────────────────► weckt iPhone · Watch
-└───────────────────────────────────────────────┘
-```
 
-- **Bridge:** ein kleiner Dienst auf deinem Heimserver. Sie meldet sich an der FRITZ!Box als IP-Telefon an, weckt deine Geräte per Push und reicht Gespräche durch.
-- **iPhone-App:** Tastenfeld, Anrufliste (auch die der FRITZ!Box), Kontakte (iPhone und FRITZ!Box-Telefonbuch).
-- **Watch-App:** klingelt selbst. Du nimmst am Handgelenk an, auch ohne iPhone in der Nähe.
-- **Sicherheit:** Die Geräteschlüssel liegen im Secure Enclave, und die Verbindung zwischen Gerät und Bridge ist Ende-zu-Ende verschlüsselt, also auch gegenüber Cloudflare. Kopplungscodes gibt es nur auf dem Server.
+Die **Bridge** meldet sich an deiner FRITZ!Box als ganz normales IP-Telefon an. Klingelt dein Festnetz, weckt sie iPhone und Watch per Push, und wer zuerst annimmt, bekommt das Gespräch. Es wird **kein TCP-Port** geöffnet, nur ein UDP-Port für den Ton.
 
 ---
 
-## Inhalt
+## 🚀 Einrichtung in 9 Schritten
 
-1. [Was du brauchst](#was-du-brauchst)
-2. [FRITZ!Box vorbereiten](#1-fritzbox-vorbereiten)
-3. [Apple: Push-Schlüssel (APNs)](#2-apple-push-schlüssel-apns)
-4. [Cloudflare Tunnel](#3-cloudflare-tunnel)
-5. [Bridge auf dem Server starten](#4-bridge-auf-dem-server-starten)
-6. [Selbsttest in der TUI](#5-selbsttest-in-der-tui)
-7. [App aufs iPhone (und die Watch)](#6-app-aufs-iphone-und-die-watch)
-8. [iPhone koppeln](#7-iphone-koppeln)
-9. [Optional: Telefonbuch und Anrufliste der FRITZ!Box](#8-optional-telefonbuch-und-anrufliste)
-10. [Ausprobieren](#9-ausprobieren)
-11. [Alltag: Befehle, Updates, Backup](#alltag-befehle-updates-backup)
-12. [Wenn etwas nicht klappt](#wenn-etwas-nicht-klappt)
-13. [Wie sicher ist das?](#wie-sicher-ist-das)
-14. [Entwicklung](#entwicklung)
+| # | Schritt | Wo | ⏱ |
+|:-:|---|---|:-:|
+| 1 | [FRITZ!Box vorbereiten](#1--fritzbox-vorbereiten) | FRITZ!Box | 10 min |
+| 2 | [Push-Schlüssel](#2--push-schlüssel-bei-apple) | developer.apple.com | 5 min |
+| 3 | [Cloudflare Tunnel](#3--cloudflare-tunnel) | Cloudflare | 10 min |
+| 4 | [Bridge starten](#4--bridge-auf-dem-server-starten) | Server | 10 min |
+| 5 | [Selbsttest](#5--selbsttest) | Server | 2 min |
+| 6 | [App installieren](#6--app-aufs-iphone-und-die-watch) | Mac + iPhone | 15 min |
+| 7 | [Koppeln](#7--iphone-koppeln) | Server + iPhone | 2 min |
+| 8 | [Telefonbuch](#8--optional-telefonbuch--anrufliste) *(optional)* | FRITZ!Box + Server | 5 min |
+| 9 | [Ausprobieren](#9--ausprobieren) | Telefon | 5 min |
 
----
+> [!NOTE]
+> **Du brauchst:** eine FRITZ!Box mit Telefonie, einen Server im Heimnetz, der immer läuft (Linux mit Docker, z. B. Mini-PC, NAS, Raspberry Pi 4/5), einen **bezahlten Apple-Developer-Account**, einen **kostenlosen Cloudflare-Account mit eigener Domain** und einen Mac mit Xcode.
 
-## Was du brauchst
+### 1 · FRITZ!Box vorbereiten
 
-| | Wofür | Dauer |
-|---|---|---|
-| **FRITZ!Box** mit Telefonie | Die Bridge meldet sich dort als IP-Telefon an | 10 min |
-| **Server im Heimnetz**, der immer läuft (Linux mit Docker, z. B. Mini-PC, NAS, Raspberry Pi 4/5) | Läuft die Bridge | 10 min |
-| **Apple-Developer-Account** (bezahlt) | Push-Schlüssel, damit das iPhone klingelt, wenn die App zu ist | 5 min |
-| **Cloudflare-Account** mit eigener Domain (kostenlos) | Damit iPhone und Watch unterwegs die Bridge erreichen, ohne VPN | 10 min |
-| **Mac mit Xcode** und dein iPhone | App installieren | 15 min |
+Öffne die Oberfläche deiner Box, z. B. `http://fritz.box` oder bei Vodafone-Kabel `http://192.168.0.1`.
 
-> 💡 Es wird **kein** TCP-Port geöffnet. Freigegeben wird nur **ein** UDP-Port für den Ton.
+**a) Feste IP für den Server:** **Heimnetz → Netzwerk → Netzwerkverbindungen** → beim Server ✏️ → **„Diesem Netzwerkgerät immer die gleiche IPv4-Adresse zuweisen“**.
 
----
-
-## 1. FRITZ!Box vorbereiten
-
-Öffne `http://fritz.box` bzw. die IP deiner Box, bei Vodafone-Kabel z. B. `http://192.168.0.1`.
-
-### 1a · Dem Server eine feste IP geben
-
-**Heimnetz → Netzwerk → Netzwerkverbindungen** → beim Server auf ✏️ → **„Diesem Netzwerkgerät immer die gleiche IPv4-Adresse zuweisen“** → Übernehmen.
-Notiere dir die IP, z. B. `192.168.0.50`.
-
-### 1b · IP-Telefon „Housephone“ anlegen
-
+**b) IP-Telefon anlegen**
 1. **Telefonie → Telefoniegeräte → Neues Gerät einrichten**
-2. **Telefon (mit und ohne Anrufbeantworter)** → **LAN/WLAN (IP-Telefon)** → Name `Housephone` → Weiter
-3. **Benutzername** (z. B. `housephone`) und ein **langes Kennwort** vergeben und notieren
-4. Wähle, mit welcher Nummer das Gerät **rausruft** und auf welche Nummern es **reagiert**
-5. **„Anmeldung aus dem Internet erlauben“ bleibt aus.** Die Bridge steht im Heimnetz.
+2. **Telefon (mit und ohne Anrufbeantworter)** → **LAN/WLAN (IP-Telefon)** → Name `Housephone`
+3. Benutzername (z. B. `housephone`) und ein **langes Kennwort** notieren
+4. Festlegen, mit welcher Nummer es **rausruft** und auf welche es **reagiert**
 
-### 1c · Portfreigabe für den Ton (UDP 50000)
+**c) Portfreigabe für den Ton:** **Internet → Freigaben → Portfreigaben → Gerät für Freigaben hinzufügen** → Server → **Neue Freigabe** → *Andere Anwendung*
 
-**Internet → Freigaben → Portfreigaben → Gerät für Freigaben hinzufügen** → deinen Server wählen → **Neue Freigabe** → **Portfreigabe**:
+| Protokoll | Port an Gerät | bis Port | extern |
+|:-:|:-:|:-:|:-:|
+| **UDP** | 50000 | 50000 | 50000 |
 
-| Anwendung | Protokoll | Port an Gerät | bis Port | Port extern gewünscht |
-|---|---|---|---|---|
-| Andere Anwendung „Housephone Ton“ | **UDP** | 50000 | 50000 | 50000 |
+> [!TIP]
+> Mehr muss nicht offen sein. **„Anmeldung aus dem Internet erlauben“** beim IP-Telefon bleibt **aus**, weil die Bridge im Heimnetz steht.
 
-Mehr muss nicht offen sein. SIP bleibt im Heimnetz, die Steuerung läuft über den Tunnel.
+### 2 · Push-Schlüssel bei Apple
 
-✅ **Geschafft, wenn:** die Freigabe in der Liste aktiv ist (grüner Punkt).
+Damit das iPhone klingelt, auch wenn die App geschlossen ist:
 
----
+1. [developer.apple.com → **Keys**](https://developer.apple.com/account/resources/authkeys/list) → **＋** → Name `Housephone Push` → ☑️ **Apple Push Notifications service (APNs)** → Register
+2. **`AuthKey_XXXXXXXXXX.p8` herunterladen** und die **Key ID** notieren
 
-## 2. Apple: Push-Schlüssel (APNs)
+> [!IMPORTANT]
+> Die `.p8`-Datei lässt sich **nur einmal** herunterladen. Bewahr sie gut auf.
 
-Damit das iPhone klingelt, obwohl die App geschlossen ist, schickt die Bridge einen VoIP-Push über Apple.
+### 3 · Cloudflare Tunnel
 
-1. [developer.apple.com → Certificates, Identifiers & Profiles → **Keys**](https://developer.apple.com/account/resources/authkeys/list) → **＋**
-2. Name z. B. `Housephone Push`, **Apple Push Notifications service (APNs)** ankreuzen → Continue → Register
-3. **`AuthKey_XXXXXXXXXX.p8` herunterladen.** Das geht **nur einmal**, also gut aufbewahren.
-4. Die **Key ID** notieren (10 Zeichen, z. B. `ABCDE12345`)
+Damit iPhone und Watch die Bridge von unterwegs erreichen, ohne VPN und ohne offenen TCP-Port:
 
-Team-ID (`T9CA6D7T8N`) und Topic (`com.jorisconrad.housephone.voip`) sind in der Beispielkonfiguration bereits eingetragen.
+1. [one.dash.cloudflare.com](https://one.dash.cloudflare.com) → **Networks → Tunnels → Create a tunnel** → **Cloudflared** → Name `housephone`
+2. Bei „Install connector“ **nichts installieren**, nur den **Token** kopieren
+3. **Public Hostname:** Subdomain `phone` · Domain `deine-domain.de` · Service **HTTP** → `localhost:8080`
 
----
+Deine Bridge-Adresse ist dann **`wss://phone.deine-domain.de/v1/ws`**.
 
-## 3. Cloudflare Tunnel
+### 4 · Bridge auf dem Server starten
 
-Über den Tunnel erreichen iPhone und Watch die Bridge von unterwegs, ohne offenen TCP-Port und ohne VPN.
-
-1. [one.dash.cloudflare.com](https://one.dash.cloudflare.com) → **Networks → Tunnels → Create a tunnel** → **Cloudflared** → Name `housephone` → Save
-2. Bei „Install and run a connector“ **nichts installieren**, nur den **Token** kopieren (die lange Zeichenkette nach `--token`)
-3. **Public Hostname** hinzufügen:
-   - Subdomain `phone`, Domain `deine-domain.de`
-   - Service Type **HTTP**, URL **`localhost:8080`**
-   - Save
-
-Deine Adresse für die Bridge lautet dann **`wss://phone.deine-domain.de/v1/ws`**.
-
-> Der Tunnel trägt nur die Steuerung (WebSocket). Der Ton läuft über UDP 50000, weil Cloudflare Tunnel kein UDP weiterleitet.
-
----
-
-## 4. Bridge auf dem Server starten
-
-Voraussetzung: Docker mit Compose-Plugin ([Anleitung](https://docs.docker.com/engine/install/)).
+Voraussetzung ist [Docker mit Compose](https://docs.docker.com/engine/install/).
 
 ```sh
 git clone https://github.com/JoKeks2023/housephone.git
 cd housephone/bridge
-
 cp config.example.yaml config.yaml
 cp docker-compose.example.yml docker-compose.yml
 mkdir -p data secrets
 ```
 
-### 4a · `config.yaml` anpassen
-
-Nur diese Zeilen musst du ändern:
+**`config.yaml`** – diese vier Werte anpassen:
 
 ```yaml
 bridge:
-  name: "Zuhause"                                   # Name in der App
+  name: "Zuhause"                                   # erscheint in der App
   publicUrl: "wss://phone.deine-domain.de/v1/ws"    # aus Schritt 3
 sip:
-  registrar: "192.168.0.1"                          # IP deiner FRITZ!Box, keine Namen wie fritz.box
-  username: "housephone"                            # Benutzername aus Schritt 1b
+  registrar: "192.168.0.1"                          # IP deiner FRITZ!Box
+  username: "housephone"                            # aus Schritt 1b
 ```
 
-> ⚠️ Trag bei `registrar` die **IP** der FRITZ!Box ein. Die Bridge startet absichtlich nicht, wenn die Adresse nicht im Heimnetz liegt. `fritz.box` kann über öffentliches DNS zu einem fremden Server auflösen.
-
-### 4b · Geheimnisse ablegen
+**Geheimnisse** – bleiben auf dem Server, nie im Repo:
 
 ```sh
 printf '%s' 'KENNWORT-DES-IP-TELEFONS' > secrets/sip_password
@@ -150,194 +172,175 @@ echo 'CLOUDFLARE_TUNNEL_TOKEN=DEIN-TOKEN' > .env
 chmod 600 secrets/* .env
 ```
 
-In `docker-compose.yml` die **Key ID** eintragen:
-
-```yaml
-      HOUSEPHONE_APNS_KEY_ID: "ABCDE12345"
-```
-
-Der Container läuft als Benutzer `1000:1000`. Falls dein Benutzer eine andere ID hat, gilt eine der beiden Varianten:
-
-```sh
-sudo chown -R 1000:1000 data secrets   # entweder so
-# oder in docker-compose.yml:  user: "$(id -u):$(id -g)" durch deine Werte ersetzen
-```
-
-### 4c · Starten
+In **`docker-compose.yml`** die Key ID eintragen: `HOUSEPHONE_APNS_KEY_ID: "ABCDE12345"`
 
 ```sh
 docker compose up -d
-docker compose logs -f housephone-bridge
 ```
 
-✅ **Geschafft, wenn** im Log steht: `registered at FRITZ!Box`. In der FRITZ!Box erscheint „Housephone“ unter **Telefonie → Telefoniegeräte** als verbunden.
+> [!WARNING]
+> Bei `registrar` die **IP** der FRITZ!Box eintragen, nicht `fritz.box`. Dieser Name kann über öffentliches DNS zu einem fremden Server auflösen. Die Bridge startet deshalb absichtlich nicht, wenn die Adresse nicht im Heimnetz liegt.
 
-Das Image kommt fertig aus der GitHub Container Registry, für amd64 und arm64. Selbst bauen: in `docker-compose.yml` `image:` auskommentieren und `build: .` aktivieren.
+<details>
+<summary><b>Der Container findet seine Dateien nicht (Rechte)?</b></summary>
 
----
-
-## 5. Selbsttest in der TUI
+Der Container läuft als Benutzer `1000:1000`. Hat dein Benutzer eine andere ID, gilt eine der beiden Varianten:
 
 ```sh
-./housephone tui
+sudo chown -R 1000:1000 data secrets
+# oder in docker-compose.yml bei "user:" deine IDs eintragen (id -u / id -g)
 ```
+</details>
 
-Mit **6** öffnest du den **Selbsttest**. Jede Zeile ist grün, gelb oder rot. Mit ↑/↓ siehst du bei jedem Punkt, was zu tun ist.
+<details>
+<summary><b>Image selbst bauen statt aus der Registry ziehen</b></summary>
+
+In `docker-compose.yml` `image:` auskommentieren und `build: .` aktivieren. Das fertige Image `ghcr.io/jokeks2023/housephone-bridge` gibt es für amd64 und arm64:
+- `:edge` = jeder Stand von `master`
+- `:latest` = die letzte Version
+</details>
+
+### 5 · Selbsttest
+
+```sh
+./housephone tui      # dann Taste 6
+```
 
 ```
   ● FRITZ!Box-Anmeldung      angemeldet an 192.168.0.1
   ● Push (APNs)              eingerichtet
   ● Öffentliche IP           94.x.x.x (von der FRITZ!Box)
-  ● Medienport               UDP 50000 lokal offen   ← die Freigabe in der FRITZ!Box musst du selbst prüfen
+  ● Medienport               UDP 50000 lokal offen
   ● Öffentliche Adresse      wss://phone.deine-domain.de/v1/ws
 ```
 
+Jede Zeile ist 🟢 grün, 🟡 gelb oder 🔴 rot. Mit ↑/↓ siehst du, was zu tun ist.
 Weitere Tabs: **1** Übersicht · **2** Geräte · **3** Kopplung · **4** Anrufe · **5** Logs. **?** zeigt die Hilfe, **q** beendet.
 
----
-
-## 6. App aufs iPhone (und die Watch)
+### 6 · App aufs iPhone (und die Watch)
 
 Auf dem Mac, einmalig:
 
 ```sh
 brew install xcodegen
-cd housephone/ios
-xcodegen generate
-open Housephone.xcodeproj
+cd housephone/ios && xcodegen generate && open Housephone.xcodeproj
 ```
 
-1. In Xcode oben dein **iPhone** als Ziel wählen, Scheme **Housephone** → ▶︎
-2. **Beim ersten Mal:**
-   - auf dem iPhone **Einstellungen → Datenschutz & Sicherheit → Entwicklermodus** einschalten
-   - in Xcode unter *Signing & Capabilities* prüfen, dass dein Team gesetzt ist
-3. **Watch-App:** Die Watch-App steckt in der iPhone-App. Auf dem iPhone in der **Watch-App → Verfügbare Apps → Housephone → Installieren**.
+1. Oben dein **iPhone** als Ziel, Scheme **Housephone** → ▶︎
+2. **Beim ersten Mal:** auf dem iPhone **Einstellungen → Datenschutz & Sicherheit → Entwicklermodus** einschalten
+3. **Watch:** in der **Watch-App** auf dem iPhone → **Verfügbare Apps → Housephone → Installieren**, falls sie nicht automatisch kommt
 
-> Falls Xcode „Push Notifications“ bemängelt: auf [developer.apple.com → Identifiers](https://developer.apple.com/account/resources/identifiers/list) bei `com.jorisconrad.housephone` bzw. `…watchkitapp` **Push Notifications** aktivieren.
+<details>
+<summary><b>Xcode bemängelt „Push Notifications“?</b></summary>
 
----
+Auf [developer.apple.com → Identifiers](https://developer.apple.com/account/resources/identifiers/list) bei `com.jorisconrad.housephone` und `…watchkitapp` **Push Notifications** aktivieren und erneut bauen.
+</details>
 
-## 7. iPhone koppeln
-
-Auf dem Server:
+### 7 · iPhone koppeln
 
 ```sh
 ./housephone pair -name "iPhone Joris"
 ```
 
-Es erscheinen ein **QR-Code** und ein Code wie `K7P2-XH9Q-RMW4-DZT8`. Er ist 10 Minuten gültig und einmalig.
+Im Terminal erscheint ein **QR-Code**. In der App → **QR-Code scannen** → **Mikrofon erlauben** → fertig ✅
 
-1. Öffne die App. Beim ersten Start erscheint die Kopplung → **QR-Code scannen**, oder den Link kopieren und einsetzen.
-2. Die App prüft, dass die Bridge wirklich deine ist (Fingerabdruck im QR-Code).
-3. **Mikrofon erlauben.** Kontakte sind optional.
-4. Im Terminal meldet `pair`, welches Gerät gekoppelt wurde. Warst du es nicht, entfernst du es sofort mit `./housephone devices remove <ID>`.
+- Die App prüft dabei, dass sie **deine** Bridge erreicht; der Fingerabdruck steckt im QR-Code.
+- `pair` meldet, welches Gerät den Code benutzt hat. Warst du es nicht, reicht `./housephone devices remove <ID>`.
+- **Die Watch koppelt sich automatisch.** Auf der Uhr musst du nie etwas scannen.
 
-**Apple Watch:** Du musst nichts tun. Sobald das iPhone verbunden und die Watch-App installiert ist, koppelt sich die Watch automatisch mit eigenem Schlüssel.
+### 8 · Optional: Telefonbuch & Anrufliste
 
-✅ **Geschafft, wenn** in der App unter **Einstellungen** „Verbunden“ steht und die Watch „Bereit für Anrufe“ zeigt.
-
----
-
-## 8. Optional: Telefonbuch und Anrufliste
-
-Damit zeigen App und Watch das FRITZ!Box-Telefonbuch, die Anrufliste des ganzen Anschlusses und Namen bei eingehenden Anrufen.
-
-1. **FRITZ!Box:** **System → FRITZ!Box-Benutzer → Benutzer hinzufügen**. Name `housephone`, ein Kennwort, Recht **„Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“**. Keine weiteren Rechte.
-2. **FRITZ!Box:** **Heimnetz → Netzwerk → Netzwerkeinstellungen → „Zugriff für Anwendungen zulassen“** muss an sein (Standard).
-3. **Server:**
+1. **FRITZ!Box → System → FRITZ!Box-Benutzer → Benutzer hinzufügen:** Name `housephone`, nur das Recht **„Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“**
+2. **Server:**
    ```sh
    printf '%s' 'KENNWORT' > secrets/fritzbox_password && chmod 600 secrets/fritzbox_password
    ```
-   In `config.yaml`:
-   ```yaml
-   fritzbox:
-     username: "housephone"
-   ```
-4. `docker compose up -d`. In der TUI unter Übersicht steht dann „TR-064 ● eingerichtet“.
+   in `config.yaml`: `fritzbox:` → `username: "housephone"`, dann `docker compose up -d`
 
----
+### 9 · Ausprobieren
 
-## 9. Ausprobieren
-
-- [ ] **Ausgehend:** Nummer im Tastenfeld wählen → Freiton → Gespräch
-- [ ] **Eingehend, unterwegs:** WLAN am iPhone aus, App schließen, iPhone sperren, Festnetz vom Handy anrufen → klingelt wie ein normaler Anruf → Ton in beide Richtungen
-- [ ] **Watch:** Festnetz anrufen → Watch klingelt selbst → an der Watch annehmen
+- [ ] **Ausgehend:** im Tastenfeld wählen → Freiton → Gespräch
+- [ ] **Unterwegs:** WLAN aus, App zu, iPhone sperren, Festnetz anrufen → klingelt, Ton in beide Richtungen
+- [ ] **Watch:** Festnetz anrufen → an der Watch annehmen
 - [ ] **Anderes Telefon nimmt ab** → iPhone und Watch hören auf zu klingeln
-- [ ] **Rückruf aus der iPhone-Anrufliste** startet Housephone
 
 ---
 
-## Alltag: Befehle, Updates, Backup
+## 🛠 Alltag
 
 Alle Befehle im Ordner `housephone/bridge`:
 
-| Aufgabe | Befehl |
+| | Befehl |
 |---|---|
-| Admin-Oberfläche | `./housephone tui` |
-| Neues Gerät koppeln | `./housephone pair -name "iPad"` |
-| Geräte anzeigen | `./housephone devices list` |
-| Gerät entfernen (wirkt sofort) | `./housephone devices remove <ID>` |
-| Fingerabdruck der Bridge | `./housephone identity` |
-| Logs | `docker compose logs -f housephone-bridge` |
-| **Update** | `docker compose pull && docker compose up -d` |
+| 🖥 Admin-Oberfläche | `./housephone tui` |
+| ➕ Gerät koppeln | `./housephone pair -name "iPad"` |
+| 📋 Geräte anzeigen | `./housephone devices list` |
+| 🗑 Gerät entfernen (wirkt sofort) | `./housephone devices remove <ID>` |
+| 🔑 Fingerabdruck der Bridge | `./housephone identity` |
+| 📜 Logs | `docker compose logs -f housephone-bridge` |
+| ⬆️ Update | `docker compose pull && docker compose up -d` |
 
-**Backup:** Sichere den Ordner `data/`, vor allem `identity.key` und `devices.json`. Geht `identity.key` verloren, müssen alle Geräte neu gekoppelt werden.
-
-**Mehr Details:** Die Konfiguration steht im Kommentar von `config.example.yaml`, der Betrieb in [`bridge/README.md`](bridge/README.md).
+> [!IMPORTANT]
+> **Backup:** den Ordner `data/` sichern, vor allem `identity.key`. Ohne ihn müssen alle Geräte neu gekoppelt werden.
 
 ---
 
-## Wenn etwas nicht klappt
+## 🩺 Wenn etwas nicht klappt
+
+<details open>
+<summary><b>Die häufigsten Ursachen</b></summary>
 
 | Symptom | Lösung |
 |---|---|
 | Bridge startet nicht: „… nicht im Heimnetz“ | `sip.registrar` auf die **IP** der FRITZ!Box setzen |
-| `registration failed … 401/403` | Benutzername/Kennwort des IP-Telefons prüfen (Schritt 1b) |
-| iPhone klingelt nur bei offener App | APNs-Key, Key-ID bzw. Team prüfen. Im Log steht dann `push failed`. |
-| Klingelt, aber kein Ton unterwegs | UDP-Portfreigabe 50000 fehlt (Schritt 1c) |
-| Kein Ton zu Hause | Server und iPhone im selben Netz? Kein Gast-WLAN. |
-| App: „Bridge nicht erreichbar“ | Läuft der Tunnel (`docker compose ps`)? Stimmt `publicUrl` mit dem Hostnamen aus Schritt 3 überein? |
-| App: „Bridge nicht vertrauenswürdig“ | Die Bridge hat einen anderen Schlüssel als beim Koppeln, z. B. weil `data/` gelöscht wurde. Neu koppeln. |
-| App: „Uhrzeit prüfen“ | Die Uhr des iPhones oder Servers geht falsch. Automatische Uhrzeit einschalten. |
-| Telefonbuch fehlt | Schritt 8. Hat der FRITZ!Box-Benutzer das Recht „…Anrufliste“? |
+| `registration failed … 401/403` | Benutzername/Kennwort des IP-Telefons prüfen (1b) |
+| Klingelt nur bei offener App | APNs-Key und Key-ID prüfen; im Log steht dann `push failed` |
+| Klingelt, aber kein Ton unterwegs | UDP-Freigabe 50000 fehlt (1c) |
+| Kein Ton zu Hause | iPhone im Gast-WLAN? Server und iPhone müssen im selben Netz sein |
+| „Bridge nicht erreichbar“ | Tunnel läuft? (`docker compose ps`) `publicUrl` = Hostname aus Schritt 3? |
+| „Bridge nicht vertrauenswürdig“ | Die Bridge hat einen neuen Schlüssel (`data/` gelöscht?), neu koppeln |
+| „Uhrzeit prüfen“ | Die Uhr von iPhone oder Server geht falsch |
+| Telefonbuch fehlt | Schritt 8; der FRITZ!Box-Benutzer braucht das Recht „…Anrufliste“ |
 
-Mehr Details liefern `./housephone tui` → **5 Logs**; auf dem iPhone Konsole.app mit Subsystem `com.jorisconrad.housephone`. Telefonnummern stehen im Log standardmäßig nur gekürzt (`…563`).
-
----
-
-## Wie sicher ist das?
-
-- **Geräteschlüssel:** Jedes Gerät hat einen eigenen Schlüssel im **Secure Enclave**. Er kann das Gerät nicht verlassen, auch nicht per Backup.
-- **Beidseitige Prüfung:** Die App prüft bei jeder Verbindung, dass sie mit **deiner** Bridge spricht; der Fingerabdruck steckt im QR-Code.
-- **Ende-zu-Ende-Verschlüsselung:** Steuerung, Telefonbuch, Anrufliste und der Ton der Watch sind Ende-zu-Ende verschlüsselt, auch gegenüber Cloudflare. Der Ton des iPhones läuft über WebRTC (DTLS-SRTP).
-- **Kopplungscodes** gibt es nur auf dem Server: 80 Bit, einmalig, 10 Minuten gültig. Jede neue Kopplung wird allen Geräten angezeigt.
-- **Container:** gehärtet, also schreibgeschützt, ohne Root und ohne Linux-Capabilities.
-- **Details:** [ADR-0004](docs/architecture/ADR-0004-anmeldung-v2.md), [Sicherheits-Review](docs/reviews/).
+**Mehr Details:** `./housephone tui` → **5 Logs** · iPhone: Konsole.app, Subsystem `com.jorisconrad.housephone`. Nummern stehen im Log nur gekürzt (`…563`).
+</details>
 
 ---
 
-## Entwicklung
+## 🔐 Wie sicher ist das?
 
-| Thema | Dokument |
+| | |
 |---|---|
-| Architektur | [ADR-0001 Bridge](docs/architecture/ADR-0001-bridge-architektur.md) · [ADR-0002 Watch](docs/architecture/ADR-0002-watch.md) · [ADR-0003 Telefonbuch](docs/architecture/ADR-0003-fritzbox-telefonbuch-anrufliste.md) · [ADR-0004 Anmeldung v2](docs/architecture/ADR-0004-anmeldung-v2.md) |
-| Protokoll | [v1](docs/protocol/signaling-v1.md) · [v2](docs/protocol/signaling-v2.md) · [Fixtures](docs/protocol/fixtures/) |
-| Bridge im Detail | [`bridge/README.md`](bridge/README.md) |
-| Apps bauen | [`ios/README.md`](ios/README.md) |
-| Zukunftsplan | [`docs/roadmap.md`](docs/roadmap.md) |
-| Veröffentlichung | [`docs/veroeffentlichung.md`](docs/veroeffentlichung.md) |
-| Aufgaben, Berichte, Reviews | [`docs/tasks/`](docs/tasks/) · [`docs/reviews/`](docs/reviews/) |
+| 🔑 **Geräteschlüssel** | Liegen im **Secure Enclave**, nicht kopierbar, auch nicht per Backup |
+| 🪪 **Bridge-Identität** | Die App prüft bei jeder Verbindung den Fingerabdruck aus dem QR-Code |
+| 🔒 **Ende-zu-Ende** | Steuerung, Telefonbuch, Anrufliste und Watch-Ton sind verschlüsselt, auch gegenüber Cloudflare; iPhone-Ton per DTLS-SRTP |
+| 🎟 **Kopplung** | Codes nur auf dem Server: 80 Bit, einmalig, 10 min. Jede Kopplung sehen alle Geräte |
+| 🧱 **Container** | Schreibgeschützt, kein Root, keine Linux-Capabilities |
+| 🕵️ **Datenschutz** | Kein Tracking, keine Daten beim Entwickler, Nummern im Log gekürzt |
+
+Details: [ADR-0004](docs/architecture/ADR-0004-anmeldung-v2.md) · [Sicherheits-Review](docs/reviews/)
+
+---
+
+## 🧑‍💻 Entwicklung
+
+| | |
+|---|---|
+| 🏛 Architektur | [Bridge](docs/architecture/ADR-0001-bridge-architektur.md) · [Watch](docs/architecture/ADR-0002-watch.md) · [Telefonbuch](docs/architecture/ADR-0003-fritzbox-telefonbuch-anrufliste.md) · [Anmeldung v2](docs/architecture/ADR-0004-anmeldung-v2.md) |
+| 📡 Protokoll | [v1](docs/protocol/signaling-v1.md) · [v2](docs/protocol/signaling-v2.md) · [Fixtures](docs/protocol/fixtures/) |
+| 🐳 Bridge | [`bridge/README.md`](bridge/README.md) |
+| 📱 Apps | [`ios/README.md`](ios/README.md) |
+| 🗺 Zukunftsplan | [`docs/roadmap.md`](docs/roadmap.md) |
+| 🏪 Veröffentlichung | [`docs/veroeffentlichung.md`](docs/veroeffentlichung.md) |
 
 ```sh
-cd bridge && go test -race ./...                    # Bridge
-cd ios/Packages/HousephoneKit && swift test         # Protokoll, Krypto, Zustände
+cd bridge && go test -race ./...                  # Bridge
+cd ios/Packages/HousephoneKit && swift test       # Protokoll, Krypto, Zustände
 ```
 
-Die CI testet die Bridge (inkl. gehärtetem Docker-Start), baut die iPhone-App samt Watch-App und veröffentlicht das Bridge-Image auf GHCR.
+<details>
+<summary><b>Legacy: Telephone für macOS</b></summary>
 
----
-
-## Legacy: Telephone für macOS
 
 Dieses Repository ist aus [64characters/Telephone](https://github.com/64characters/Telephone) entstanden. Der macOS-Code (`Telephone/`, `Domain/`, `UseCases/` …) liegt weiterhin hier und dient als Referenz. Die ursprüngliche Anleitung folgt unverändert.
 
@@ -417,3 +420,5 @@ Build Telephone.
 
 For the legal reasons, pull requests are not accepted. Please feel
 free to share your thoughts and ideas by commenting on the issues.
+
+</details>
