@@ -145,5 +145,5 @@ func (c *call) onReattachOutgoing(conn DeviceConn) {
 	l.conn = conn
 	l.iceRestarts = 0
 	c.stopReattachTimer()
-	c.offer(l, c.peerCodecs(), l.peer != nil && l.answered)
+	c.reoffer(l)
 }

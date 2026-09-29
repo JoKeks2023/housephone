@@ -47,9 +47,11 @@ type leg struct {
 	// peerGen identifies the current peer for state callbacks.
 	peerGen int
 	// offerGen identifies the latest offer; stale offers are dropped.
-	offerGen    int
-	answered    bool
-	iceRestarts int
+	offerGen      int
+	offerInFlight bool
+	lastOffer     string
+	answered      bool
+	iceRestarts   int
 }
 
 // call is an actor: all fields below ops are only touched by run().
@@ -212,6 +214,7 @@ func (c *call) dropLeg(l *leg) {
 
 // offer creates (or reuses) the leg's peer and sends call.offer when ready.
 func (c *call) offer(l *leg, codecs []codec.Codec, iceRestart bool) {
+	l.offerInFlight = true
 	l.offerGen++
 	gen := l.offerGen
 	existing := l.peer
@@ -247,6 +250,9 @@ func (c *call) offer(l *leg, codecs []codec.Codec, iceRestart bool) {
 }
 
 func (c *call) onOfferReady(l *leg, gen int, created Peer, peerGen int, sdp string, err error) {
+	if l.offerGen == gen {
+		l.offerInFlight = false
+	}
 	stale := c.phase == phaseEnded || c.legs[l.deviceID] != l || l.offerGen != gen
 	if stale {
 		if created != nil {
@@ -265,8 +271,13 @@ func (c *call) onOfferReady(l *leg, gen int, created Peer, peerGen int, sdp stri
 		return
 	}
 	l.answered = false
+	l.lastOffer = sdp
+	c.sendOffer(l, sdp)
+}
+
+// sendOffer sends call.offer and, for a re-attached device, the current state.
+func (c *call) sendOffer(l *leg, sdp string) {
 	c.send(l.conn, protocol.TypeCallOffer, protocol.CallOffer{CallID: c.id, SDP: sdp, ICEServers: c.m.opts.ICEServers})
-	// A re-attached device needs to learn the current state again.
 	if c.lastState != "" && (c.phase == phaseConnected || c.dir == directionOutgoing) {
 		c.sendState(l.conn, c.lastState)
 	}
@@ -289,6 +300,11 @@ func (c *call) onAnswer(conn DeviceConn, sdp string) {
 	l := c.legs[conn.DeviceID()]
 	if l == nil || l.conn != conn || l.peer == nil {
 		sendError(conn, protocol.ErrorBadRequest, "no offer pending for this device", c.id)
+		return
+	}
+	if l.answered {
+		// Duplicate answer to a re-sent offer (repeated call.attach).
+		c.log.Debug("ignoring answer for already answered offer", "device", l.deviceID)
 		return
 	}
 	if err := l.peer.SetAnswer(sdp); err != nil {
@@ -397,9 +413,9 @@ func (c *call) onDisconnect(conn DeviceConn) {
 	}
 	active := c.dir == directionOutgoing || id == c.acceptedBy
 	if !active {
-		// Ringing device lost its connection: it may attach again.
-		c.dropLeg(l)
-		c.notified[id] = true
+		// Ringing device lost its connection. Keep its PeerConnection: when
+		// it attaches again it gets an ICE-restart offer on the same one.
+		l.conn = nil
 		return
 	}
 	c.log.Info("active device detached, waiting for re-attach", "device", id, "timeout", c.m.opts.ReattachTimeout)

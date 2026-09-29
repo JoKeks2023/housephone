@@ -338,7 +338,7 @@ func TestIncomingReattachWithICERestart(t *testing.T) {
 	a2 := newFakeConn("dev-a")
 	h.m.DeviceConnected(a2)
 	h.send(a2, protocol.TypeCallAttach, protocol.CallAttach{CallID: inc.CallID})
-	a2.expect(t, protocol.TypeCallIncoming, nil)
+	// Connected: no call.incoming, only the restart offer and the state.
 	var offer protocol.CallOffer
 	a2.expect(t, protocol.TypeCallOffer, &offer)
 	if !strings.Contains(offer.SDP, "restart=true") {
@@ -570,4 +570,109 @@ func TestShutdownEndsCalls(t *testing.T) {
 	h.m.Shutdown(ctx)
 	sip.expectEvent(t, "503")
 	waitClosed(t, done, "HandleIncoming")
+}
+
+func TestIncomingDoubleAttachReusesPeerAndResendsPendingOffer(t *testing.T) {
+	h := newHarness(t, device("dev-a", ""))
+	a := newFakeConn("dev-a")
+	h.m.DeviceConnected(a)
+	sip := newFakeSIPIn("123", codec.G722)
+	done := h.incoming(sip)
+	sip.expectEvent(t, "180")
+	var inc protocol.CallIncoming
+	a.expect(t, protocol.TypeCallIncoming, &inc) // unsolicited notification, no offer yet
+	a.expectNothing(t)
+
+	h.send(a, protocol.TypeCallAttach, protocol.CallAttach{CallID: inc.CallID})
+	a.expect(t, protocol.TypeCallIncoming, nil)
+	var first protocol.CallOffer
+	a.expect(t, protocol.TypeCallOffer, &first)
+
+	// Same connection attaches again before answering: same offer again.
+	h.send(a, protocol.TypeCallAttach, protocol.CallAttach{CallID: inc.CallID})
+	a.expect(t, protocol.TypeCallIncoming, nil)
+	var second protocol.CallOffer
+	a.expect(t, protocol.TypeCallOffer, &second)
+	if second.SDP != first.SDP {
+		t.Fatalf("pending offer must be resent unchanged:\n%s\n%s", first.SDP, second.SDP)
+	}
+	// Both answers arrive; the duplicate is ignored without error.
+	h.send(a, protocol.TypeCallAnswer, protocol.CallAnswer{CallID: inc.CallID, SDP: "x"})
+	h.send(a, protocol.TypeCallAnswer, protocol.CallAnswer{CallID: inc.CallID, SDP: "x"})
+	a.expectNothing(t)
+
+	// Attach once more after answering: ICE restart on the same peer.
+	h.send(a, protocol.TypeCallAttach, protocol.CallAttach{CallID: inc.CallID})
+	a.expect(t, protocol.TypeCallIncoming, nil)
+	var third protocol.CallOffer
+	a.expect(t, protocol.TypeCallOffer, &third)
+	if !strings.Contains(third.SDP, "restart=true") {
+		t.Fatalf("expected ICE restart offer, got %s", third.SDP)
+	}
+	h.peers.mu.Lock()
+	peers := len(h.peers.peers)
+	h.peers.mu.Unlock()
+	if peers != 1 {
+		t.Fatalf("repeated attach created %d PeerConnections", peers)
+	}
+
+	h.send(a, protocol.TypeCallAnswer, protocol.CallAnswer{CallID: inc.CallID, SDP: "y"})
+	h.send(a, protocol.TypeCallAccept, protocol.CallAccept{CallID: inc.CallID})
+	sip.expectEvent(t, "200")
+	a.expect(t, protocol.TypeCallState, nil)
+	sip.remoteEnd(SIPEndRemoteHangup)
+	a.expectEnded(t, protocol.EndReasonRemoteHangup)
+	waitClosed(t, done, "HandleIncoming")
+}
+
+func TestIncomingRingingReconnectKeepsPeer(t *testing.T) {
+	h := newHarness(t, device("dev-a", "tok"))
+	sip := newFakeSIPIn("123", codec.G722)
+	done := h.incoming(sip)
+	sip.expectEvent(t, "180")
+	push := h.expectPush(t)
+
+	a := newFakeConn("dev-a")
+	h.m.DeviceConnected(a)
+	h.attachAndAnswer(t, a, push.CallID, "x")
+
+	// The WebSocket drops while ringing and comes back.
+	h.m.DeviceDisconnected(a)
+	a2 := newFakeConn("dev-a")
+	h.m.DeviceConnected(a2)
+	h.send(a2, protocol.TypeCallAttach, protocol.CallAttach{CallID: push.CallID})
+	a2.expect(t, protocol.TypeCallIncoming, nil)
+	var offer protocol.CallOffer
+	a2.expect(t, protocol.TypeCallOffer, &offer)
+	if !strings.Contains(offer.SDP, "restart=true") {
+		t.Fatalf("expected ICE restart on the existing peer: %s", offer.SDP)
+	}
+	if h.peers.peer(t, 0).isClosed() {
+		t.Fatal("peer was closed on disconnect")
+	}
+	sip.remoteEnd(SIPEndCancelled)
+	a2.expectEnded(t, protocol.EndReasonRemoteCancelled)
+	waitClosed(t, done, "HandleIncoming")
+}
+
+func TestOutgoingReattachBeforeAnswerResendsOffer(t *testing.T) {
+	h := newHarness(t)
+	h.sip.dial = func(ctx context.Context, number string, c codec.Codec, ev DialEvents) (OutgoingSIPCall, SIPMedia, error) {
+		<-ctx.Done()
+		return nil, nil, ctx.Err()
+	}
+	a := newFakeConn("dev-a")
+	h.m.DeviceConnected(a)
+	callID := uuid.NewString()
+	h.send(a, protocol.TypeCallDial, protocol.CallDial{CallID: callID, Number: "123"})
+	var first protocol.CallOffer
+	a.expect(t, protocol.TypeCallOffer, &first)
+	h.send(a, protocol.TypeCallAttach, protocol.CallAttach{CallID: callID})
+	var again protocol.CallOffer
+	a.expect(t, protocol.TypeCallOffer, &again)
+	if again.SDP != first.SDP {
+		t.Fatal("unanswered offer must be resent unchanged")
+	}
+	h.send(a, protocol.TypeCallHangup, protocol.CallHangup{CallID: callID})
+	a.expectEnded(t, protocol.EndReasonLocalHangup)
 }

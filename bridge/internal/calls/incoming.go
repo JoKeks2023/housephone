@@ -25,13 +25,14 @@ func (c *call) onAttach(conn DeviceConn) {
 	case phaseRinging:
 		delete(c.notified, id)
 		delete(c.informed, id)
-		if old := c.legs[id]; old != nil {
-			c.dropLeg(old)
+		l := c.legs[id]
+		if l == nil {
+			l = &leg{deviceID: id}
+			c.legs[id] = l
 		}
-		l := &leg{deviceID: id, conn: conn}
-		c.legs[id] = l
+		l.conn = conn
 		conn.Send(c.incomingEnvelope())
-		c.offer(l, c.peerCodecs(), false)
+		c.reoffer(l)
 	case phaseAnswering, phaseConnected:
 		if id != c.acceptedBy {
 			c.sendEnded(id, conn, protocol.EndReasonAnsweredElsewhere, 0)
@@ -46,8 +47,24 @@ func (c *call) onAttach(conn DeviceConn) {
 		l.conn = conn
 		l.iceRestarts = 0
 		c.stopReattachTimer()
-		conn.Send(c.incomingEnvelope())
-		c.offer(l, c.peerCodecs(), l.peer != nil && l.answered)
+		c.reoffer(l)
+	}
+}
+
+// reoffer answers a (repeated) call.attach. call.attach is idempotent and
+// never creates a second PeerConnection for the same device:
+//   - an offer still being created is delivered to the current connection,
+//   - an offer that was sent but not answered yet is sent again unchanged
+//     (same ICE credentials, so either answer matches),
+//   - an answered PeerConnection is re-offered with an ICE restart (same
+//     DTLS fingerprint).
+func (c *call) reoffer(l *leg) {
+	switch {
+	case l.offerInFlight:
+	case l.peer != nil && !l.answered && l.lastOffer != "":
+		c.sendOffer(l, l.lastOffer)
+	default:
+		c.offer(l, c.peerCodecs(), l.peer != nil)
 	}
 }
 
