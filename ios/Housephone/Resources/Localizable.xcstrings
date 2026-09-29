@@ -1341,6 +1341,26 @@
           }
         }
       }
+    },
+    "Danach klingeln dieses iPhone und deine Apple Watch nicht mehr. Du kannst beide jederzeit neu koppeln.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This iPhone and your Apple Watch will no longer ring. You can pair both again at any time."
+          }
+        }
+      }
+    },
+    "Die Zugangsdaten werden von diesem iPhone gelöscht. Deine Apple Watch wird ebenfalls entkoppelt.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The credentials will be removed from this iPhone. Your Apple Watch will be unpaired as well."
+          }
+        }
+      }
     }
   }
 }

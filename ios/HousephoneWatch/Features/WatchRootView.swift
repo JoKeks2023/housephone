@@ -89,6 +89,8 @@ struct WatchHomeView: View {
     @Environment(WatchCallCenter.self) private var callCenter
     @Environment(RecentCalls.self) private var recents
     @State private var microphone = AVAudioApplication.shared.recordPermission
+    @State private var confirmsUnpair = false
+    @State private var isUnpairing = false
 
     var body: some View {
         List {
@@ -129,8 +131,38 @@ struct WatchHomeView: View {
                     }
                 }
             }
+
+            Section {
+                Button(role: .destructive) {
+                    confirmsUnpair = true
+                } label: {
+                    if isUnpairing {
+                        HStack(spacing: WatchTheme.Space.s2) {
+                            ProgressView()
+                            Text("Wird entkoppelt …")
+                        }
+                    } else {
+                        Label("Kopplung aufheben", systemImage: "link.badge.minus")
+                    }
+                }
+                .disabled(isUnpairing || callCenter.hasActiveCall)
+            } footer: {
+                Text("Danach klingelt diese Watch nicht mehr. Du kannst sie jederzeit über das iPhone neu koppeln.")
+            }
         }
         .navigationTitle(bridge.bridgeName ?? String(localized: "Housephone"))
+        .confirmationDialog("Kopplung aufheben?", isPresented: $confirmsUnpair, titleVisibility: .visible) {
+            Button("Kopplung aufheben", role: .destructive) {
+                isUnpairing = true
+                Task {
+                    await bridge.unpair()
+                    isUnpairing = false
+                }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Die Zugangsdaten werden von dieser Watch gelöscht.")
+        }
         .onAppear {
             microphone = AVAudioApplication.shared.recordPermission
         }

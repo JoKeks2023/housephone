@@ -71,6 +71,13 @@ Unter **Einstellungen → Apple Watch** steht danach **Gekoppelt** (grün). Auf 
 
 Die Uhr spricht mit der Bridge nur über den Cloudflare Tunnel – ohne zusätzliche Portfreigabe. Der Ton läuft während eines Anrufs über dieselbe verschlüsselte Verbindung (G.711, Schmalband).
 
+### Entkoppeln
+
+- **iPhone:** Bei **Einstellungen → Kopplung aufheben** wird die Apple Watch mit entkoppelt.
+  - Ist Housephone auf der Uhr gerade nicht offen, passiert das beim nächsten Start der Uhr-App, spätestens beim nächsten Anruf.
+  - Koppelst du die Uhr vorher neu, verfällt der alte Entkoppel-Auftrag.
+- **Nur die Uhr:** Auf der Watch-Startseite ganz unten **Kopplung aufheben**. Das iPhone bleibt gekoppelt.
+
 ## 4. Ausprobieren
 
 - [ ] **Ausgehend (WLAN):** Nummer im Tastenfeld wählen → Freiton → Gespräch → Auflegen.
@@ -85,6 +92,9 @@ Die Uhr spricht mit der Bridge nur über den Cloudflare Tunnel – ohne zusätzl
 - [ ] **Ohne iPhone:** iPhone ausschalten oder außer Reichweite, Watch im WLAN oder mit LTE → Festnetz anrufen → Watch klingelt → Gespräch.
 - [ ] **Ausgehend:** Auf der Watch **Wählen** → Nummer → grüner Hörer → Freiton → Gespräch → Auflegen.
 - [ ] **Lautstärke:** Während des Gesprächs die Digital Crown drehen.
+- [ ] **Woanders angenommen:** Festnetz anrufen → Watch klingelt → am iPhone oder am Schnurlostelefon annehmen → die Watch hört nach spätestens 2–3 s auf zu klingeln.
+- [ ] **Anrufer legt auf:** Festnetz anrufen → Watch klingelt → Anrufer legt vor dem Annehmen auf → die Watch hört auf zu klingeln und zeigt den Anruf als verpasst.
+- [ ] **Entkoppeln:** Auf dem iPhone *Kopplung aufheben* → iPhone und Watch zeigen den Kopplungshinweis; Festnetzanrufe klingeln auf keinem der beiden mehr.
 
 ## 5. Wenn etwas nicht klappt
 
@@ -105,3 +115,4 @@ Die Uhr spricht mit der Bridge nur über den Cloudflare Tunnel – ohne zusätzl
 | Watch zeigt „Wartet auf Push-Freigabe“ | Die Uhr hat noch kein VoIP-Token. Watch-App einmal öffnen; *Push Notifications* für `com.jorisconrad.housephone.watchkitapp` prüfen |
 | Watch zeigt „Bridge nicht erreichbar“ | Die Uhr erreicht `phone.<deine-domain>` nicht. Sie versucht es automatisch erneut, auch beim nächsten Öffnen der App |
 | Watch klingelt, Annehmen endet mit „Fehlgeschlagen“ | Die Uhr konnte in 10 s keine Verbindung aufbauen. Logs der Bridge (`call.media`) und der Uhr (`calls`) prüfen |
+| Watch klingelt weiter, obwohl woanders angenommen | Die Uhr fragt beim Klingeln alle 2 s `GET /v1/calls/{id}` ab. Erreicht sie die Bridge nicht (Log `Call status unavailable` in der Kategorie `bridge`), hört sie erst nach 60 s auf |

@@ -3,8 +3,9 @@ import HousephoneKit
 import os
 import WatchConnectivity
 
-/// The watch side of WatchConnectivity: receives pairing codes from the
-/// iPhone and keeps the iPhone informed about the watch's pairing state.
+/// The watch side of WatchConnectivity: receives pairing codes and unpair
+/// instructions from the iPhone and keeps the iPhone informed about the
+/// watch's pairing state.
 @MainActor
 final class PhoneLink: NSObject {
     private let bridge: WatchBridge
@@ -40,6 +41,13 @@ final class PhoneLink: NSObject {
             reply?.send(state.dictionary)
         }
     }
+
+    fileprivate func handle(_ instruction: CompanionUnpairInstruction, reply: UncheckedReply?) {
+        Task {
+            await bridge.unpair(following: instruction)
+            reply?.send(bridge.pairingState.dictionary)
+        }
+    }
 }
 
 /// A WatchConnectivity reply handler, which is safe to call from any thread.
@@ -58,16 +66,21 @@ extension PhoneLink: WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
-        guard let instruction = CompanionPairingInstruction(dictionary: message) else {
-            replyHandler([:])
-            return
-        }
         let reply = UncheckedReply(handler: replyHandler)
-        Task { @MainActor in self.handle(instruction, reply: reply) }
+        if let instruction = CompanionPairingInstruction(dictionary: message) {
+            Task { @MainActor in self.handle(instruction, reply: reply) }
+        } else if let instruction = CompanionUnpairInstruction(dictionary: message) {
+            Task { @MainActor in self.handle(instruction, reply: reply) }
+        } else {
+            replyHandler([:])
+        }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        guard let instruction = CompanionPairingInstruction(dictionary: userInfo) else { return }
-        Task { @MainActor in self.handle(instruction, reply: nil) }
+        if let instruction = CompanionPairingInstruction(dictionary: userInfo) {
+            Task { @MainActor in self.handle(instruction, reply: nil) }
+        } else if let instruction = CompanionUnpairInstruction(dictionary: userInfo) {
+            Task { @MainActor in self.handle(instruction, reply: nil) }
+        }
     }
 }
