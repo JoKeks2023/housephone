@@ -2,6 +2,7 @@ import Foundation
 import HousephoneKit
 import NetworkExtension
 import os
+import Security
 
 /// Local Push Connectivity for the mode without bridge (ADR-0005): while
 /// the iPhone is on the home Wi-Fi (`matchSSIDs`), iOS keeps this

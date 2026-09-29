@@ -99,12 +99,12 @@ final class FritzBoxData {
         }
     }
 
-    nonisolated static func message(for error: TR064Error) -> String {
-        switch error {
+    nonisolated static func message(for error: any Error) -> String {
+        switch error as? TR064Error {
         case .unreachable: String(localized: "Die FRITZ!Box antwortet nicht. Bist du im Heim-WLAN?")
         case .authentication: String(localized: "Die FRITZ!Box hat die Anmeldung abgelehnt. Prüfe Benutzer und Kennwort für TR-064.")
         case .unsupported: String(localized: "Die FRITZ!Box bietet diese Funktion nicht an.")
-        case .invalidResponse: String(localized: "Die FRITZ!Box hat unerwartet geantwortet.")
+        case .invalidResponse, nil: String(localized: "Die FRITZ!Box hat unerwartet geantwortet.")
         }
     }
 
