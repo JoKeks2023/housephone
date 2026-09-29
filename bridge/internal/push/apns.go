@@ -91,7 +91,12 @@ func (a *APNs) PushIncomingCall(ctx context.Context, dev store.Device, payload p
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("Authorization", "bearer "+a.token.GenerateIfExpired())
-	req.Header.Set("apns-topic", a.topic)
+	topic := a.topic
+	if dev.PushTopic != "" {
+		// Per-device topic (v1.1), e.g. the watch app. Validated when stored.
+		topic = dev.PushTopic
+	}
+	req.Header.Set("apns-topic", topic)
 	req.Header.Set("apns-push-type", string(apns2.PushTypeVOIP))
 	req.Header.Set("apns-priority", "10")
 	req.Header.Set("apns-expiration", "0")
