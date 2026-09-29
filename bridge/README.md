@@ -37,7 +37,7 @@ FRITZ!Box ◄─SIP/RTP (LAN)─► Bridge ◄── WSS (Cloudflare Tunnel) ─
 
 Mehr muss nicht offen sein. SIP (5060/5062) bleibt im LAN.
 
-Die Bridge ermittelt ihre öffentliche IPv4 automatisch per STUN. Alternativ kannst du `media.publicIp` oder `media.publicHost` (z. B. deine MyFRITZ!-Adresse) setzen.
+Die Bridge ermittelt ihre öffentliche IPv4 automatisch: Sie fragt alle 30 s die FRITZ!Box per UPnP. Ein IP-Wechsel bei dynamischer IP fällt so sofort auf, ohne Internet-Abfrage. Antwortet die Box nicht (UPnP-Statusinformationen aus), nimmt sie STUN, höchstens alle 10 min. Alternativ kannst du `media.publicIp` (feste IP) oder `media.publicHost` (z. B. deine MyFRITZ!-Adresse) setzen.
 
 ## 3. APNs-Key erstellen
 
@@ -127,6 +127,7 @@ Sichere diesen Ordner. Verlierst du ihn, müssen alle Geräte neu gekoppelt werd
 | Kein Ton zu Hause | Server und iPhone müssen sich im LAN erreichen (kein Gast-WLAN, keine Client-Isolation). |
 | `rejecting INVITE from unexpected source` | Die FRITZ!Box meldet sich von einer anderen IP als `sip.registrar` → dort die tatsächliche IP eintragen. |
 | `no public IP configured` | STUN nicht erreichbar → `media.publicIp`/`publicHost` setzen. |
+| `FRITZ!Box does not report its external IP via UPnP` | In der FRITZ!Box **Heimnetz → Netzwerk → Netzwerkeinstellungen → „Statusinformationen über UPnP übertragen“** einschalten. Bis dahin arbeitet die Bridge mit STUN. |
 | Watch klingelt nicht | Log `push failed … DeviceTokenNotForTopic` = Topic der Watch passt nicht zum Token. Die Watch-App einmal öffnen, dann meldet sie Token und Topic neu. `not ringing websocket-pcma device` = der Anruf bot kein PCMA an. |
 | Watch-Gespräch stockt | Der Ton der Watch läuft über TCP (Tunnel). Die Bridge puffert höchstens 200 ms und verwirft ältere Rahmen. Bei schlechtem Netz lieber am iPhone annehmen. |
 

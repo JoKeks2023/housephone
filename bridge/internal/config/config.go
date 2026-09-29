@@ -77,9 +77,14 @@ type Media struct {
 	PublicIP string `yaml:"publicIp"`
 	// PublicHost is resolved periodically (e.g. a MyFRITZ! or DynDNS name).
 	PublicHost string `yaml:"publicHost"`
-	// DetectPublicIP asks a STUN server for the public IP when neither
-	// PublicIP nor PublicHost is set.
+	// DetectPublicIP finds the public IP automatically when neither PublicIP
+	// nor PublicHost is set: from the FRITZ!Box (see PublicIPFromRouter),
+	// otherwise via STUN.
 	DetectPublicIP bool `yaml:"detectPublicIp"`
+	// PublicIPFromRouter asks the FRITZ!Box at sip.registrar for its external
+	// IPv4 via UPnP every 30 s, so a changing IP is noticed within seconds.
+	// STUN is the fallback.
+	PublicIPFromRouter bool `yaml:"publicIpFromRouter"`
 	// STUN servers handed to devices and used for public IP detection.
 	STUN []string `yaml:"stun"`
 	// Interfaces optionally restricts ICE host candidates to these interface
@@ -124,9 +129,10 @@ func Default() Config {
 			RegisterExpirySeconds: 300,
 		},
 		Media: Media{
-			UDPPort:        50000,
-			DetectPublicIP: true,
-			STUN:           []string{"stun:stun.cloudflare.com:3478"},
+			UDPPort:            50000,
+			DetectPublicIP:     true,
+			PublicIPFromRouter: true,
+			STUN:               []string{"stun:stun.cloudflare.com:3478"},
 		},
 		APNs: APNs{
 			TeamID: "T9CA6D7T8N",
