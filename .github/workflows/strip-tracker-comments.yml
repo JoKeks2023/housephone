@@ -1,0 +1,22 @@
+name: Strip tracker bot comments
+
+# The Huly GitHub integration posts guest links with access tokens on every
+# PR. The repo is public, so those comments are removed as soon as they appear.
+on:
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  strip:
+    if: contains(github.event.comment.user.login, 'huly') && github.event.comment.user.type == 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Delete comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X DELETE "repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}"
