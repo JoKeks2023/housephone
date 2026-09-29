@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -32,6 +33,9 @@ type Hub interface {
 	SIPRegistered() bool
 	// CallStatus answers GET /v1/calls/{callId} for one device (v1.1).
 	CallStatus(deviceID, callID string) (protocol.CallStatus, bool)
+	// DeviceRevoked ends the calls of a device that was removed while it
+	// was connected.
+	DeviceRevoked(calls.DeviceConn)
 }
 
 // Directory serves the FRITZ!Box phonebook and call list (v1.2,
@@ -64,7 +68,10 @@ type Config struct {
 
 	PingInterval     time.Duration
 	FirstMessageWait time.Duration
-	Now              func() time.Time
+	// RevalidateInterval is how often an open connection checks that its
+	// device is still paired (devices remove takes effect within it).
+	RevalidateInterval time.Duration
+	Now                func() time.Time
 }
 
 // Limits.
@@ -75,6 +82,8 @@ const (
 	closeGrace         = time.Second
 	maxDeviceNameRunes = 64
 	maxPushTokenLength = 200
+	// companionCodesPerHour bounds pair.companion.request per device.
+	companionCodesPerHour = 5
 )
 
 // Server is the HTTP handler for /v1/*.
@@ -82,6 +91,8 @@ type Server struct {
 	cfg     Config
 	log     *slog.Logger
 	limiter *rateLimiter
+	// companions limits pair.companion.request per device ID.
+	companions *rateLimiter
 
 	mu       sync.Mutex
 	sessions map[string]*session
@@ -96,6 +107,9 @@ func New(cfg Config) *Server {
 	if cfg.FirstMessageWait == 0 {
 		cfg.FirstMessageWait = 10 * time.Second
 	}
+	if cfg.RevalidateInterval == 0 {
+		cfg.RevalidateInterval = 10 * time.Second
+	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
@@ -103,10 +117,11 @@ func New(cfg Config) *Server {
 		cfg.Logger = slog.Default()
 	}
 	return &Server{
-		cfg:      cfg,
-		log:      cfg.Logger.With("component", "signaling"),
-		limiter:  newRateLimiter(5, time.Minute, cfg.Now),
-		sessions: map[string]*session{},
+		cfg:        cfg,
+		log:        cfg.Logger.With("component", "signaling"),
+		limiter:    newRateLimiter(5, time.Minute, cfg.Now),
+		companions: newRateLimiter(companionCodesPerHour, time.Hour, cfg.Now),
+		sessions:   map[string]*session{},
 	}
 }
 
@@ -284,6 +299,9 @@ func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.Pai
 	}
 	now := s.cfg.Now()
 	pc, err := s.cfg.Pairing.Consume(p.Code, now)
+	if err == nil {
+		err = s.checkCompanionCode(pc, p.Platform)
+	}
 	if err != nil {
 		s.limiter.fail(ip)
 		s.log.Warn("pairing failed", "ip", ip, "error", err)
@@ -310,6 +328,7 @@ func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.Pai
 		Platform:   p.Platform,
 		Model:      truncateRunes(p.Model, maxDeviceNameRunes),
 		SecretHash: auth.HashSecret(secret),
+		PairedBy:   pc.ParentID,
 		CreatedAt:  now.UTC(),
 	}
 	if err := s.cfg.Devices.Add(dev); err != nil {
@@ -323,6 +342,25 @@ func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.Pai
 		BridgeID:     s.cfg.BridgeID,
 		BridgeName:   s.cfg.BridgeName,
 	}, nil
+}
+
+// checkCompanionCode enforces the restrictions of a companion code: only its
+// platform may use it, and the device that requested it must still be
+// paired, so a code requested just before that device was removed is void.
+func (s *Server) checkCompanionCode(pc store.PairingCode, platform string) error {
+	if pc.Platform != "" && pc.Platform != platform {
+		return fmt.Errorf("%w: code is for platform %s", store.ErrPairingInvalid, pc.Platform)
+	}
+	if pc.ParentID == "" {
+		return nil
+	}
+	if _, err := s.cfg.Devices.Get(pc.ParentID); err != nil {
+		if errors.Is(err, store.ErrDeviceNotFound) {
+			return fmt.Errorf("%w: requesting device was removed", store.ErrPairingInvalid)
+		}
+		return err
+	}
+	return nil
 }
 
 func validPlatform(p string) bool {

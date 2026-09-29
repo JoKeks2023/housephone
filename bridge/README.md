@@ -94,6 +94,8 @@ Für die Watch musst du auf dem Server und an der FRITZ!Box nichts einrichten:
 
 - **Keine neue Portfreigabe:** Die Watch hat kein WebRTC. Ihr Ton läuft als A-law (8 kHz) in 20-ms-Rahmen über dieselbe WebSocket-Verbindung wie die Signalisierung, also durch den Cloudflare Tunnel. Die UDP-Freigabe 50000 braucht nur das iPhone.
 - **Koppeln:** Die Watch wird über das gekoppelte iPhone gekoppelt (**Einstellungen → Apple Watch koppeln**). Das iPhone holt dafür einen frischen Code bei der Bridge und gibt ihn an die Uhr weiter. Die Uhr meldet sich danach selbst per HTTPS an (`POST /v1/pair`, `PUT /v1/device`).
+  - Der Code gilt nur für eine Watch und nur, solange das iPhone gekoppelt ist. `devices list` zeigt in der Spalte „ÜBER“, über welches iPhone eine Watch gekoppelt wurde.
+  - Entfernst du ein verlorenes iPhone, entfernt `devices remove` dessen Watches automatisch mit: Sie wurden mit den Zugangsdaten des iPhones gekoppelt und gelten deshalb als mitbetroffen.
   - watchOS erlaubt WebSocket nur während eines Anrufs. Die Uhr öffnet sie deshalb erst, wenn der VoIP-Push kommt.
 - **Push:** Die Watch-App hat ein eigenes APNs-Topic (`com.jorisconrad.housephone.watchkitapp.voip`). Derselbe APNs-Key aus Schritt 3 gilt für alle Apps deines Teams.
   - Die Bridge akzeptiert nur Topics, die mit dem Bundle aus `apns.topic` beginnen (hier `com.jorisconrad.housephone.`) und auf `.voip` enden.
@@ -138,7 +140,7 @@ Technik:
 | Aufgabe | Befehl |
 |---|---|
 | Geräte anzeigen | `housephone-bridge devices list` |
-| Gerät entfernen | `housephone-bridge devices remove <id>` |
+| Gerät entfernen | `housephone-bridge devices remove <id>` – entfernt auch die Watches, die über dieses iPhone gekoppelt wurden (`-keep-companions` behält sie). Verbundene Geräte trennt die laufende Bridge innerhalb von 10 s. |
 | Version | `housephone-bridge version` |
 | Mehr Logs | `log.level: debug` bzw. `HOUSEPHONE_LOG_LEVEL=debug` |
 

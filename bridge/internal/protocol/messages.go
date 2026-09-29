@@ -122,6 +122,9 @@ const (
 	// CloseReplaced is used when a newer connection of the same device
 	// replaces this one.
 	CloseReplaced = 4001
+	// CloseRevoked is used when the device was removed at the bridge
+	// (devices remove) while it was connected.
+	CloseRevoked = 4003
 )
 
 // Envelope is a single WebSocket text message.

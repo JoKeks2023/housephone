@@ -163,6 +163,17 @@ func (c *call) onAnswered(media SIPMedia, err error) {
 }
 
 // onHangup handles call.hangup from a device.
+// onRevoked handles a device removed while connected: if it takes part in
+// the call, it hangs up (decline while ringing, BYE if it is active).
+func (c *call) onRevoked(conn DeviceConn) {
+	id := conn.DeviceID()
+	if c.phase == phaseEnded || (c.legs[id] == nil && !c.notified[id] && c.informed[id] == nil && c.acceptedBy != id) {
+		return
+	}
+	c.log.Info("device removed during call, hanging up for it", "device", id)
+	c.onHangup(conn, protocol.HangupReasonHangup)
+}
+
 func (c *call) onHangup(conn DeviceConn, reason string) {
 	if c.dir == directionOutgoing {
 		c.onHangupOutgoing(conn)

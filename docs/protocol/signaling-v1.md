@@ -24,6 +24,7 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`: iPhone-App
 - Bei ungültigem Token antwortet die Bridge mit HTTP `401`; es findet kein Upgrade statt.
 - Ohne Header ist nur `pair` erlaubt. Jede andere Nachricht → `error{code:"unauthorized"}`, danach wird die Verbindung geschlossen.
 - Pro Gerät ist höchstens **eine** Verbindung aktiv. Eine neue Verbindung desselben Geräts schließt die alte mit Close-Code `4001` („replaced“).
+- Wird ein Gerät auf der Bridge entfernt (`housephone-bridge devices remove`), während es verbunden ist, schließt die Bridge die Verbindung spätestens nach 10 s mit Close-Code `4003` („revoked“) und beendet die Anrufe des Geräts wie bei `call.hangup`. Zustandsändernde Nachrichten (`call.*`, `device.update`, `pair.companion.request`) eines entfernten Geräts werden nicht mehr ausgeführt.
 
 ## Nachrichtenformat
 
@@ -252,11 +253,14 @@ Eine klingelnde Watch hat evtl. noch keine WebSocket-Verbindung und erfährt so 
 
 | type | Richtung | payload |
 |---|---|---|
-| `pair.companion.request` | Gerät → Bridge | `{deviceName, platform}`, `platform` ist in der Regel `"watchos"` |
+| `pair.companion.request` | Gerät → Bridge | `{deviceName, platform}`, `platform` muss `"watchos"` sein |
 | `pair.companion` | Bridge → Gerät | `{code, url, expiresAt}` |
 
-- Nur ein bereits gekoppeltes Gerät darf einen Code anfordern.
+- Nur ein bereits gekoppeltes **iPhone** (`platform: ios` bei der Kopplung) darf einen Code anfordern, und nur für eine Watch; sonst `error{bad_request}`.
 - Der Code folgt denselben Regeln wie `housephone-bridge pair`: 10 Minuten gültig, einmalig. `deviceName` wird wie `pair -name` behandelt.
+- Pro iPhone gibt es höchstens **einen** offenen Code; ein neuer ersetzt den alten. Höchstens 5 Codes pro Stunde und iPhone, danach `error{pairing_rate_limited}`.
+- Der Code koppelt nur ein Gerät mit `platform: watchos`, und nur solange das anfordernde iPhone noch gekoppelt ist; sonst `pairing_invalid` (der Code ist damit verbraucht).
+- Die Bridge merkt sich, über welches iPhone eine Watch gekoppelt wurde. `devices remove` für das iPhone entfernt dessen Watches mit.
 - Das iPhone gibt `{url, code}` per WatchConnectivity an die Watch weiter. Die Watch koppelt sich per `POST /v1/pair`.
 
 ### Medien über WebSocket (`websocket-pcma`)

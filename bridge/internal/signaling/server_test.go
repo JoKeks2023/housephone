@@ -27,6 +27,7 @@ type fakeHub struct {
 	gone      chan calls.DeviceConn
 	// statuses: CallStatus answers keyed by "<deviceID>/<callID>".
 	statuses map[string]protocol.CallStatus
+	revoked  []string
 }
 
 func newFakeHub() *fakeHub {
@@ -43,6 +44,11 @@ func (h *fakeHub) HandleDeviceMessage(c calls.DeviceConn, env protocol.Envelope)
 	h.messages <- env
 }
 func (h *fakeHub) SIPRegistered() bool { return true }
+func (h *fakeHub) DeviceRevoked(c calls.DeviceConn) {
+	h.mu.Lock()
+	h.revoked = append(h.revoked, c.DeviceID())
+	h.mu.Unlock()
+}
 func (h *fakeHub) CallStatus(deviceID, callID string) (protocol.CallStatus, bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -67,11 +73,11 @@ type testServer struct {
 	pairing *store.Pairing
 }
 
-func newTestServer(t *testing.T) *testServer {
+func newTestServer(t *testing.T, opts ...func(*Config)) *testServer {
 	t.Helper()
 	dir := t.TempDir()
 	ts := &testServer{hub: newFakeHub(), devices: store.NewDevices(dir), pairing: store.NewPairing(dir)}
-	ts.srv = New(Config{
+	cfg := Config{
 		BridgeID: "bridge-1", BridgeName: "Zuhause", BridgeVersion: "test",
 		PublicURL:         testPublicURL,
 		PushTopic:         "com.jorisconrad.housephone.voip",
@@ -80,7 +86,11 @@ func newTestServer(t *testing.T) *testServer {
 		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
 		PingInterval:     200 * time.Millisecond,
 		FirstMessageWait: time.Second,
-	})
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	ts.srv = New(cfg)
 	ts.http = httptest.NewServer(ts.srv.Handler())
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

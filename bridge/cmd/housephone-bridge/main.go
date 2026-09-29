@@ -176,8 +176,12 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 			fmt.Fprintln(out, "Keine Geräte gekoppelt. Neues Gerät: housephone-bridge pair")
 			return nil
 		}
+		names := make(map[string]string, len(list))
+		for _, d := range list {
+			names[d.ID] = d.Name
+		}
 		tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(tw, "ID\tNAME\tPLATTFORM\tPUSH\tGEKOPPELT\tZULETZT GESEHEN")
+		fmt.Fprintln(tw, "ID\tNAME\tPLATTFORM\tPUSH\tGEKOPPELT\tÜBER\tZULETZT GESEHEN")
 		for _, d := range list {
 			pushInfo := "nein"
 			if d.PushToken != "" {
@@ -187,22 +191,67 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 			if !d.LastSeen.IsZero() {
 				lastSeen = d.LastSeen.Local().Format("02.01.2006 15:04")
 			}
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", d.ID, d.Name, d.Platform, pushInfo, d.CreatedAt.Local().Format("02.01.2006 15:04"), lastSeen)
+			via := "–"
+			if d.PairedBy != "" {
+				via = names[d.PairedBy]
+				if via == "" {
+					via = "entferntes Gerät " + d.PairedBy
+				}
+			}
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", d.ID, d.Name, d.Platform, pushInfo, d.CreatedAt.Local().Format("02.01.2006 15:04"), via, lastSeen)
 		}
 		return tw.Flush()
 	}
 	if args[0] == "remove" {
-		if len(args) != 2 {
-			return errors.New("usage: devices remove <device-id>")
-		}
-		if err := reg.Remove(args[1]); err != nil {
-			if errors.Is(err, store.ErrDeviceNotFound) {
-				return fmt.Errorf("gerät %s nicht gefunden", args[1])
-			}
-			return err
-		}
-		fmt.Fprintf(out, "Gerät %s entfernt. Eine bestehende Verbindung endet beim nächsten Verbindungsaufbau.\n", args[1])
-		return nil
+		return removeDevice(reg, store.NewPairing(cfg.Bridge.DataDir), args[1:], out)
 	}
 	return fmt.Errorf("unbekannter devices-Befehl %q (list|remove)", args[0])
+}
+
+// removeDevice removes a device and, unless -keep-companions is given, the
+// watches paired through it: they were paired with its credentials, so a
+// lost or compromised iPhone must not leave its watches behind. Open
+// companion codes of the device are dropped as well. Connected devices are
+// cut off by the running bridge within its revalidation interval (10 s).
+func removeDevice(reg *store.Devices, pairing *store.Pairing, args []string, out io.Writer) error {
+	fs := flag.NewFlagSet("devices remove", flag.ContinueOnError)
+	fs.SetOutput(out)
+	keep := fs.Bool("keep-companions", false, "über dieses Gerät gekoppelte Uhren behalten")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() != 1 {
+		return errors.New("usage: devices remove [-keep-companions] <device-id>")
+	}
+	id := fs.Arg(0)
+	dev, err := reg.Get(id)
+	if err != nil {
+		if errors.Is(err, store.ErrDeviceNotFound) {
+			return fmt.Errorf("gerät %s nicht gefunden", id)
+		}
+		return err
+	}
+	companions, err := reg.Companions(id)
+	if err != nil {
+		return err
+	}
+	if err := reg.Remove(id); err != nil && !errors.Is(err, store.ErrDeviceNotFound) {
+		return err
+	}
+	if err := pairing.RemoveByParent(id); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Gerät %s (%s) entfernt.\n", dev.ID, dev.Name)
+	for _, c := range companions {
+		if *keep {
+			fmt.Fprintf(out, "Behalten: %s (%s), gekoppelt über dieses Gerät.\n", c.ID, c.Name)
+			continue
+		}
+		if err := reg.Remove(c.ID); err != nil && !errors.Is(err, store.ErrDeviceNotFound) {
+			return err
+		}
+		fmt.Fprintf(out, "Ebenfalls entfernt: %s (%s), gekoppelt über dieses Gerät.\n", c.ID, c.Name)
+	}
+	fmt.Fprintln(out, "Offene Verbindungen trennt die laufende Bridge innerhalb von 10 s; laufende Anrufe dieser Geräte werden beendet.")
+	return nil
 }

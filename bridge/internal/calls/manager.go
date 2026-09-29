@@ -155,6 +155,18 @@ func (m *Manager) DeviceDisconnected(conn DeviceConn) {
 
 // usesWebSocketAudio reports whether the device takes calls over the
 // websocket-pcma media path (v1.1). Unknown devices use WebRTC.
+// DeviceRevoked ends a removed device's part in every call, as if it hung
+// up: a declined ringing call, a BYE/CANCEL where it is the active device.
+// It is called when the device was removed while still connected.
+func (m *Manager) DeviceRevoked(conn DeviceConn) {
+	m.mu.Lock()
+	calls := m.activeCallsLocked()
+	m.mu.Unlock()
+	for _, c := range calls {
+		c.do(func() { c.onRevoked(conn) })
+	}
+}
+
 func (m *Manager) usesWebSocketAudio(deviceID string) bool {
 	dev, err := m.opts.Devices.Get(deviceID)
 	return err == nil && dev.UsesWebSocketAudio()
