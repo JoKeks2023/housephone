@@ -1,0 +1,66 @@
+name: Bridge
+
+on:
+  push:
+    paths:
+      - "bridge/**"
+      - "docs/protocol/**"
+      - ".github/workflows/bridge.yml"
+  pull_request:
+    paths:
+      - "bridge/**"
+      - "docs/protocol/**"
+      - ".github/workflows/bridge.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bridge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: bridge
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: bridge/go.mod
+          cache-dependency-path: bridge/go.sum
+
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "Not gofmt-formatted:"; echo "$unformatted"; exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test -race
+        run: go test -race -count=1 ./...
+
+      # Excluded from -race because of an upstream data race in diago's
+      # early-media handling (see internal/sipleg/earlymedia_test.go).
+      - name: go test (early media, without -race)
+        run: go test -count=1 -run EarlyMedia ./internal/sipleg/
+
+      - name: go build
+        run: go build -trimpath -o bin/housephone-bridge ./cmd/housephone-bridge
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: docker build
+        run: docker build --build-arg VERSION=${{ github.sha }} -t housephone-bridge:ci bridge
+      - name: smoke test image
+        run: docker run --rm housephone-bridge:ci version
