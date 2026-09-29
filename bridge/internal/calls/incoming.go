@@ -23,6 +23,7 @@ func (c *call) onAttach(conn DeviceConn) {
 	}
 	switch c.phase {
 	case phaseRinging:
+		c.participants[id] = true
 		delete(c.notified, id)
 		delete(c.informed, id)
 		l := c.legs[id]

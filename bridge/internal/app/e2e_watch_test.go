@@ -274,6 +274,10 @@ func TestEndToEndWatchIncomingCall(t *testing.T) {
 	case <-time.After(wait):
 		t.Fatal("watch not pushed")
 	}
+	// While ringing, the watch can only use HTTPS.
+	if st := watch.callStatus(push.CallID); st.State != protocol.CallStatusRinging {
+		t.Fatalf("status while ringing %+v", st)
+	}
 	watch.connect()
 	watch.send(protocol.TypeCallAttach, protocol.CallAttach{CallID: push.CallID})
 	var incoming protocol.CallIncoming
@@ -329,6 +333,69 @@ func TestEndToEndWatchIncomingCall(t *testing.T) {
 	watch.expect(protocol.TypeCallEnded, &ended)
 	if ended.Reason != protocol.EndReasonRemoteHangup {
 		t.Fatalf("ended %+v", ended)
+	}
+	if st := watch.awaitEndedStatus(push.CallID); st.Reason != protocol.EndReasonRemoteHangup {
+		t.Fatalf("status after hangup %+v", st)
+	}
+}
+
+// callStatus polls GET /v1/calls/{callId} like the ringing watch does.
+func (d *watchDevice) callStatus(callID string) protocol.CallStatus {
+	d.t.Helper()
+	var st protocol.CallStatus
+	if status := d.w.httpJSON(d.t, http.MethodGet, "/v1/calls/"+callID, d.auth, nil, &st); status != http.StatusOK {
+		d.t.Fatalf("call status: HTTP %d", status)
+	}
+	return st
+}
+
+func (d *watchDevice) awaitEndedStatus(callID string) protocol.CallStatus {
+	d.t.Helper()
+	deadline := time.Now().Add(wait)
+	for {
+		st := d.callStatus(callID)
+		if st.State == protocol.CallStatusEnded {
+			return st
+		}
+		if time.Now().After(deadline) {
+			d.t.Fatalf("call still %q", st.State)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+func TestEndToEndWatchLearnsAboutCancelWhileRinging(t *testing.T) {
+	w := startWorld(t)
+	watch := w.pairWatch(t)
+
+	callCtx, hangUp := context.WithCancel(context.Background())
+	defer hangUp()
+	callDone := make(chan struct{})
+	go func() {
+		defer close(callDone)
+		_, _, _ = w.box.Call(callCtx, "0301234567", "Oma")
+	}()
+
+	var push protocol.PushIncomingCall
+	select {
+	case push = <-w.pusher.pushes:
+	case <-time.After(wait):
+		t.Fatal("watch not pushed")
+	}
+	if st := watch.callStatus(push.CallID); st.State != protocol.CallStatusRinging {
+		t.Fatalf("status while ringing %+v", st)
+	}
+
+	// The caller hangs up before the watch was answered; the watch never
+	// opened a WebSocket and learns it only through HTTPS.
+	hangUp()
+	if st := watch.awaitEndedStatus(push.CallID); st.Reason != protocol.EndReasonRemoteCancelled {
+		t.Fatalf("status after CANCEL %+v", st)
+	}
+	select {
+	case <-callDone:
+	case <-time.After(wait):
+		t.Fatal("FRITZ!Box call did not end")
 	}
 }
 

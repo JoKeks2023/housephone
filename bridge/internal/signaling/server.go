@@ -30,6 +30,8 @@ type Hub interface {
 	DeviceDisconnected(calls.DeviceConn)
 	HandleDeviceMessage(calls.DeviceConn, protocol.Envelope)
 	SIPRegistered() bool
+	// CallStatus answers GET /v1/calls/{callId} for one device (v1.1).
+	CallStatus(deviceID, callID string) (protocol.CallStatus, bool)
 }
 
 // Config configures the server.
@@ -105,6 +107,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/pair", s.httpPair)
 	mux.HandleFunc("PUT /v1/device", s.httpUpdateDevice)
 	mux.HandleFunc("DELETE /v1/device", s.httpDeleteDevice)
+	mux.HandleFunc("GET /v1/calls/{callId}", s.httpCallStatus)
 	return mux
 }
 

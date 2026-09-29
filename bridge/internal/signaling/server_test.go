@@ -25,6 +25,8 @@ type fakeHub struct {
 	connected []calls.DeviceConn
 	messages  chan protocol.Envelope
 	gone      chan calls.DeviceConn
+	// statuses: CallStatus answers keyed by "<deviceID>/<callID>".
+	statuses map[string]protocol.CallStatus
 }
 
 func newFakeHub() *fakeHub {
@@ -41,6 +43,12 @@ func (h *fakeHub) HandleDeviceMessage(c calls.DeviceConn, env protocol.Envelope)
 	h.messages <- env
 }
 func (h *fakeHub) SIPRegistered() bool { return true }
+func (h *fakeHub) CallStatus(deviceID, callID string) (protocol.CallStatus, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	st, ok := h.statuses[deviceID+"/"+callID]
+	return st, ok
+}
 
 func (h *fakeHub) last() calls.DeviceConn {
 	h.mu.Lock()

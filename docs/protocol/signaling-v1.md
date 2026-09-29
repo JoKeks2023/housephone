@@ -217,16 +217,36 @@ Diese Erweiterung ist rückwärtskompatibel. Ein Gerät ohne die neuen Felder ve
 
 ### HTTPS-Endpunkte (für die Watch)
 
-Auf watchOS darf eine App WebSocket nur während eines CallKit-Anrufs öffnen. Deshalb gibt es für Kopplung und Push-Token zusätzlich reines HTTPS unter demselben Host wie `/v1/ws`:
+Auf watchOS darf eine App WebSocket nur während eines CallKit-Anrufs öffnen. Deshalb gibt es für Kopplung, Push-Token und den Anrufstatus beim Klingeln zusätzlich reines HTTPS unter demselben Host wie `/v1/ws`:
 
 | Methode + Pfad | Auth | Body | Antwort |
 |---|---|---|---|
 | `POST /v1/pair` | keine | Payload von `pair` | `200` + Payload von `pair.ok` bzw. `4xx` + Payload von `error` |
 | `PUT /v1/device` | `Authorization: Bearer <deviceId>.<deviceSecret>` | Payload von `device.update` (inkl. `mediaCapabilities`, `pushTopic`) | `204` bzw. `401`/`400` + `error` |
 | `DELETE /v1/device` | Bearer | – | `204`; wirkt wie `device.unpair` |
+| `GET /v1/calls/{callId}` | Bearer | – | `200 {callId, state, reason?, sipCode?}` bzw. `404` + `error{call_not_found}` |
 
 - Rate-Limit und Code-Regeln sind dieselben wie bei `pair` über WebSocket.
-- Fehlerantworten: `400 bad_request`, `401 unauthorized`, `403 pairing_invalid`, `429 pairing_rate_limited`.
+- Fehlerantworten: `400 bad_request`, `401 unauthorized`, `403 pairing_invalid`, `429 pairing_rate_limited`, `404 call_not_found`.
+
+#### Anrufstatus (`GET /v1/calls/{callId}`)
+
+Eine klingelnde Watch hat evtl. noch keine WebSocket-Verbindung und erfährt so nichts von CANCEL oder einer Annahme an anderer Stelle. Deshalb fragt sie den Status des Anrufs **aus ihrer eigenen Sicht** ab:
+
+| `state` | Bedeutung |
+|---|---|
+| `ringing` | Eingehend: klingelt noch. Ausgehend: wird gewählt bzw. die Gegenstelle klingelt. |
+| `connected` | Dieses Gerät führt das Gespräch (eingehend: nach `call.accept` dieses Geräts). |
+| `ended` | Für dieses Gerät beendet. `reason`/`sipCode` wie in `call.ended`, z. B. `answered_elsewhere`, wenn ein anderes Gerät angenommen hat, `remote_cancelled` nach CANCEL, `local_hangup` nach eigenem Ablehnen. |
+
+- `404 call_not_found`:
+  - wenn der Anruf unbekannt ist,
+  - wenn dieses Gerät nicht beteiligt war (weder gepusht noch informiert, angehängt oder wählend),
+  - oder wenn das Ende länger als 2 Minuten zurückliegt (Tombstone abgelaufen).
+- Poll-Empfehlung:
+  - Alle **2 s** abfragen, und nur solange das Gerät klingelt und keine WebSocket-Verbindung zu diesem Anruf hat.
+  - Netzfehler werden ignoriert, danach weiter pollen.
+  - Nach Annahme bzw. `call.attach` aufhören.
 
 ### Kopplung der Watch über das iPhone
 
