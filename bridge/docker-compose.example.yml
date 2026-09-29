@@ -16,8 +16,9 @@
 
 services:
   housephone-bridge:
-    build: .
-    image: housephone-bridge:local
+    # Fertiges Image (amd64/arm64). Selbst bauen: Zeile auskommentieren und `build: .` aktivieren.
+    image: ghcr.io/jokeks2023/housephone-bridge:edge
+    # build: .
     container_name: housephone-bridge
     restart: unless-stopped
     # Host-Netzwerk: SIP/RTP zur FRITZ!Box und der WebRTC-Port 50000 ohne
