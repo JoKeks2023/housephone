@@ -241,6 +241,23 @@ func TestOversizedBodyAnswerIsSigned(t *testing.T) {
 	}
 }
 
+// Unknown paths get a signed 404; 401 answers carry Date (the app derives
+// the clock offset from it).
+func TestNotFoundSignedAnd401Dated(t *testing.T) {
+	ts := newTestServer(t)
+	d := ts.pairDevice(t)
+	res, err := d.tryDo(http.MethodGet, "/v1/nothing", nil, nil)
+	if err != nil || res.Status != http.StatusNotFound {
+		t.Fatalf("unknown path: %d %v", res.Status, err)
+	}
+	ctx, cancel := contextWithTimeout()
+	defer cancel()
+	_, wsRes, err := websocket.Dial(ctx, ts.wsURL(), nil)
+	if err == nil || wsRes == nil || wsRes.StatusCode != http.StatusUnauthorized || wsRes.Header.Get("Date") == "" {
+		t.Fatalf("401 upgrade: %v %v", wsRes, err)
+	}
+}
+
 // dialRaw opens the WebSocket like hp2.Client.Dial but returns the keys, so
 // a test can write frames the real client never would.
 func dialRaw(t *testing.T, ts *testServer, d *testDevice) (*websocket.Conn, hp2.SessionKeys) {

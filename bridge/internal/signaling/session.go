@@ -240,7 +240,9 @@ func (srv *Server) readLoop(ctx context.Context, sess *session, ip string) {
 				srv.warnClient("sealed frame rejected", ip, "device", sess.deviceID)
 				sess.close(websocket.StatusCode(protocol.CloseIntegrity), "integrity")
 			}
-			return
+			// Keep reading (everything fails now) until the device answers
+			// the close frame, so it receives 4002.
+			continue
 		}
 		if err != nil {
 			return

@@ -159,7 +159,14 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/calls/{callId}", s.authed(s.httpCallStatus))
 	mux.HandleFunc("GET /v1/phonebook", s.authed(s.httpPhonebook))
 	mux.HandleFunc("GET /v1/history", s.authed(s.httpHistory))
+	mux.HandleFunc("/", s.notFound)
 	return mux
+}
+
+// notFound answers unknown paths and methods with 404, signed when the
+// request carries a well-formed HP2 header, so the app can trust even that.
+func (s *Server) notFound(w http.ResponseWriter, r *http.Request) {
+	s.writeSignedError(w, s.sessionFromHeader(r), http.StatusNotFound, protocol.Error{Code: protocol.ErrorBadRequest, Message: "not found"})
 }
 
 // withDeadline bounds reading the body and writing the answer of a plain
