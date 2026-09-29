@@ -8,11 +8,12 @@ struct StatusIndicator: View {
         case negative
         case neutral
 
+        /// Dot color: 3:1 or better against the background (a graphic).
         var color: Color {
             switch self {
             case .positive: Theme.call
-            case .warning: Theme.warning
-            case .negative: Theme.danger
+            case .warning: Theme.warningText
+            case .negative: Theme.dangerText
             case .neutral: .secondary
             }
         }
@@ -40,7 +41,8 @@ struct StatusIndicator: View {
     }
 }
 
-/// Circle with initials, or a phone glyph for unknown numbers.
+/// Circle with initials, or a person glyph for unknown callers. Neutral,
+/// like Phone and Contacts: the accent stays reserved for actions.
 struct AvatarView: View {
     let name: String?
     var size: CGFloat = 44
@@ -55,15 +57,15 @@ struct AvatarView: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(Color.accentColor.opacity(0.16))
+                .fill(.fill.tertiary)
             if let initials {
                 Text(initials)
                     .font(.system(size: size * 0.38, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.secondary)
             } else {
-                Image(systemName: "phone.fill")
-                    .font(.system(size: size * 0.36, weight: .medium))
-                    .foregroundStyle(Color.accentColor)
+                Image(systemName: "person.fill")
+                    .font(.system(size: size * 0.4, weight: .medium))
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(width: size, height: size)
@@ -95,11 +97,19 @@ extension EmptyStateView where Actions == EmptyView {
     }
 }
 
-/// The round, tinted glass button used on the call screen.
+/// Identifies the glass of a call control so it can morph into the keypad.
+struct GlassMorph {
+    let id: String
+    let namespace: Namespace.ID
+}
+
+/// The round glass button used on the call screen. "On" reads as filled
+/// white; the change cross-fades with a Magic Replace of the symbol.
 struct CallControlButton: View {
     let symbol: String
     let label: LocalizedStringKey
     var isOn = false
+    var morph: GlassMorph?
     let action: () -> Void
 
     var body: some View {
@@ -112,17 +122,33 @@ struct CallControlButton: View {
                     .frame(width: 72, height: 72)
                     .foregroundStyle(isOn ? Color.black : Color.white)
                     .background {
-                        if isOn { Circle().fill(Color.white) }
+                        Circle().fill(Color.white).opacity(isOn ? 1 : 0)
                     }
                     .glassEffect(.regular.interactive(), in: .circle)
+                    .glassMorph(morph)
                 Text(label)
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.white.opacity(0.85))
             }
         }
         .buttonStyle(.plain)
+        .motion(Theme.Motion.snappy, value: isOn)
+        .sensoryFeedback(.selection, trigger: isOn)
         .accessibilityLabel(Text(label))
         .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+}
+
+extension View {
+    /// Gives this view's glass an identity so it can morph within a
+    /// `GlassEffectContainer`. No-op without `morph`.
+    @ViewBuilder
+    func glassMorph(_ morph: GlassMorph?) -> some View {
+        if let morph {
+            glassEffectID(morph.id, in: morph.namespace)
+        } else {
+            self
+        }
     }
 }
 
@@ -163,14 +189,20 @@ struct CallActionButton: View {
                     Circle()
                         .fill(kind.color.gradient)
                         .overlay {
-                            // Light-catching top edge for a tactile, physical feel.
+                            // Tactile construction: a ring one step darker than
+                            // the fill and a light-catching top edge.
                             Circle()
+                                .strokeBorder(kind.color.mix(with: .black, by: 0.2), lineWidth: 1)
+                        }
+                        .overlay {
+                            Circle()
+                                .inset(by: 1)
                                 .strokeBorder(
                                     LinearGradient(colors: [.white.opacity(0.35), .clear], startPoint: .top, endPoint: .center),
                                     lineWidth: 1
                                 )
                         }
-                        .shadow(color: kind.color.opacity(0.35), radius: 12, y: 4)
+                        .shadow(color: kind.color.opacity(0.18), radius: 12, y: 4)
                 }
         }
         .buttonStyle(PressableButtonStyle())
@@ -180,12 +212,57 @@ struct CallActionButton: View {
     }
 }
 
-/// Scales down on press, starting at touch-down.
+/// Scales down at touch-down and eases back on release.
 struct PressableButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.94 : 1)
-            .animation(Theme.Motion.snappy, value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? Theme.pressedScale : 1)
+            .pressAnimation(isPressed: configuration.isPressed)
+    }
+}
+
+/// A list row that calls on tap: dims at touch-down like system rows,
+/// without tinting the whole label in the accent color.
+struct RowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.55 : 1)
+            .pressAnimation(isPressed: configuration.isPressed)
+    }
+}
+
+/// Phone-app style dates for call lists: time today, "Gestern",
+/// the weekday within the last week, otherwise the date.
+enum CallDate {
+    static func text(for date: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+        if calendar.isDateInToday(date) {
+            return date.formatted(.dateTime.hour().minute())
+        }
+        if calendar.isDateInYesterday(date) {
+            return String(localized: "Gestern")
+        }
+        if let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now)).day,
+           days < 7 {
+            return date.formatted(.dateTime.weekday(.wide))
+        }
+        return date.formatted(.dateTime.day().month(.twoDigits).year(.twoDigits))
+    }
+}
+
+extension AttributedString {
+    /// A phone number read digit by digit by VoiceOver
+    /// ("plus 4 9 3 0 …" instead of "three hundred million …").
+    static func spokenNumber(_ number: String) -> AttributedString {
+        var spoken = AttributedString(number)
+        spoken.accessibilitySpeechSpellsOutCharacters = true
+        return spoken
+    }
+}
+
+extension Text {
+    /// A phone number read digit by digit by VoiceOver.
+    static func spokenNumber(_ number: String) -> Text {
+        Text(AttributedString.spokenNumber(number))
     }
 }
 
