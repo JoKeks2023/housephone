@@ -29,14 +29,21 @@ func TestChooseFromOfferPrefersG722(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if choice.codec != codec.G722 || choice.audio != codecG722 {
-		t.Fatalf("chose %v %+v", choice.codec, choice.audio)
+	if choice.codec != codec.G722 || choice.offered[codec.G722] != codecG722 {
+		t.Fatalf("chose %v %+v", choice.codec, choice.offered)
 	}
 	if choice.telephoneEvent == nil || choice.telephoneEvent.PayloadType != 101 {
 		t.Fatalf("telephone-event not found: %+v", choice.telephoneEvent)
 	}
-	if got := choice.diagoCodecs(); len(got) != 2 {
+	if got := choice.diagoCodecs(codec.G722); len(got) != 2 || got[0] != codecG722 {
 		t.Fatalf("answer codecs %+v", got)
+	}
+	// The watch answers the same INVITE with PCMA (v1.1).
+	if !choice.has(codec.PCMA) || !choice.has(codec.PCMU) {
+		t.Fatalf("offered codecs %+v", choice.offered)
+	}
+	if got := choice.diagoCodecs(codec.PCMA); got[0].Name != "PCMA" || got[0].PayloadType != 8 {
+		t.Fatalf("PCMA answer codecs %+v", got)
 	}
 }
 

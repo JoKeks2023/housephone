@@ -65,6 +65,8 @@ func newTestServer(t *testing.T) *testServer {
 	ts := &testServer{hub: newFakeHub(), devices: store.NewDevices(dir), pairing: store.NewPairing(dir)}
 	ts.srv = New(Config{
 		BridgeID: "bridge-1", BridgeName: "Zuhause", BridgeVersion: "test",
+		PublicURL:         testPublicURL,
+		PushTopic:         "com.jorisconrad.housephone.voip",
 		TrustProxyHeaders: true,
 		Devices:           ts.devices, Pairing: ts.pairing, Hub: ts.hub,
 		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),

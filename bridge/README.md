@@ -1,8 +1,8 @@
 # Housephone Bridge
 
-Die Bridge verbindet deine FRITZ!Box mit der Housephone-App. Sie meldet sich an der FRITZ!Box als ganz normales IP-Telefon an. Kommt ein Anruf, weckt sie iPhone (und später Watch) per VoIP-Push und reicht das Gespräch über WebRTC durch – zu Hause und unterwegs, ohne VPN auf dem Telefon.
+Die Bridge verbindet deine FRITZ!Box mit der Housephone-App. Sie meldet sich an der FRITZ!Box als ganz normales IP-Telefon an. Kommt ein Anruf, weckt sie iPhone und Apple Watch per VoIP-Push. Dann reicht sie das Gespräch durch – zum iPhone über WebRTC, zur Watch über die WebSocket-Verbindung. Das klappt zu Hause und unterwegs, ohne VPN auf dem Telefon.
 
-Architektur: [`docs/architecture/ADR-0001-bridge-architektur.md`](../docs/architecture/ADR-0001-bridge-architektur.md) · Protokoll: [`docs/protocol/signaling-v1.md`](../docs/protocol/signaling-v1.md)
+Architektur: [`ADR-0001`](../docs/architecture/ADR-0001-bridge-architektur.md) (iPhone) und [`ADR-0002`](../docs/architecture/ADR-0002-watch.md) (Watch) · Protokoll: [`docs/protocol/signaling-v1.md`](../docs/protocol/signaling-v1.md)
 
 ```
 FRITZ!Box ◄─SIP/RTP (LAN)─► Bridge ◄── WSS (Cloudflare Tunnel) ──► App
@@ -88,6 +88,18 @@ docker compose exec housephone-bridge housephone-bridge pair -name "iPhone Joris
 
 Die Bridge zeigt einen QR-Code, einen Link und einen 10-stelligen Code an. Gültig sind sie 10 Minuten und nur einmal. In der App: **Einstellungen → Bridge koppeln** → QR-Code scannen.
 
+## 7. Apple Watch
+
+Für die Watch musst du auf dem Server und an der FRITZ!Box nichts einrichten:
+
+- **Keine neue Portfreigabe:** Die Watch hat kein WebRTC. Ihr Ton läuft als A-law (8 kHz) in 20-ms-Rahmen über dieselbe WebSocket-Verbindung wie die Signalisierung, also durch den Cloudflare Tunnel. Die UDP-Freigabe 50000 braucht nur das iPhone.
+- **Koppeln:** Die Watch wird über das gekoppelte iPhone gekoppelt (**Einstellungen → Apple Watch koppeln**). Das iPhone holt dafür einen frischen Code bei der Bridge und gibt ihn an die Uhr weiter. Die Uhr meldet sich danach selbst per HTTPS an (`POST /v1/pair`, `PUT /v1/device`).
+  - watchOS erlaubt WebSocket nur während eines Anrufs. Die Uhr öffnet sie deshalb erst, wenn der VoIP-Push kommt.
+- **Push:** Die Watch-App hat ein eigenes APNs-Topic (`com.jorisconrad.housephone.watchkitapp.voip`). Derselbe APNs-Key aus Schritt 3 gilt für alle Apps deines Teams.
+  - Die Bridge akzeptiert nur Topics, die mit dem Bundle aus `apns.topic` beginnen (hier `com.jorisconrad.housephone.`) und auf `.voip` enden.
+- **Codec:** Nimmst du an der Watch ab, beantwortet die Bridge den Anruf der FRITZ!Box mit PCMA. Am iPhone nimmt sie G.722 (HD). Umgewandelt wird nie.
+  - Bietet die FRITZ!Box für einen Anruf kein PCMA an (sehr unüblich), klingelt die Watch für diesen Anruf nicht.
+
 ## Betrieb
 
 | Aufgabe | Befehl |
@@ -115,6 +127,8 @@ Sichere diesen Ordner. Verlierst du ihn, müssen alle Geräte neu gekoppelt werd
 | Kein Ton zu Hause | Server und iPhone müssen sich im LAN erreichen (kein Gast-WLAN, keine Client-Isolation). |
 | `rejecting INVITE from unexpected source` | Die FRITZ!Box meldet sich von einer anderen IP als `sip.registrar` → dort die tatsächliche IP eintragen. |
 | `no public IP configured` | STUN nicht erreichbar → `media.publicIp`/`publicHost` setzen. |
+| Watch klingelt nicht | Log `push failed … DeviceTokenNotForTopic` = Topic der Watch passt nicht zum Token. Die Watch-App einmal öffnen, dann meldet sie Token und Topic neu. `not ringing websocket-pcma device` = der Anruf bot kein PCMA an. |
+| Watch-Gespräch stockt | Der Ton der Watch läuft über TCP (Tunnel). Die Bridge puffert höchstens 200 ms und verwirft ältere Rahmen. Bei schlechtem Netz lieber am iPhone annehmen. |
 
 ## Entwicklung
 

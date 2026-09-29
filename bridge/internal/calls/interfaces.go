@@ -1,5 +1,6 @@
 // Package calls orchestrates calls between the FRITZ!Box SIP leg and device
-// legs (WebRTC), following docs/protocol/signaling-v1.md.
+// legs (WebRTC, or binary WebSocket audio for the watch), following
+// docs/protocol/signaling-v1.md.
 //
 // The Manager depends only on the interfaces in this file, so it can be
 // tested with fakes. Production implementations live in internal/sipleg,
@@ -47,12 +48,16 @@ const (
 type IncomingSIPCall interface {
 	Caller() string
 	CallerName() string
-	// Codec is the codec chosen from the INVITE offer.
+	// Codec is the preferred pass-through codec of the INVITE offer
+	// (G722 > PCMA > PCMU); WebRTC devices are offered this codec.
 	Codec() codec.Codec
+	// Offers reports whether the INVITE offer contains c.
+	Offers(c codec.Codec) bool
 	// Ringing sends 180 Ringing.
 	Ringing() error
-	// Answer sends 200 OK with the chosen codec and blocks until ACK.
-	Answer(ctx context.Context) (SIPMedia, error)
+	// Answer sends 200 OK with codec c, which must be offered, and blocks
+	// until ACK. The codec is chosen by the device that accepts (v1.1).
+	Answer(ctx context.Context, c codec.Codec) (SIPMedia, error)
 	// Reject sends a final error response before answer.
 	Reject(status int, reason string) error
 	// Hangup sends BYE after answer.
@@ -148,11 +153,23 @@ type PeerFactory interface {
 	NewPeer(codecs []codec.Codec, onState func(PeerState)) (Peer, error)
 }
 
+// AudioSink receives binary audio frames from a websocket-pcma device (v1.1).
+type AudioSink interface {
+	DeviceAudio(frame []byte)
+}
+
 // DeviceConn is an authenticated WebSocket connection of one device.
 type DeviceConn interface {
 	DeviceID() string
 	// Send queues a message without blocking.
 	Send(env protocol.Envelope)
+	// SendAudio queues a binary audio frame without blocking. Frames are
+	// dropped (not the connection) when the device cannot keep up (v1.1).
+	SendAudio(frame []byte)
+	// SetAudioSink routes the device's binary frames to sink (v1.1).
+	SetAudioSink(sink AudioSink)
+	// RemoveAudioSink clears the sink if it is still sink.
+	RemoveAudioSink(sink AudioSink)
 }
 
 // ErrInvalidPushToken means the device's push token must be discarded.
@@ -166,5 +183,6 @@ type Pusher interface {
 // DeviceDirectory lists paired devices.
 type DeviceDirectory interface {
 	List() ([]store.Device, error)
+	Get(id string) (store.Device, error)
 	ClearPushToken(id, token string) error
 }

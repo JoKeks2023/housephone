@@ -5,14 +5,23 @@ import (
 	"errors"
 	"time"
 
+	"github.com/JoKeks2023/housephone/bridge/internal/codec"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 )
 
-// startOutgoing creates the device leg and sends the first offer.
+// startOutgoing creates the device leg and sends the first offer. A
+// websocket-pcma device gets call.media and the INVITE (PCMA only) goes out
+// right away, because there is no answer to wait for (v1.1).
 func (c *call) startOutgoing(conn DeviceConn) {
-	l := &leg{deviceID: conn.DeviceID(), conn: conn}
+	l := &leg{deviceID: conn.DeviceID(), conn: conn, ws: c.m.usesWebSocketAudio(conn.DeviceID())}
 	c.legs[l.deviceID] = l
-	c.log.Info("outgoing call", "device", l.deviceID, "number", c.number)
+	c.log.Info("outgoing call", "device", l.deviceID, "number", c.number, "websocketAudio", l.ws)
+	if l.ws {
+		c.codec = codec.PCMA
+		c.attachWSMedia(l)
+		c.startDial()
+		return
+	}
 	c.offer(l, c.peerCodecs(), false)
 }
 
@@ -105,6 +114,7 @@ func (c *call) onDialResult(out OutgoingSIPCall, media SIPMedia, err error) {
 	if l != nil {
 		c.sendState(l.conn, protocol.CallStateConnected)
 	}
+	c.markConnectedMedia()
 	c.ensureRelay()
 	go func() {
 		select {

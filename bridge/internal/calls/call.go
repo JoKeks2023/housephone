@@ -43,6 +43,9 @@ type leg struct {
 	deviceID string
 	// conn is nil while the device is detached (WebSocket lost).
 	conn DeviceConn
+	// ws: the device uses the websocket-pcma media path (v1.1); peer is then
+	// a *wsPeer and there is no offer/answer.
+	ws   bool
 	peer Peer
 	// peerGen identifies the current peer for state callbacks.
 	peerGen int
@@ -298,6 +301,10 @@ func (c *call) legFailed(l *leg) {
 
 func (c *call) onAnswer(conn DeviceConn, sdp string) {
 	l := c.legs[conn.DeviceID()]
+	if l != nil && l.ws {
+		sendError(conn, protocol.ErrorBadRequest, "websocket-pcma devices do not answer offers", c.id)
+		return
+	}
 	if l == nil || l.conn != conn || l.peer == nil {
 		sendError(conn, protocol.ErrorBadRequest, "no offer pending for this device", c.id)
 		return
@@ -360,6 +367,35 @@ func (c *call) ensureRelay() {
 	c.relay = startRelay(c.sipMedia, l.peer, c.codec, c.log)
 }
 
+// attachWSMedia sets up (or re-binds after re-attach) the websocket-pcma
+// media of a leg and sends call.media instead of an offer (v1.1).
+func (c *call) attachWSMedia(l *leg) {
+	p, _ := l.peer.(*wsPeer)
+	if p == nil {
+		p = newWSPeer(c.m.opts.AudioFrameInterval)
+		l.peer = p
+	}
+	l.answered = true
+	p.bind(l.conn)
+	c.send(l.conn, protocol.TypeCallMedia, protocol.NewCallMedia(c.id))
+	if c.lastState != "" && (c.phase == phaseConnected || c.dir == directionOutgoing) {
+		c.sendState(l.conn, c.lastState)
+	}
+	if c.phase == phaseConnected {
+		p.setLive(true)
+	}
+}
+
+// markConnectedMedia lets a websocket-pcma device's audio through once the
+// call is connected; before that the bridge drops it (v1.1).
+func (c *call) markConnectedMedia() {
+	for _, l := range c.legs {
+		if p, ok := l.peer.(*wsPeer); ok && (c.dir == directionOutgoing || l.deviceID == c.acceptedBy) {
+			p.setLive(true)
+		}
+	}
+}
+
 func (c *call) onDTMF(conn DeviceConn, digits string) {
 	owner := c.dir == directionOutgoing && c.legs[conn.DeviceID()] != nil || conn.DeviceID() == c.acceptedBy
 	if !owner || c.sipMedia == nil || c.phase != phaseConnected {
@@ -410,6 +446,9 @@ func (c *call) onDisconnect(conn DeviceConn) {
 	l := c.legs[id]
 	if l == nil || l.conn != conn {
 		return
+	}
+	if p, ok := l.peer.(*wsPeer); ok {
+		p.bind(nil)
 	}
 	active := c.dir == directionOutgoing || id == c.acceptedBy
 	if !active {

@@ -52,6 +52,12 @@ func payloadFor(t *testing.T, msgType string) any {
 		return &CallEnded{}
 	case TypeError:
 		return &Error{}
+	case TypePairCompanionRequest:
+		return &PairCompanionRequest{}
+	case TypePairCompanion:
+		return &PairCompanion{}
+	case TypeCallMedia:
+		return &CallMedia{}
 	}
 	t.Fatalf("no payload type registered for %q", msgType)
 	return nil
@@ -74,8 +80,8 @@ func TestFixturesRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) < 19 {
-		t.Fatalf("expected at least 19 fixtures, found %d in %s", len(files), fixturesDir)
+	if len(files) < 22 {
+		t.Fatalf("expected at least 22 fixtures, found %d in %s", len(files), fixturesDir)
 	}
 
 	for _, file := range files {

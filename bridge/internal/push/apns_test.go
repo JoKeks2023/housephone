@@ -134,3 +134,16 @@ func TestPushWithoutTokenFails(t *testing.T) {
 		t.Fatal("request sent without token")
 	}
 }
+
+func TestPushUsesDeviceTopic(t *testing.T) {
+	a, reqs, mu := newTestAPNs(t, http.StatusOK, "")
+	dev := store.Device{ID: "watch", PushToken: "abc123", PushTopic: "com.jorisconrad.housephone.watchkitapp.voip"}
+	if err := a.PushIncomingCall(context.Background(), dev, protocol.PushIncomingCall{CallID: "c"}); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if got := (*reqs)[0].headers.Get("Apns-Topic"); got != dev.PushTopic {
+		t.Fatalf("topic %q, want %q", got, dev.PushTopic)
+	}
+}
