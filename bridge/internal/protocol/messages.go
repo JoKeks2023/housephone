@@ -436,7 +436,8 @@ type HistoryCall struct {
 	// Number is the remote party; empty when withheld.
 	Number string `json:"number"`
 	Name   string `json:"name,omitempty"`
-	Device string `json:"device"`
+	// Device is omitted when the FRITZ!Box names none.
+	Device string `json:"device,omitempty"`
 	// AnsweredBy is set for answered incoming calls only.
 	AnsweredBy      string    `json:"answeredBy,omitempty"`
 	StartedAt       time.Time `json:"startedAt"`

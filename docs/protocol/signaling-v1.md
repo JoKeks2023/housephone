@@ -344,7 +344,7 @@ Rückwärtskompatibel. Beide Endpunkte brauchen Bearer-Auth wie `/v1/device` und
 
 - **`number`:** die Nummer der Gegenstelle, eingehend aus `Caller`, ausgehend aus `Called`. Leer, wenn sie unterdrückt ist.
 - **`name`:** Name der Gegenstelle laut FRITZ!Box, sonst weggelassen.
-- **`device`:** das FRITZ!Box-Gerät, z. B. „Mobilteil 1“ oder „Housephone“.
+- **`device`:** das FRITZ!Box-Gerät, z. B. „Mobilteil 1“ oder „Housephone“. Fehlt, wenn die FRITZ!Box kein Gerät nennt.
 - **`answeredBy`:** nur bei `incoming`/`answered`. `answering_machine`, wenn `Port` 6 oder 40–49 ist, sonst `phone`.
 - **Fax:** Einträge mit `Port` 5 entfallen.
 - **`startedAt`:** Die Ortszeit `TT.MM.JJ HH:MM` der FRITZ!Box wird mit `fritzbox.timezone` nach UTC umgerechnet (RFC 3339, ohne Sekundenbruchteile).

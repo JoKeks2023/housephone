@@ -117,6 +117,16 @@ Mit diesem Schritt zeigen iPhone und Watch das FRITZ!Box-Telefonbuch (mit Favori
    - In `docker-compose.yml` ist `HOUSEPHONE_FRITZBOX_PASSWORD_FILE` schon eingetragen.
 4. **Neu starten:** `docker compose up -d`. Im Log erscheinen `FRITZ!Box phonebook loaded` und `FRITZ!Box call list loaded`.
 
+| Schlüssel in `config.yaml` | Standard | Bedeutung |
+|---|---|---|
+| `fritzbox.username` | leer (= aus) | FRITZ!Box-Benutzer; gesetzt = Funktion an |
+| `fritzbox.host` | `sip.registrar` | FRITZ!Box, z. B. `192.168.0.1` |
+| `fritzbox.port` | `49000` | TR-064-Port ohne TLS; nur für die Frage nach dem TLS-Port |
+| `fritzbox.timezone` | `Europe/Berlin` | Zeitzone der Anrufliste |
+| `fritzbox.countryCode` | `49` | Ländervorwahl ohne `+`, für den Namensabgleich |
+
+Das Kennwort nie in `config.yaml` eintragen, sondern per `HOUSEPHONE_FRITZBOX_PASSWORD` oder, empfohlen, per `HOUSEPHONE_FRITZBOX_PASSWORD_FILE` (Datei `secrets/fritzbox_password`).
+
 Technik:
 - **Schnittstelle:** TR-064 (`X_AVM-DE_OnTel`) über HTTPS auf dem TLS-Port der FRITZ!Box (meist 49443), mit Digest-Anmeldung.
 - **Zertifikat:** Die FRITZ!Box hat ein selbstsigniertes Zertifikat, das nicht geprüft wird. Die Verbindung ist trotzdem verschlüsselt.
