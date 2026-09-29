@@ -60,9 +60,13 @@ final class CallCenter: NSObject {
     @ObservationIgnored private var callsNotRecorded: Set<CallID> = []
     @ObservationIgnored private var lastSend: Task<Void, Never>?
     @ObservationIgnored private var clearTask: Task<Void, Never>?
+    @ObservationIgnored private var mediaRecoveryTask: Task<Void, Never>?
 
     /// How long the bridge may take to confirm a call before it fails.
     static let attachTimeout: Duration = .seconds(10)
+    /// How long a failed media path may take to recover (the bridge sends
+    /// ICE-restart offers; a reconnect re-attaches) before the call ends.
+    static let mediaRecoveryTimeout: Duration = .seconds(15)
 
     init(bridge: BridgeConnection, contacts: ContactsDirectory, modelContainer: ModelContainer) {
         self.bridge = bridge
@@ -239,6 +243,8 @@ final class CallCenter: NSObject {
     }
 
     private func finish(_ call: CallSession) {
+        mediaRecoveryTask?.cancel()
+        mediaRecoveryTask = nil
         ringback.stop()
         isMuted = false
         attachedGeneration[call.id] = nil
@@ -334,9 +340,30 @@ final class CallCenter: NSObject {
     private func mediaStateChanged(_ state: MediaEngine.ConnectionState, for callId: CallID) {
         guard activeCall?.id == callId else { return }
         mediaState = state
-        if state == .failed {
-            send(.callHangup(Hangup(callId: callId, reason: .failed)))
-            apply(.bridgeEnded(.failed), to: callId)
+        switch state {
+        case .interrupted, .failed:
+            // A dead socket reconnects now; the re-attach brings a fresh
+            // ICE-restart offer. With a live socket the bridge sends one.
+            bridge.refresh()
+            if state == .failed { scheduleMediaRecoveryTimeout(for: callId) }
+        case .connected:
+            mediaRecoveryTask?.cancel()
+            mediaRecoveryTask = nil
+        case .connecting:
+            break
+        }
+    }
+
+    private func scheduleMediaRecoveryTimeout(for callId: CallID) {
+        guard mediaRecoveryTask == nil else { return }
+        mediaRecoveryTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.mediaRecoveryTimeout)
+            guard !Task.isCancelled, let self else { return }
+            self.mediaRecoveryTask = nil
+            guard self.activeCall?.id == callId, self.activeCall?.isActive == true, self.mediaState != .connected else { return }
+            self.logger.error("Media did not recover; ending call")
+            self.send(.callHangup(Hangup(callId: callId, reason: .failed)))
+            self.apply(.bridgeEnded(.failed), to: callId)
         }
     }
 

@@ -149,7 +149,7 @@ private struct CallStatusLine: View {
         Group {
             switch call.phase {
             case .connected:
-                if mediaState == .interrupted {
+                if mediaState == .interrupted || mediaState == .failed {
                     Text("Verbindung wird wiederhergestellt …")
                 } else if let connectedAt = call.connectedAt {
                     TimelineView(.periodic(from: connectedAt, by: 1)) { context in
