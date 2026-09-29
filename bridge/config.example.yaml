@@ -1,0 +1,55 @@
+# Housephone Bridge – Beispielkonfiguration
+#
+# Secrets gehören nicht in diese Datei. Setze sie per Umgebungsvariable:
+#   HOUSEPHONE_SIP_PASSWORD (oder HOUSEPHONE_SIP_PASSWORD_FILE)
+#   HOUSEPHONE_APNS_KEY_FILE, HOUSEPHONE_APNS_KEY_ID
+
+bridge:
+  # Name, den die App anzeigt.
+  name: "Zuhause"
+  # HTTP/WebSocket-Port. Cloudflare Tunnel (oder ein Reverse Proxy) zeigt hierauf.
+  listen: ":8080"
+  # Öffentliche WebSocket-URL für die App (landet im Kopplungs-QR-Code).
+  publicUrl: "wss://phone.example.com/v1/ws"
+  # Geräte, Kopplungscodes und Bridge-ID.
+  dataDir: "/data"
+  # CF-Connecting-IP / X-Forwarded-For als Client-IP verwenden (nur hinter Tunnel/Proxy).
+  trustProxyHeaders: true
+
+sip:
+  # FRITZ!Box: Telefonie → Telefoniegeräte → Neues Gerät → Telefon → LAN/WLAN (IP-Telefon)
+  registrar: "fritz.box"
+  port: 5060
+  # Benutzername des IP-Telefons, z. B. "620".
+  username: "620"
+  # password: über HOUSEPHONE_SIP_PASSWORD setzen.
+  # Lokale IP für SIP/RTP. Leer = automatisch (die IP, über die die FRITZ!Box erreichbar ist).
+  bindHost: ""
+  bindPort: 5062
+  rtpPortMin: 40000
+  rtpPortMax: 40199
+  registerExpirySeconds: 300
+
+media:
+  # Einziger UDP-Port für den Ton zu den Geräten. In der FRITZ!Box freigeben:
+  # Internet → Freigaben → Portfreigaben → dieser Server → UDP 50000.
+  udpPort: 50000
+  # Öffentliche IPv4. Leer lassen = publicHost oder automatische Erkennung per STUN.
+  publicIp: ""
+  # Alternativ ein DNS-Name, der auf die öffentliche IP zeigt (MyFRITZ!/DynDNS).
+  publicHost: ""
+  detectPublicIp: true
+  stun:
+    - "stun:stun.cloudflare.com:3478"
+  # Optional: ICE nur auf diesen Interfaces (z. B. ["eth0"]).
+  interfaces: []
+
+apns:
+  # Pfad zum APNs-Auth-Key (.p8) – besser per HOUSEPHONE_APNS_KEY_FILE.
+  keyFile: ""
+  keyId: ""
+  teamId: "T9CA6D7T8N"
+  topic: "com.jorisconrad.housephone.voip"
+
+log:
+  level: "info"
