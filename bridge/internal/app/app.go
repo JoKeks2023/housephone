@@ -69,9 +69,14 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		Pairing:  store.NewPairing(cfg.Bridge.DataDir),
 	}
 
+	router := ""
+	if cfg.Media.PublicIPFromRouter {
+		router = cfg.SIP.Registrar
+	}
 	publicIP := media.NewPublicIPSource(ctx, media.PublicIPConfig{
 		Static: cfg.Media.PublicIP,
 		Host:   cfg.Media.PublicHost,
+		Router: router,
 		STUN:   cfg.Media.STUN,
 		Detect: cfg.Media.DetectPublicIP,
 	}, log)

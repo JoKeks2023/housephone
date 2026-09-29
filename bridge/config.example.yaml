@@ -38,7 +38,10 @@ media:
   publicIp: ""
   # Alternativ ein DNS-Name, der auf die öffentliche IP zeigt (MyFRITZ!/DynDNS).
   publicHost: ""
+  # Automatisch erkennen: zuerst die FRITZ!Box per UPnP fragen (alle 30 s –
+  # bemerkt eine wechselnde IP sofort), sonst STUN (höchstens alle 10 min).
   detectPublicIp: true
+  publicIpFromRouter: true
   stun:
     - "stun:stun.cloudflare.com:3478"
   # Optional: ICE nur auf diesen Interfaces (z. B. ["eth0"]).
