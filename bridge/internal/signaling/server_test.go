@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -146,7 +147,16 @@ func TestWebSocketWithoutValidAuthIsNotUpgraded(t *testing.T) {
 }
 
 func TestRequestAttacks(t *testing.T) {
-	ts := newTestServer(t)
+	// The bridge clock can be frozen for the clock window checks.
+	var frozenAt atomic.Pointer[time.Time]
+	ts := newTestServer(t, func(c *Config) {
+		c.Now = func() time.Time {
+			if f := frozenAt.Load(); f != nil {
+				return *f
+			}
+			return time.Now()
+		}
+	})
 	d := ts.pairDevice(t)
 
 	// A captured request cannot be replayed.
@@ -167,10 +177,13 @@ func TestRequestAttacks(t *testing.T) {
 		t.Fatalf("401 not signed: %v", err)
 	}
 
-	// ts outside ±60 s: signature valid, but clock_skew.
+	// ts outside ±60 s: signature valid, but clock_skew. The bridge clock
+	// is frozen on a full second so the boundary is exact.
+	frozen := time.Now().Truncate(time.Second)
+	frozenAt.Store(&frozen)
 	for _, skew := range []time.Duration{61 * time.Second, -61 * time.Second} {
 		skewed := *d
-		skewed.now = func() time.Time { return time.Now().Add(skew) }
+		skewed.now = func() time.Time { return frozen.Add(skew) }
 		res, err := skewed.tryDo(http.MethodGet, "/v1/health", nil, nil)
 		if err != nil || res.Status != http.StatusUnauthorized {
 			t.Fatalf("skew %v: %d %v", skew, res.Status, err)
@@ -181,11 +194,14 @@ func TestRequestAttacks(t *testing.T) {
 			t.Fatalf("skew %v: code %q", skew, e.Code)
 		}
 	}
-	within := *d
-	within.now = func() time.Time { return time.Now().Add(50 * time.Second) }
-	if res, err := within.tryDo(http.MethodGet, "/v1/health", nil, nil); err != nil || res.Status != http.StatusOK {
-		t.Fatalf("50 s skew rejected: %d %v", res.Status, err)
+	for _, skew := range []time.Duration{60 * time.Second, -60 * time.Second} {
+		within := *d
+		within.now = func() time.Time { return frozen.Add(skew) }
+		if res, err := within.tryDo(http.MethodGet, "/v1/health", nil, nil); err != nil || res.Status != http.StatusOK {
+			t.Fatalf("skew %v rejected: %d %v", skew, res.Status, err)
+		}
 	}
+	frozenAt.Store(nil)
 
 	// Signed with another key for the same device ID.
 	impostor := *d
