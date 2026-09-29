@@ -2,6 +2,16 @@
   "sourceLanguage": "de",
   "version": "1.0",
   "strings": {
+    "%lld Nummern": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld numbers"
+          }
+        }
+      }
+    },
     "Abbrechen": {
       "localizations": {
         "en": {
@@ -28,6 +38,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Decline"
+          }
+        }
+      }
+    },
+    "Alle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All"
           }
         }
       }
@@ -118,6 +138,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "This watch will no longer ring. You can pair it again from your iPhone at any time."
+          }
+        }
+      }
+    },
+    "Das FRITZ!Box-Telefonbuch ist leer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The FRITZ!Box phonebook is empty."
           }
         }
       }
@@ -232,12 +262,62 @@
         }
       }
     },
+    "Erneut versuchen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again"
+          }
+        }
+      }
+    },
     "Es läuft bereits ein Anruf.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "A call is already in progress."
+          }
+        }
+      }
+    },
+    "FRITZ!Box nicht verbunden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FRITZ!Box not connected"
+          }
+        }
+      }
+    },
+    "Favorit": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favorite"
+          }
+        }
+      }
+    },
+    "Favoriten": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favorites"
+          }
+        }
+      }
+    },
+    "Fax": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fax"
           }
         }
       }
@@ -252,6 +332,16 @@
         }
       }
     },
+    "Geschäftlich": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work"
+          }
+        }
+      }
+    },
     "Housephone": {
       "localizations": {
         "en": {
@@ -262,12 +352,62 @@
         }
       }
     },
+    "In der Bridge ist kein Zugang zur FRITZ!Box eingerichtet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The bridge has no access to the FRITZ!Box set up."
+          }
+        }
+      }
+    },
+    "Intern": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Internal"
+          }
+        }
+      }
+    },
+    "Keine Treffer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matches"
+          }
+        }
+      }
+    },
     "Klingelt …": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Ringing …"
+          }
+        }
+      }
+    },
+    "Kontakte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contacts"
+          }
+        }
+      }
+    },
+    "Koppel die Watch auf dem iPhone neu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pair the watch again on the iPhone."
           }
         }
       }
@@ -322,6 +462,16 @@
         }
       }
     },
+    "Letzte 24 Stunden, laut FRITZ!Box": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 24 hours, from the FRITZ!Box"
+          }
+        }
+      }
+    },
     "Löschen": {
       "localizations": {
         "en": {
@@ -352,12 +502,42 @@
         }
       }
     },
+    "Mobil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mobile"
+          }
+        }
+      }
+    },
+    "Name oder Nummer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name or number"
+          }
+        }
+      }
+    },
     "Noch keine Anrufe": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "No calls yet"
+          }
+        }
+      }
+    },
+    "Notiz": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memo"
           }
         }
       }
@@ -392,6 +572,26 @@
         }
       }
     },
+    "Privat": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home"
+          }
+        }
+      }
+    },
+    "Sonstige": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        }
+      }
+    },
     "Stumm": {
       "localizations": {
         "en": {
@@ -418,6 +618,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keypad"
+          }
+        }
+      }
+    },
+    "Telefonbuch und Anrufliste kommen über deine Bridge. Prüfe die Verbindung.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The phonebook and call list come through your bridge. Check the connection."
+          }
+        }
+      }
+    },
+    "Treffer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matches"
           }
         }
       }

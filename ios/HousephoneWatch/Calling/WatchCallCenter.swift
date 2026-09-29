@@ -55,6 +55,10 @@ final class WatchCallCenter: NSObject {
     private(set) var connection: ConnectionState?
     var failure: WatchCallFailure?
 
+    /// Name for a number the push or the dialer did not name, e.g. from
+    /// the FRITZ!Box phonebook.
+    @ObservationIgnored var nameLookup: ((String) -> String?)?
+
     @ObservationIgnored private let provider: CXProvider
     @ObservationIgnored private let callController = CXCallController()
     @ObservationIgnored private let pushRegistry = PKPushRegistry(queue: .main)
@@ -456,7 +460,8 @@ final class WatchCallCenter: NSObject {
         update.remoteHandle = trimmed.isEmpty
             ? CXHandle(type: .generic, value: String(localized: "Unbekannt"))
             : CXHandle(type: .phoneNumber, value: trimmed)
-        update.localizedCallerName = name
+        let given = name?.trimmingCharacters(in: .whitespaces)
+        update.localizedCallerName = given?.isEmpty == false ? given : (trimmed.isEmpty ? nil : nameLookup?(trimmed))
         update.hasVideo = false
         update.supportsDTMF = true
         update.supportsHolding = false

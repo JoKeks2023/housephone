@@ -13,6 +13,7 @@ struct HousephoneWatchApp: App {
                 .environment(services.bridge)
                 .environment(services.callCenter)
                 .environment(services.recents)
+                .environment(services.fritzBox)
         }
     }
 }
@@ -28,12 +29,17 @@ final class WatchServices {
     let recents: RecentCalls
     let callCenter: WatchCallCenter
     let phoneLink: PhoneLink
+    let fritzBox: WatchFritzBox
 
     private init() {
         bridge = WatchBridge(store: KeychainCredentialStore())
         recents = RecentCalls()
         callCenter = WatchCallCenter(bridge: bridge, recents: recents)
         phoneLink = PhoneLink(bridge: bridge)
+        fritzBox = WatchFritzBox(bridge: bridge)
+        // Caller names from the (cached) FRITZ!Box phonebook, also for a
+        // push that launches the app.
+        callCenter.nameLookup = { [fritzBox] number in fritzBox.name(for: number) }
     }
 }
 
