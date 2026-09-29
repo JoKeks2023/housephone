@@ -30,6 +30,8 @@ final class BridgeConnection {
     @ObservationIgnored var onMessage: ((SignalingMessage) -> Void)?
     /// Called after every successful (re)connection.
     @ObservationIgnored var onConnected: (() -> Void)?
+    /// Called when this device gets paired or unpaired.
+    @ObservationIgnored var onPairingChanged: ((Bool) -> Void)?
 
     @ObservationIgnored private let store: any CredentialStore
     @ObservationIgnored private var client: SignalingClient?
@@ -104,6 +106,7 @@ final class BridgeConnection {
         stopClient()
         self.credentials = credentials
         start()
+        onPairingChanged?(true)
     }
 
     func unpair() {
@@ -111,7 +114,9 @@ final class BridgeConnection {
         try? store.delete()
         credentials = nil
         welcome = nil
+        pushToken = nil
         status = .unpaired
+        onPairingChanged?(false)
     }
 
     // MARK: - Push token

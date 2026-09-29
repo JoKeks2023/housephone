@@ -73,14 +73,21 @@ final class CallCenter: NSObject {
 
         provider.setDelegate(self, queue: nil)
         pushRegistry.delegate = self
-        pushRegistry.desiredPushTypes = [.voIP]
+        updatePushRegistration(paired: bridge.isPaired)
 
         bridge.onMessage = { [weak self] message in self?.handle(message) }
         bridge.onConnected = { [weak self] in self?.bridgeDidConnect() }
+        bridge.onPairingChanged = { [weak self] paired in self?.updatePushRegistration(paired: paired) }
         media.onConnectionStateChange = { [weak self] callId, state in self?.mediaStateChanged(state, for: callId) }
     }
 
     var hasActiveCall: Bool { activeCall?.isActive == true }
+
+    /// Only a paired device asks for VoIP pushes. Unpairing drops the
+    /// token, so APNs answers the bridge with 410 and the bridge forgets it.
+    private func updatePushRegistration(paired: Bool) {
+        pushRegistry.desiredPushTypes = paired ? [.voIP] : []
+    }
 
     // MARK: - User actions
 
@@ -422,18 +429,16 @@ extension CallCenter: @preconcurrency PKPushRegistryDelegate {
         do {
             push = try IncomingCallPush(dictionary: payload.dictionaryPayload)
         } catch {
-            // Even an unusable push must produce a CallKit call, or iOS
-            // stops delivering pushes. Report and end it right away.
             logger.error("Unusable VoIP push: \(String(describing: error), privacy: .public)")
-            let uuid = UUID()
             let update = CXCallUpdate()
             update.remoteHandle = CXHandle(type: .generic, value: String(localized: "Unbekannt"))
-            provider.reportNewIncomingCall(with: uuid, update: update) { [weak self] _ in
-                Task { @MainActor in
-                    self?.provider.reportCall(with: uuid, endedAt: nil, reason: .failed)
-                    done.value()
-                }
-            }
+            reportAndEndImmediately(UUID(), update: update, completion: done)
+            return
+        }
+
+        guard bridge.isPaired else {
+            // A push that was already on its way when the user unpaired.
+            reportAndEndImmediately(push.callId.uuid, update: callUpdate(number: push.caller, name: push.callerName), completion: done)
             return
         }
 
@@ -458,6 +463,18 @@ extension CallCenter: @preconcurrency PKPushRegistryDelegate {
         reportIncoming(session) { done.value() }
         bridge.refresh()
         perform(effects, for: session.id)
+    }
+
+    /// Every VoIP push must produce a CallKit call, or iOS stops delivering
+    /// them. For pushes that can't become a real call, report one and end
+    /// it right away.
+    private func reportAndEndImmediately(_ uuid: UUID, update: CXCallUpdate, completion: UncheckedSendable<() -> Void>) {
+        provider.reportNewIncomingCall(with: uuid, update: update) { [weak self] _ in
+            Task { @MainActor in
+                self?.provider.reportCall(with: uuid, endedAt: nil, reason: .failed)
+                completion.value()
+            }
+        }
     }
 }
 
