@@ -7,6 +7,7 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     struct Response: Sendable {
         var status: Int
         var body: Data
+        var headers: [String: String] = [:]
     }
 
     typealias Handler = @Sendable (URLRequest, Data?) -> Response
@@ -32,7 +33,8 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
         let handler = Self.lock.withLock { Self.handlers[id] }
         let body = request.httpBody ?? request.httpBodyStream.map(Self.read)
         let response = handler?(request, body) ?? Response(status: 500, body: Data())
-        let http = HTTPURLResponse(url: request.url!, statusCode: response.status, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"])!
+        let headers = ["Content-Type": "application/json"].merging(response.headers) { _, new in new }
+        let http = HTTPURLResponse(url: request.url!, statusCode: response.status, httpVersion: "HTTP/1.1", headerFields: headers)!
         client?.urlProtocol(self, didReceive: http, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: response.body)
         client?.urlProtocolDidFinishLoading(self)

@@ -46,9 +46,9 @@ struct CallStatusPayload: Decodable {
     }
 }
 
-/// The HTTPS endpoints of signaling v1.1. The Apple Watch uses them because
-/// watchOS only allows WebSocket during a CallKit call; plain HTTPS works
-/// any time.
+/// The HTTPS endpoints of signaling v1.1 and v1.2. The Apple Watch uses
+/// them because watchOS only allows WebSocket during a CallKit call; plain
+/// HTTPS works any time. Phonebook and call list are HTTPS-only on both.
 ///
 /// Errors: `SignalingClientError.unauthorized` for 401,
 /// `SignalingClientError.bridge` when the bridge sent an `error` payload.
@@ -123,10 +123,47 @@ public struct BridgeHTTPClient: Sendable {
         return payload.status
     }
 
+    /// `GET /v1/phonebook` (v1.2): all FRITZ!Box phonebooks merged. With
+    /// the ETag of the cached copy the bridge answers `.notModified` when
+    /// nothing changed. Errors: `SignalingClientError.bridge` with
+    /// `fritzbox_unavailable` when the bridge has no working FRITZ!Box access.
+    public func phonebook(ifNoneMatch etag: String?, credentials: BridgeCredentials) async throws -> FritzBoxFetchResult<FritzBoxPhonebook> {
+        guard let url = Self.endpoint("phonebook", for: credentials.bridgeURL) else { throw BridgeHTTPError.invalidBridgeURL }
+        let headers = etag.map { ["If-None-Match": $0] } ?? [:]
+        let (data, response) = try await send(method: "GET", url: url, body: nil, authorization: credentials.authorizationHeader, headers: headers)
+        if response.statusCode == 304 { return .notModified }
+        guard let phonebook = try? SignalingCoding.makeDecoder().decode(FritzBoxPhonebook.self, from: data) else {
+            throw BridgeHTTPError.invalidResponse
+        }
+        return .updated(phonebook, etag: response.value(forHTTPHeaderField: "ETag"))
+    }
+
+    /// `GET /v1/history` (v1.2): the line's call list, newest first.
+    public func history(limit: Int = 100, credentials: BridgeCredentials) async throws -> FritzBoxCallList {
+        guard let base = Self.endpoint("history", for: credentials.bridgeURL),
+              var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
+        else { throw BridgeHTTPError.invalidBridgeURL }
+        components.queryItems = [URLQueryItem(name: "limit", value: String(min(max(limit, 1), 500)))]
+        guard let url = components.url else { throw BridgeHTTPError.invalidBridgeURL }
+        let data = try await perform(method: "GET", url: url, body: nil, authorization: credentials.authorizationHeader)
+        guard let history = try? SignalingCoding.makeDecoder().decode(FritzBoxCallList.self, from: data) else {
+            throw BridgeHTTPError.invalidResponse
+        }
+        return history
+    }
+
     private func perform(method: String, url: URL, body: Data?, authorization: String?) async throws -> Data {
+        try await send(method: method, url: url, body: body, authorization: authorization, headers: [:]).data
+    }
+
+    /// Sends a request; success is any 2xx and 304.
+    private func send(method: String, url: URL, body: Data?, authorization: String?, headers: [String: String]) async throws -> (data: Data, response: HTTPURLResponse) {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.timeoutInterval = 15
+        // Never answer from URLCache: responses are per device, and a 304
+        // must reach `phonebook(ifNoneMatch:)` as a 304.
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let body {
             request.httpBody = body
@@ -135,12 +172,15 @@ public struct BridgeHTTPClient: Sendable {
         if let authorization {
             request.setValue(authorization, forHTTPHeaderField: "Authorization")
         }
+        for (field, value) in headers {
+            request.setValue(value, forHTTPHeaderField: field)
+        }
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw BridgeHTTPError.invalidResponse }
         switch http.statusCode {
-        case 200..<300:
-            return data
+        case 200..<300, 304:
+            return (data, http)
         case 401:
             throw SignalingClientError.unauthorized
         default:
