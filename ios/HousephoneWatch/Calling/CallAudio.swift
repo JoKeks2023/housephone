@@ -244,19 +244,34 @@ private final class CaptureConverter {
         let capacity = AVAudioFrameCount((Double(buffer.frameLength) * ratio).rounded(.up)) + 32
         guard let output = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: capacity) else { return [] }
 
-        var consumed = false
+        let input = SingleInput(buffer)
         var error: NSError?
         let status = converter.convert(to: output, error: &error) { _, inputStatus in
-            if consumed {
+            guard let buffer = input.take() else {
                 inputStatus.pointee = .noDataNow
                 return nil
             }
-            consumed = true
             inputStatus.pointee = .haveData
             return buffer
         }
         guard status != .error, let samples = output.int16ChannelData?[0] else { return [] }
         return chunker.append(UnsafeBufferPointer(start: samples, count: Int(output.frameLength)))
+    }
+}
+
+/// Hands one buffer to `AVAudioConverter`'s input block. The block runs
+/// synchronously inside `convert(to:error:withInputFrom:)` on the calling
+/// thread, so the unchecked `Sendable` is sound.
+private final class SingleInput: @unchecked Sendable {
+    private var buffer: AVAudioPCMBuffer?
+
+    init(_ buffer: AVAudioPCMBuffer) {
+        self.buffer = buffer
+    }
+
+    func take() -> AVAudioPCMBuffer? {
+        defer { buffer = nil }
+        return buffer
     }
 }
 

@@ -226,6 +226,10 @@ final class CallCenter: NSObject {
                 send(.callHangup(Hangup(callId: callId, reason: reason)))
             case .negotiate(let offer):
                 negotiate(offer)
+            case .startWebSocketMedia:
+                // The iPhone announces only WebRTC and never feeds
+                // `call.media` into the session; this is the watch's path.
+                logger.error("Unexpected WebSocket media on the iPhone")
             case .updateRemoteParty(let number, let name):
                 provider.reportCall(with: callId.uuid, updated: callUpdate(number: number, name: name))
             case .reportOutgoingConnected:
