@@ -1532,12 +1532,12 @@
         }
       }
     },
-    "Installiere Housephone in der Watch-App auf dem iPhone unter „Verfügbare Apps“.": {
+    "Installiere Housephone in der Watch-App auf dem iPhone unter „Verfügbare Apps“. Danach koppelt sich die Watch automatisch.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Install Housephone in the Watch app on your iPhone under “Available Apps”."
+            "value": "Install Housephone from “Available Apps” in the Watch app on your iPhone. Your watch then pairs automatically."
           }
         }
       }
@@ -1562,12 +1562,12 @@
         }
       }
     },
-    "Danach klingelt auch deine Watch, und du kannst direkt am Handgelenk telefonieren.": {
+    "Die Watch koppelt sich automatisch. Danach klingelt sie mit, und du kannst direkt am Handgelenk telefonieren.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Then your watch rings too, and you can take calls right on your wrist."
+            "value": "Your watch pairs automatically. It then rings too, and you can take calls right on your wrist."
           }
         }
       }

@@ -91,13 +91,13 @@ struct WatchSection: View {
     @ViewBuilder
     private var footer: some View {
         if !watch.isAppInstalled {
-            Text("Installiere Housephone in der Watch-App auf dem iPhone unter „Verfügbare Apps“.")
+            Text("Installiere Housephone in der Watch-App auf dem iPhone unter „Verfügbare Apps“. Danach koppelt sich die Watch automatisch.")
         } else if !bridge.isOnline {
             Text("Zum Koppeln muss die Bridge erreichbar sein.")
         } else if watch.isPairedWithBridge {
             Text("Bei Anrufen klingelt auch deine Watch. Du kannst direkt am Handgelenk annehmen und sprechen – auch ohne iPhone in der Nähe.")
         } else {
-            Text("Danach klingelt auch deine Watch, und du kannst direkt am Handgelenk telefonieren.")
+            Text("Die Watch koppelt sich automatisch. Danach klingelt sie mit, und du kannst direkt am Handgelenk telefonieren.")
         }
     }
 }
