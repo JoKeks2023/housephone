@@ -11,6 +11,7 @@ Einmal durchgearbeitet, klingeln dein iPhone und deine Apple Watch bei Festnetza
 | Server | Bridge per Docker starten | 10 min |
 | Mac + iPhone | App bauen, installieren und koppeln | 10 min |
 | iPhone + Watch | Apple Watch koppeln | 2 min |
+| FRITZ!Box + Server | Zugang für Telefonbuch und Anrufliste (optional) | 3 min |
 
 ## 1. Bridge einrichten
 
@@ -20,7 +21,7 @@ Folge [`bridge/README.md`](../bridge/README.md), Schritte 1–5. Deine Werte:
   - `fritz.box` funktioniert, wenn dein Server die FRITZ!Box als DNS nutzt.
   - Sonst `sip.registrar: "192.168.0.1"` in `config.yaml` eintragen.
 - **Team-ID:** `T9CA6D7T8N`, **Topic:** `com.jorisconrad.housephone.voip`. Beides steht schon so in `config.example.yaml`.
-- **Anschluss:** Vodafone Red Business hat eine öffentliche IPv4. Ist sie fest, trag sie als `media.publicIp` ein – das ist robuster als die automatische Erkennung.
+- **Anschluss:** Vodafone Red Business hat eine öffentliche IPv4, die sich ändern kann. Die Bridge fragt sie alle 30 s bei der FRITZ!Box ab (UPnP), du musst nichts eintragen.
 
 Fertig ist dieser Schritt, wenn `curl -s http://localhost:8080/v1/health` auf dem Server `"sipRegistered":true` meldet und die FRITZ!Box unter **Telefonie → Telefoniegeräte** das IP-Telefon „Housephone“ als verbunden zeigt.
 
@@ -78,7 +79,31 @@ Die Uhr spricht mit der Bridge nur über den Cloudflare Tunnel – ohne zusätzl
   - Koppelst du die Uhr vorher neu, verfällt der alte Entkoppel-Auftrag.
 - **Nur die Uhr:** Auf der Watch-Startseite ganz unten **Kopplung aufheben**. Das iPhone bleibt gekoppelt.
 
-## 4. Ausprobieren
+## 4. Telefonbuch und Anrufliste
+
+Optional, aber praktisch. iPhone und Watch zeigen dann:
+- das Telefonbuch der FRITZ!Box, mit den Favoriten oben,
+- die Anrufliste deines Anschlusses, auch mit Anrufen am Schnurlostelefon und auf dem Anrufbeantworter.
+
+Eingehende Anrufe tragen den Namen aus dem FRITZ!Box-Telefonbuch. Die Bridge liest dafür nur mit, sie ändert nichts in der FRITZ!Box.
+
+1. **FRITZ!Box-Benutzer anlegen:** **System → FRITZ!Box-Benutzer → Benutzer hinzufügen**.
+   - Name z. B. `housephone`, langes Kennwort.
+   - Als Recht **nur** „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“ ankreuzen.
+   - „Zugang auch aus dem Internet erlaubt“ **aus** lassen.
+2. **Zugriff für Anwendungen:** **Heimnetz → Netzwerk → Netzwerkeinstellungen → „Zugriff für Anwendungen zulassen“** muss an sein (TR-064; bei FRITZ!OS standardmäßig an).
+3. **Bridge:** In `config.yaml` den Abschnitt `fritzbox` mit diesem Benutzernamen ergänzen. Das Kennwort gibst du wie das SIP-Kennwort als Datei oder Umgebungsvariable mit, nie in der Konfigurationsdatei. Genaue Schlüssel siehe [`bridge/README.md`](../bridge/README.md). Danach `docker compose up -d`.
+4. **Prüfen:** In der iPhone-App unter **Einstellungen → Bridge** steht **Telefonbuch & Anrufliste: Verbunden**.
+   - Kurz nach dem Start kann dort noch „Nicht eingerichtet“ stehen. Dann einmal die App schließen und wieder öffnen.
+
+In der App:
+- **Kontakte:** Oben wechselst du zwischen **FRITZ!Box** und **iPhone**.
+- **Anrufe:** Unter der Leiste wechselst du zwischen **Housephone** und **FRITZ!Box**.
+- **Watch:** Die Uhr zeigt das Telefonbuch unter **Kontakte** und auf der Startseite die verpassten Anrufe der letzten 24 Stunden.
+
+Beides ist auch offline verfügbar, dann mit dem letzten Stand und einem Hinweis.
+
+## 5. Ausprobieren
 
 - [ ] **Ausgehend (WLAN):** Nummer im Tastenfeld wählen → Freiton → Gespräch → Auflegen.
 - [ ] **Eingehend, App offen:** Festnetz von einem anderen Telefon anrufen → CallKit klingelt → Annehmen → Ton in beide Richtungen.
@@ -96,7 +121,18 @@ Die Uhr spricht mit der Bridge nur über den Cloudflare Tunnel – ohne zusätzl
 - [ ] **Anrufer legt auf:** Festnetz anrufen → Watch klingelt → Anrufer legt vor dem Annehmen auf → die Watch hört auf zu klingeln und zeigt den Anruf als verpasst.
 - [ ] **Entkoppeln:** Auf dem iPhone *Kopplung aufheben* → iPhone und Watch zeigen den Kopplungshinweis; Festnetzanrufe klingeln auf keinem der beiden mehr.
 
-## 5. Wenn etwas nicht klappt
+**Telefonbuch und Anrufliste** (wenn eingerichtet):
+
+- [ ] **Kontakte → FRITZ!Box:** Das Telefonbuch erscheint mit den Favoriten oben.
+  - Suche nach Name und nach Ziffern.
+  - Ein Kontakt mit mehreren Nummern bietet eine Auswahl an; ein Tipp ruft an.
+- [ ] **Anrufe → FRITZ!Box:** Einen Anruf am Schnurlostelefon annehmen. Nach dem Aktualisieren (nach unten ziehen) steht er dort mit „am <Mobilteil>“.
+  - Verpasste Anrufe sind rot, Anrufbeantworter-Anrufe haben ein eigenes Symbol.
+- [ ] **Name beim Anruf:** Von einer Nummer anrufen, die nur im FRITZ!Box-Telefonbuch steht (nicht in den iPhone-Kontakten). Der CallKit-Bildschirm zeigt den Namen.
+- [ ] **Watch:** **Kontakte** → Eintrag antippen → Anruf. Ein verpasster Festnetzanruf erscheint auf der Startseite unter **Verpasst** und lässt sich zurückrufen.
+- [ ] **Offline:** Flugmodus an → Kontakte → FRITZ!Box zeigt den letzten Stand mit Hinweis „Bridge nicht erreichbar“.
+
+## 6. Wenn etwas nicht klappt
 
 - **Server-Seite:** siehe Tabelle *Fehlersuche* in [`bridge/README.md`](../bridge/README.md).
   - `docker compose logs -f housephone-bridge` zeigt Registrierung, Pushes, Anrufe und ICE.
@@ -115,4 +151,6 @@ Die Uhr spricht mit der Bridge nur über den Cloudflare Tunnel – ohne zusätzl
 | Watch zeigt „Wartet auf Push-Freigabe“ | Die Uhr hat noch kein VoIP-Token. Watch-App einmal öffnen; *Push Notifications* für `com.jorisconrad.housephone.watchkitapp` prüfen |
 | Watch zeigt „Bridge nicht erreichbar“ | Die Uhr erreicht `phone.<deine-domain>` nicht. Sie versucht es automatisch erneut, auch beim nächsten Öffnen der App |
 | Watch klingelt, Annehmen endet mit „Fehlgeschlagen“ | Die Uhr konnte in 10 s keine Verbindung aufbauen. Logs der Bridge (`call.media`) und der Uhr (`calls`) prüfen |
+| „Telefonbuch & Anrufliste: Nicht eingerichtet“ | Abschnitt `fritzbox` in `config.yaml` fehlt, oder die Bridge wurde danach nicht neu gestartet |
+| Kontakte → FRITZ!Box: „FRITZ!Box nicht verbunden“ | Benutzer, Kennwort oder Recht in der FRITZ!Box falsch, oder „Zugriff für Anwendungen zulassen“ ist aus. Die Meldung darunter kommt von der Bridge; Details im Bridge-Log |
 | Watch klingelt weiter, obwohl woanders angenommen | Die Uhr fragt beim Klingeln alle 2 s `GET /v1/calls/{id}` ab. Erreicht sie die Bridge nicht (Log `Call status unavailable` in der Kategorie `bridge`), hört sie erst nach 60 s auf |
