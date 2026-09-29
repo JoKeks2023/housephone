@@ -37,6 +37,15 @@ struct CallSessionTests {
         #expect(call.duration == 60)
     }
 
+    @Test func directModeAcceptsOnAnswer() {
+        var (call, _) = CallSession.incoming(announced: IncomingCall(callId: callId, caller: "5550100", startedAt: start), now: start)
+        #expect(call.handle(.directMedia) == [])
+        #expect(call.mediaMode == .directRTP)
+        #expect(call.handle(.userAnswered) == [.sendAccept])
+        #expect(call.handle(.remoteState(.connected), now: start + 1) == [])
+        #expect(call.phase == .connected)
+    }
+
     @Test func answerBeforeBridgeContactSendsAcceptOnceAnswerIsOut() {
         var (call, _) = CallSession.incoming(push: push(), now: start)
         // The user taps "answer" on the lock screen before signaling is up.

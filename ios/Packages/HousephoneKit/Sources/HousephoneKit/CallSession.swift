@@ -51,6 +51,9 @@ public enum CallPhase: Sendable, Equatable {
 public enum CallMediaMode: Sendable, Equatable {
     case webRTC
     case webSocket
+    /// RTP straight between the iPhone and the FRITZ!Box, without a
+    /// bridge (ADR-0005).
+    case directRTP
 }
 
 /// How a call looks in the recents list.
@@ -72,6 +75,9 @@ public enum CallEvent: Sendable, Equatable {
     /// `call.media` from the bridge: audio runs as binary WebSocket frames,
     /// there is no SDP answer (signaling v1.1, Apple Watch).
     case webSocketMedia(CallMedia)
+    /// Mode without bridge (ADR-0005): the SIP user agent has the remote
+    /// SDP; answering needs no further negotiation.
+    case directMedia
     /// The media engine created an answer and it went out as `call.answer`.
     case localAnswerSent
     /// `call.state` from the bridge.
@@ -191,6 +197,11 @@ public struct CallSession: Sendable, Equatable, Identifiable {
             // No SDP answer in this mode: the device may accept right away.
             answerSent = true
             return [.startWebSocketMedia(media)] + acceptIfReady()
+
+        case (_, .directMedia):
+            mediaMode = .directRTP
+            answerSent = true
+            return acceptIfReady()
 
         case (_, .localAnswerSent):
             answerSent = true

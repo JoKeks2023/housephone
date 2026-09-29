@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(BridgeConnection.self) private var bridge
+    @Environment(DirectPhone.self) private var direct
     @Environment(WatchLink.self) private var watch
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
@@ -13,74 +14,14 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    bridgeStatusRow
-                    if let credentials = bridge.credentials {
-                        LabeledContent("Name", value: bridge.welcome?.bridgeName ?? credentials.bridgeName)
-                        LabeledContent("Adresse") {
-                            Text(credentials.bridgeURL.host() ?? credentials.bridgeURL.absoluteString)
-                                .font(.callout.monospaced())
-                                .textSelection(.enabled)
-                        }
-                        // The key pinned at pairing, as `fp` in the pairing link.
-                        VStack(alignment: .leading, spacing: Theme.Space.s1) {
-                            Text("Fingerabdruck")
-                            Text(credentials.bridgeFingerprint)
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
-                                .textSelection(.enabled)
-                                .speechSpellsOutCharacters()
-                        }
-                        .accessibilityElement(children: .combine)
+                if direct.isEnabled {
+                    DirectSettingsSection()
+                    Section("Dieses iPhone") {
+                        microphoneRows
                     }
-                    if let version = bridge.welcome?.bridgeVersion {
-                        LabeledContent("Version") {
-                            Text(version).font(.callout.monospaced())
-                        }
-                    }
-                    if let welcome = bridge.welcome {
-                        LabeledContent("Telefonbuch & Anrufliste") {
-                            if welcome.supports(.fritzboxPhonebook) || welcome.supports(.fritzboxHistory) {
-                                StatusIndicator(tone: .positive, label: "Verbunden")
-                            } else {
-                                StatusIndicator(tone: .neutral, label: "Nicht eingerichtet")
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Bridge")
-                } footer: {
-                    Text("Die Bridge läuft auf deinem Server und ist für die FRITZ!Box ein IP-Telefon.")
-                }
-
-                Section {
-                    LabeledContent("Anrufe im Hintergrund") {
-                        StatusIndicator(
-                            tone: bridge.pushToken == nil ? .warning : .positive,
-                            label: bridge.pushToken == nil ? "Noch nicht bereit" : "Bereit"
-                        )
-                    }
-                    microphoneRows
-                } header: {
-                    Text("Dieses iPhone")
-                } footer: {
-                    if bridge.pushToken == nil {
-                        Text("iOS hat Housephone noch nicht für Anrufe im Hintergrund freigegeben. Das passiert automatisch, sobald die App mit Internet geöffnet ist. Bleibt es dabei, prüfe den Push-Schlüssel (APNs) der Bridge.")
-                    }
-                }
-
-                WatchSection()
-
-                Section {
-                    Button("Kopplung aufheben", role: .destructive) {
-                        confirmsUnpair = true
-                    }
-                } footer: {
-                    if watch.isPairedWithBridge {
-                        Text("Danach klingeln dieses iPhone und deine Apple Watch nicht mehr. Du kannst beide jederzeit neu koppeln.")
-                    } else {
-                        Text("Danach klingelt dieses iPhone nicht mehr. Du kannst es jederzeit neu koppeln.")
-                    }
+                    WatchSection()
+                } else {
+                    bridgeSections
                 }
 
                 Section("Über") {
@@ -112,6 +53,79 @@ struct SettingsView: View {
             .onChange(of: scenePhase) { _, phase in
                 // Coming back from the Settings app with a changed permission.
                 if phase == .active { microphone = AVAudioApplication.shared.recordPermission }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var bridgeSections: some View {
+        Section {
+            bridgeStatusRow
+            if let credentials = bridge.credentials {
+                LabeledContent("Name", value: bridge.welcome?.bridgeName ?? credentials.bridgeName)
+                LabeledContent("Adresse") {
+                    Text(credentials.bridgeURL.host() ?? credentials.bridgeURL.absoluteString)
+                        .font(.callout.monospaced())
+                        .textSelection(.enabled)
+                }
+                // The key pinned at pairing, as `fp` in the pairing link.
+                VStack(alignment: .leading, spacing: Theme.Space.s1) {
+                    Text("Fingerabdruck")
+                    Text(credentials.bridgeFingerprint)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .speechSpellsOutCharacters()
+                }
+                .accessibilityElement(children: .combine)
+            }
+            if let version = bridge.welcome?.bridgeVersion {
+                LabeledContent("Version") {
+                    Text(version).font(.callout.monospaced())
+                }
+            }
+            if let welcome = bridge.welcome {
+                LabeledContent("Telefonbuch & Anrufliste") {
+                    if welcome.supports(.fritzboxPhonebook) || welcome.supports(.fritzboxHistory) {
+                        StatusIndicator(tone: .positive, label: "Verbunden")
+                    } else {
+                        StatusIndicator(tone: .neutral, label: "Nicht eingerichtet")
+                    }
+                }
+            }
+        } header: {
+            Text("Bridge")
+        } footer: {
+            Text("Die Bridge läuft auf deinem Server und ist für die FRITZ!Box ein IP-Telefon.")
+        }
+
+        Section {
+            LabeledContent("Anrufe im Hintergrund") {
+                StatusIndicator(
+                    tone: bridge.pushToken == nil ? .warning : .positive,
+                    label: bridge.pushToken == nil ? "Noch nicht bereit" : "Bereit"
+                )
+            }
+            microphoneRows
+        } header: {
+            Text("Dieses iPhone")
+        } footer: {
+            if bridge.pushToken == nil {
+                Text("iOS hat Housephone noch nicht für Anrufe im Hintergrund freigegeben. Das passiert automatisch, sobald die App mit Internet geöffnet ist. Bleibt es dabei, prüfe den Push-Schlüssel (APNs) der Bridge.")
+            }
+        }
+
+        WatchSection()
+
+        Section {
+            Button("Kopplung aufheben", role: .destructive) {
+                confirmsUnpair = true
+            }
+        } footer: {
+            if watch.isPairedWithBridge {
+                Text("Danach klingeln dieses iPhone und deine Apple Watch nicht mehr. Du kannst beide jederzeit neu koppeln.")
+            } else {
+                Text("Danach klingelt dieses iPhone nicht mehr. Du kannst es jederzeit neu koppeln.")
             }
         }
     }

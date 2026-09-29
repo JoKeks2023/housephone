@@ -13,6 +13,10 @@ enum CallFailure: Identifiable, Equatable {
     case bridgeOffline
     case invalidNumber
     case callInProgress
+    /// Mode without bridge, away from the home Wi-Fi.
+    case notAtHome
+    /// Mode without bridge, the FRITZ!Box refused the login.
+    case directNotRegistered
     case system(String)
 
     var id: String { message.key }
@@ -23,13 +27,16 @@ enum CallFailure: Identifiable, Equatable {
         case .bridgeOffline: "Die Bridge ist gerade nicht erreichbar. Prüfe die Internetverbindung und versuche es erneut."
         case .invalidNumber: "Diese Nummer kann nicht gewählt werden."
         case .callInProgress: "Es läuft bereits ein Anruf."
+        case .notAtHome: "Ohne Bridge telefoniert Housephone nur im Heim-WLAN. Verbinde dich mit dem WLAN deiner FRITZ!Box."
+        case .directNotRegistered: "Housephone ist nicht an der FRITZ!Box angemeldet. Prüfe die Zugangsdaten in den Einstellungen."
         case .system(let description): "Der Anruf konnte nicht gestartet werden: \(description)"
         }
     }
 }
 
 /// Coordinates CallKit, PushKit, the bridge, WebRTC and the recents list.
-/// Supports one call at a time.
+/// Supports one call at a time. In the mode without bridge (ADR-0005) the
+/// calls run through `DirectPhone` (SIP and RTP to the FRITZ!Box) instead.
 ///
 /// The rules that matter most:
 /// - Every VoIP push is reported to CallKit synchronously, before anything
@@ -48,6 +55,9 @@ final class CallCenter: NSObject {
     @ObservationIgnored private let callController = CXCallController()
     @ObservationIgnored private let pushRegistry = PKPushRegistry(queue: .main)
     @ObservationIgnored private let bridge: BridgeConnection
+    @ObservationIgnored private let direct: DirectPhone
+    /// SIP Call-ID of each direct call.
+    @ObservationIgnored private var sipCallIDs: [CallID: String] = [:]
     @ObservationIgnored private let contacts: ContactsDirectory
     @ObservationIgnored private let media = MediaEngine()
     @ObservationIgnored private let ringback = RingbackPlayer()
@@ -68,8 +78,9 @@ final class CallCenter: NSObject {
     /// ICE-restart offers; a reconnect re-attaches) before the call ends.
     static let mediaRecoveryTimeout: Duration = .seconds(15)
 
-    init(bridge: BridgeConnection, contacts: ContactsDirectory, modelContainer: ModelContainer) {
+    init(bridge: BridgeConnection, direct: DirectPhone, contacts: ContactsDirectory, modelContainer: ModelContainer) {
         self.bridge = bridge
+        self.direct = direct
         self.contacts = contacts
         self.modelContainer = modelContainer
         provider = CXProvider(configuration: Self.makeProviderConfiguration())
@@ -83,7 +94,10 @@ final class CallCenter: NSObject {
         bridge.onConnected = { [weak self] in self?.bridgeDidConnect() }
         bridge.onPairingChanged = { [weak self] paired in self?.updatePushRegistration(paired: paired) }
         media.onConnectionStateChange = { [weak self] callId, state in self?.mediaStateChanged(state, for: callId) }
+        direct.onCallEvent = { [weak self] event in self?.handleDirect(event) }
     }
+
+    private var isDirect: Bool { direct.isEnabled }
 
     var hasActiveCall: Bool { activeCall?.isActive == true }
 
@@ -103,16 +117,24 @@ final class CallCenter: NSObject {
             failure = .invalidNumber
             return false
         }
-        guard bridge.isPaired, bridge.status != .rejected else {
-            failure = .notPaired
-            return false
-        }
         guard !hasActiveCall else {
             failure = .callInProgress
             return false
         }
-        // Skip a pending reconnect backoff; dialing waits for the connection.
-        bridge.refresh()
+        if isDirect {
+            switch direct.status {
+            case .ready: break
+            case .wrongPassword, .rejected: failure = .directNotRegistered; return false
+            case .notAtHome, .connecting, .off: failure = .notAtHome; return false
+            }
+        } else {
+            guard bridge.isPaired, bridge.status != .rejected else {
+                failure = .notPaired
+                return false
+            }
+            // Skip a pending reconnect backoff; dialing waits for the connection.
+            bridge.refresh()
+        }
 
         let uuid = UUID()
         pendingOutgoingNames[uuid] = name ?? contacts.name(for: number)
@@ -202,7 +224,8 @@ final class CallCenter: NSObject {
         activeCall = session
         isMuted = false
         mediaState = nil
-        scheduleAttachTimeout(for: session.id)
+        // Direct calls: the SIP transaction timers watch the FRITZ!Box.
+        if !isDirect { scheduleAttachTimeout(for: session.id) }
     }
 
     private func apply(_ event: CallEvent, to callId: CallID) {
@@ -219,11 +242,11 @@ final class CallCenter: NSObject {
         for effect in effects {
             switch effect {
             case .sendAttach:
-                attach(callId)
+                if !isDirect { attach(callId) }
             case .sendAccept:
-                send(.callAccept(CallReference(callId: callId)))
+                if isDirect { directAnswer(callId) } else { send(.callAccept(CallReference(callId: callId))) }
             case .sendHangup(let reason):
-                send(.callHangup(Hangup(callId: callId, reason: reason)))
+                if isDirect { directHangUp(callId, reason: reason) } else { send(.callHangup(Hangup(callId: callId, reason: reason))) }
             case .negotiate(let offer):
                 negotiate(offer)
             case .startWebSocketMedia:
@@ -237,11 +260,15 @@ final class CallCenter: NSObject {
             case .reportEnded(let reason):
                 provider.reportCall(with: callId.uuid, endedAt: nil, reason: reason.cxReason)
             case .startRingback:
-                ringback.start()
+                if isDirect { direct.media.audio.setRingback(true) } else { ringback.start() }
             case .stopRingback:
-                ringback.stop()
+                if isDirect { direct.media.audio.setRingback(false) } else { ringback.stop() }
             case .closeMedia:
-                media.close(callId: callId)
+                if isDirect {
+                    direct.media.close()
+                } else {
+                    media.close(callId: callId)
+                }
             }
         }
     }
@@ -252,6 +279,7 @@ final class CallCenter: NSObject {
         ringback.stop()
         isMuted = false
         attachedGeneration[call.id] = nil
+        sipCallIDs[call.id] = nil
         if callsNotRecorded.remove(call.id) == nil, let record = CallRecord(session: call) {
             let context = modelContainer.mainContext
             context.insert(record)
@@ -312,6 +340,10 @@ final class CallCenter: NSObject {
     }
 
     private func dial(_ callId: CallID, number: String) {
+        if isDirect {
+            directDial(callId, number: number)
+            return
+        }
         Task {
             do {
                 _ = try await bridge.ensureConnected(timeout: Self.attachTimeout)
@@ -368,6 +400,96 @@ final class CallCenter: NSObject {
             self.logger.error("Media did not recover; ending call")
             self.send(.callHangup(Hangup(callId: callId, reason: .failed)))
             self.apply(.bridgeEnded(.failed), to: callId)
+        }
+    }
+
+    // MARK: - Direct mode (ADR-0005)
+
+    private func configureAudioSession() {
+        if isDirect { CallAudio.configureSession() } else { media.configureAudioSession() }
+    }
+
+    private func directDial(_ callId: CallID, number: String) {
+        Task {
+            guard let sipCallID = await direct.call(number) else {
+                failure = .notAtHome
+                apply(.bridgeEnded(.failed), to: callId)
+                return
+            }
+            guard activeCall?.id == callId, activeCall?.isActive == true else {
+                // Hung up while the INVITE was being prepared.
+                direct.hangUp(sipCallID)
+                return
+            }
+            sipCallIDs[callId] = sipCallID
+        }
+    }
+
+    private func directAnswer(_ callId: CallID) {
+        guard let sipCallID = sipCallIDs[callId] else { return }
+        Task {
+            if await !direct.answer(sipCallID) {
+                apply(.bridgeEnded(.failed), to: callId)
+            }
+        }
+    }
+
+    private func directHangUp(_ callId: CallID, reason: HangupReason) {
+        guard let sipCallID = sipCallIDs[callId] else { return }
+        if reason == .declined, activeCall?.direction == .incoming {
+            direct.reject(sipCallID, busy: false)
+        } else {
+            direct.hangUp(sipCallID)
+        }
+    }
+
+    private func callID(forSIP sipCallID: String) -> CallID? {
+        sipCallIDs.first { $0.value == sipCallID }?.key
+    }
+
+    private func handleDirect(_ event: SIPEvent) {
+        switch event {
+        case .incoming(let incoming):
+            guard !hasActiveCall else {
+                direct.reject(incoming.id, busy: true)
+                return
+            }
+            let callId = CallID()
+            sipCallIDs[callId] = incoming.id
+            let announced = IncomingCall(callId: callId, caller: incoming.number, callerName: incoming.displayName, startedAt: .now)
+            let (session, _) = CallSession.incoming(announced: announced, now: .now)
+            begin(session)
+            reportIncoming(session, completion: nil)
+            apply(.directMedia, to: callId)
+        case .ringing(let sipCallID, let earlyMedia, let localPort):
+            guard let callId = callID(forSIP: sipCallID) else { return }
+            if let earlyMedia {
+                direct.media.connect(to: earlyMedia, localPort: localPort)
+                apply(.remoteState(.earlyMedia), to: callId)
+            } else {
+                apply(.remoteState(.ringing), to: callId)
+            }
+        case .connected(let sipCallID, let media, let localPort):
+            guard let callId = callID(forSIP: sipCallID) else { return }
+            direct.media.connect(to: media, localPort: localPort)
+            apply(.remoteState(.connected), to: callId)
+        case .ended(let sipCallID, let reason):
+            guard let callId = callID(forSIP: sipCallID) else { return }
+            apply(.bridgeEnded(Self.endReason(for: reason)), to: callId)
+        case .registration:
+            break
+        }
+    }
+
+    static func endReason(for reason: SIPCallEndReason) -> CallEndReason {
+        switch reason {
+        case .localHangUp: .localHangup
+        case .remoteHangUp: .remoteHangup
+        case .remoteCancelled, .unanswered: .remoteCancelled
+        case .busy: .busy
+        case .declined: .rejected
+        case .notFound: .notFound
+        case .noCommonCodec, .timeout, .failed: .failed
         }
     }
 
@@ -516,8 +638,13 @@ extension CallCenter: @preconcurrency CXProviderDelegate {
         logger.info("Provider reset")
         ringback.stop()
         if let call = activeCall {
-            media.close(callId: call.id)
-            if call.isActive { send(.callHangup(Hangup(callId: call.id, reason: .failed))) }
+            if isDirect {
+                direct.media.close()
+                if call.isActive, let sipCallID = sipCallIDs[call.id] { direct.hangUp(sipCallID) }
+            } else {
+                media.close(callId: call.id)
+                if call.isActive { send(.callHangup(Hangup(callId: call.id, reason: .failed))) }
+            }
         }
         activeCall = nil
         isMuted = false
@@ -532,7 +659,7 @@ extension CallCenter: @preconcurrency CXProviderDelegate {
         let number = action.handle.value
         let name = pendingOutgoingNames.removeValue(forKey: action.callUUID)
 
-        media.configureAudioSession()
+        configureAudioSession()
         begin(CallSession.outgoing(id: callId, number: number, name: name, now: .now))
         action.fulfill()
         provider.reportOutgoingCall(with: action.callUUID, startedConnectingAt: nil)
@@ -547,7 +674,7 @@ extension CallCenter: @preconcurrency CXProviderDelegate {
             action.fail()
             return
         }
-        media.configureAudioSession()
+        configureAudioSession()
         apply(.userAnswered, to: call.id)
         action.fulfill()
     }
@@ -560,7 +687,7 @@ extension CallCenter: @preconcurrency CXProviderDelegate {
     }
 
     func provider(_ provider: CXProvider, perform action: CXSetMutedCallAction) {
-        media.setMuted(action.isMuted)
+        if isDirect { direct.media.audio.setMuted(action.isMuted) } else { media.setMuted(action.isMuted) }
         isMuted = action.isMuted
         action.fulfill()
     }
@@ -570,7 +697,11 @@ extension CallCenter: @preconcurrency CXProviderDelegate {
             action.fail()
             return
         }
-        send(.callDTMF(DTMFDigits(callId: call.id, digits: action.digits)))
+        if isDirect {
+            direct.media.sendDTMF(action.digits)
+        } else {
+            send(.callDTMF(DTMFDigits(callId: call.id, digits: action.digits)))
+        }
         action.fulfill()
     }
 
@@ -580,11 +711,19 @@ extension CallCenter: @preconcurrency CXProviderDelegate {
     }
 
     func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
+        if isDirect {
+            direct.media.audio.start()
+            return
+        }
         media.audioSessionDidActivate(audioSession)
         ringback.audioSessionDidActivate()
     }
 
     func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
+        if isDirect {
+            direct.media.audio.stop()
+            return
+        }
         media.audioSessionDidDeactivate(audioSession)
         ringback.audioSessionDidDeactivate()
     }

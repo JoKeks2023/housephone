@@ -12,6 +12,7 @@ struct HousephoneApp: App {
         WindowGroup {
             RootView()
                 .environment(services.bridge)
+                .environment(services.direct)
                 .environment(services.callCenter)
                 .environment(services.watchLink)
                 .environment(services.contacts)
@@ -28,6 +29,7 @@ struct HousephoneApp: App {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             services.bridge.refresh()
+            services.direct.refresh()
             services.contacts.reload()
             Task { await services.fritzBox.refreshAfterConnect() }
         }

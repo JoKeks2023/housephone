@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(BridgeConnection.self) private var bridge
+    @Environment(DirectPhone.self) private var direct
     @Environment(CallCenter.self) private var callCenter
     @Environment(AppModel.self) private var appModel
     @Environment(FritzBoxData.self) private var fritzBox
@@ -12,20 +13,26 @@ struct RootView: View {
         @Bindable var callCenter = callCenter
 
         Group {
-            if bridge.isPaired {
+            if bridge.isPaired || direct.isEnabled {
                 MainTabView()
             } else {
                 OnboardingView()
             }
         }
-        .motion(Theme.Motion.standard, value: bridge.isPaired)
+        .motion(Theme.Motion.standard, value: bridge.isPaired || direct.isEnabled)
         .onChange(of: bridge.isPaired) { _, paired in
             // Phonebook and call list belong to the bridge that is gone.
             if !paired { fritzBox.clear() }
         }
+        .onChange(of: direct.isEnabled) { _, enabled in
+            if !enabled { fritzBox.clear() }
+        }
         .task(id: bridge.welcome) {
             // (Re)connected: a fresh phonebook keeps caller names current.
             await fritzBox.refreshAfterConnect()
+        }
+        .task(id: direct.status == .ready) {
+            if direct.status == .ready { await fritzBox.refreshAfterConnect() }
         }
         .fullScreenCover(isPresented: callScreenPresented) {
             InCallView()

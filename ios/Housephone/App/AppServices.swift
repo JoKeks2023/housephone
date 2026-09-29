@@ -13,6 +13,7 @@ final class AppServices {
     let modelContainer: ModelContainer
     let contacts: ContactsDirectory
     let bridge: BridgeConnection
+    let direct: DirectPhone
     let fritzBox: FritzBoxData
     let callCenter: CallCenter
     let watchLink: WatchLink
@@ -22,11 +23,12 @@ final class AppServices {
         modelContainer = Self.makeModelContainer()
         contacts = ContactsDirectory()
         bridge = BridgeConnection(store: KeychainCredentialStore())
-        fritzBox = FritzBoxData(bridge: bridge)
+        direct = DirectPhone()
+        fritzBox = FritzBoxData(bridge: bridge, direct: direct)
         // Caller names for numbers only the FRITZ!Box phonebook knows — also
         // for a push that launches the app, from the cached phonebook.
         contacts.fallbackName = { [fritzBox] number in fritzBox.name(for: number) }
-        callCenter = CallCenter(bridge: bridge, contacts: contacts, modelContainer: modelContainer)
+        callCenter = CallCenter(bridge: bridge, direct: direct, contacts: contacts, modelContainer: modelContainer)
         watchLink = WatchLink(bridge: bridge)
         // The watch pairs itself as soon as the iPhone is connected.
         let callCenterOnConnected = bridge.onConnected

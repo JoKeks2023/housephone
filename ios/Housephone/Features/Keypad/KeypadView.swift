@@ -170,30 +170,62 @@ private struct DeleteKey: View {
 /// user has to act, it leads to where they can.
 struct BridgeStatusBanner: View {
     @Environment(BridgeConnection.self) private var bridge
+    @Environment(DirectPhone.self) private var direct
     @Environment(AppModel.self) private var appModel
 
     var body: some View {
         Group {
-            switch bridge.status {
-            case .online(sipRegistered: true), .unpaired:
-                EmptyView()
-            case .online(sipRegistered: false):
-                banner(tone: .warning, text: "Bridge erreichbar, aber nicht an der FRITZ!Box angemeldet")
-            case .connecting:
-                banner(tone: .neutral, text: "Verbinde mit der Bridge …", busy: true)
-            case .offline:
-                banner(tone: .negative, text: "Bridge nicht erreichbar")
-            case .rejected:
-                Button {
-                    appModel.selectedTab = .settings
-                } label: {
-                    banner(tone: .negative, text: "Die Bridge kennt dieses iPhone nicht mehr. Zum Neu-Koppeln tippen.", showsChevron: true)
-                }
-                .buttonStyle(RowButtonStyle())
-                .accessibilityHint(Text("Öffnet die Einstellungen"))
+            if direct.isEnabled {
+                directBanner
+            } else {
+                bridgeBanner
             }
         }
         .motion(Theme.Motion.standard, value: bridge.status)
+        .motion(Theme.Motion.standard, value: direct.status)
+    }
+
+    /// Mode without bridge (ADR-0005).
+    @ViewBuilder
+    private var directBanner: some View {
+        switch direct.status {
+        case .ready, .off:
+            EmptyView()
+        case .connecting:
+            banner(tone: .neutral, text: "Melde an der FRITZ!Box an …", busy: true)
+        case .notAtHome:
+            banner(tone: .warning, text: "Nur im Heim-WLAN verfügbar – unterwegs nicht erreichbar")
+        case .wrongPassword, .rejected:
+            Button {
+                appModel.selectedTab = .settings
+            } label: {
+                banner(tone: .negative, text: "Die FRITZ!Box lehnt die Anmeldung ab. Zum Prüfen tippen.", showsChevron: true)
+            }
+            .buttonStyle(RowButtonStyle())
+            .accessibilityHint(Text("Öffnet die Einstellungen"))
+        }
+    }
+
+    @ViewBuilder
+    private var bridgeBanner: some View {
+        switch bridge.status {
+        case .online(sipRegistered: true), .unpaired:
+            EmptyView()
+        case .online(sipRegistered: false):
+            banner(tone: .warning, text: "Bridge erreichbar, aber nicht an der FRITZ!Box angemeldet")
+        case .connecting:
+            banner(tone: .neutral, text: "Verbinde mit der Bridge …", busy: true)
+        case .offline:
+            banner(tone: .negative, text: "Bridge nicht erreichbar")
+        case .rejected:
+            Button {
+                appModel.selectedTab = .settings
+            } label: {
+                banner(tone: .negative, text: "Die Bridge kennt dieses iPhone nicht mehr. Zum Neu-Koppeln tippen.", showsChevron: true)
+            }
+            .buttonStyle(RowButtonStyle())
+            .accessibilityHint(Text("Öffnet die Einstellungen"))
+        }
     }
 
     private func banner(tone: StatusIndicator.Tone, text: LocalizedStringKey, busy: Bool = false, showsChevron: Bool = false) -> some View {

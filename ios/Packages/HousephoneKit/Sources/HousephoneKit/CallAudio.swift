@@ -1,27 +1,40 @@
 import AVFAudio
 import Foundation
-import HousephoneKit
 import os
 
-/// Audio of the watch's `websocket-pcma` calls.
+/// G.711 A-law call audio: the watch's `websocket-pcma` calls and the
+/// iPhone's RTP calls without bridge (ADR-0005).
 ///
 /// - Microphone → voice processing (echo cancellation) → 8 kHz Int16 →
-///   A-law → 160-byte frames → `onFrame`.
+///   A-law → 160-byte frames → `onFrame` (framed as `AudioFrame` or raw).
 /// - Network frames → jitter buffer → A-law decode → 8 kHz buffers on an
 ///   `AVAudioPlayerNode`. The player's own completion callbacks pull the
 ///   next frame, so playout runs on the audio hardware clock.
 ///
 /// Runs only between CallKit's `didActivate` and `didDeactivate`. Thread
 /// safe: CallKit, the network and the audio threads call in concurrently.
-final class CallAudio: @unchecked Sendable {
+public final class CallAudio: @unchecked Sendable {
+    public enum Framing: Sendable {
+        /// Binary WebSocket messages with a type byte (watch, `AudioFrame`).
+        case audioFrame
+        /// Bare A-law payloads, e.g. for RTP.
+        case raw
+    }
+
     /// Called on an audio thread with each outgoing audio message.
-    var onFrame: (@Sendable (Data) -> Void)? {
+    public var onFrame: (@Sendable (Data) -> Void)? {
         get { lock.withLock { frameHandler } }
         set { lock.withLock { frameHandler = newValue } }
     }
 
     private let lock = NSLock()
-    private let logger = Logger(subsystem: "com.jorisconrad.housephone.watch", category: "audio")
+    private let framing: Framing
+    private let logger: Logger
+
+    public init(framing: Framing = .audioFrame, logSubsystem: String = "com.jorisconrad.housephone.watch") {
+        self.framing = framing
+        logger = Logger(subsystem: logSubsystem, category: "audio")
+    }
 
     // Guarded by `lock`.
     private var frameHandler: (@Sendable (Data) -> Void)?
@@ -47,20 +60,22 @@ final class CallAudio: @unchecked Sendable {
     // MARK: - Session
 
     /// Sets the category before CallKit activates the session.
-    static func configureSession() {
+    public static func configureSession() {
+        #if os(iOS) || os(watchOS)
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playAndRecord, mode: .voiceChat, options: [])
         } catch {
-            Logger(subsystem: "com.jorisconrad.housephone.watch", category: "audio")
+            Logger(subsystem: "com.jorisconrad.housephone", category: "audio")
                 .error("Audio session category failed: \(error.localizedDescription, privacy: .public)")
         }
+        #endif
     }
 
     // MARK: - Lifecycle
 
     /// Call from `provider(_:didActivate:)`.
-    func start() {
+    public func start() {
         lock.lock()
         defer { lock.unlock() }
         guard !isRunning else { return }
@@ -106,7 +121,7 @@ final class CallAudio: @unchecked Sendable {
     }
 
     /// Call from `provider(_:didDeactivate:)` and when the call ends.
-    func stop() {
+    public func stop() {
         lock.lock()
         isRunning = false
         let engine = self.engine
@@ -126,11 +141,11 @@ final class CallAudio: @unchecked Sendable {
 
     // MARK: - Controls
 
-    func setMuted(_ muted: Bool) {
+    public func setMuted(_ muted: Bool) {
         lock.withLock { isMuted = muted }
     }
 
-    func setRingback(_ on: Bool) {
+    public func setRingback(_ on: Bool) {
         lock.withLock {
             if on, !isRingbackOn { ringback = RingbackGenerator() }
             isRingbackOn = on
@@ -138,7 +153,7 @@ final class CallAudio: @unchecked Sendable {
     }
 
     /// 0…1, from the Digital Crown.
-    func setVolume(_ newValue: Float) {
+    public func setVolume(_ newValue: Float) {
         lock.withLock {
             volume = max(0, min(1, newValue))
             player?.volume = volume
@@ -146,16 +161,33 @@ final class CallAudio: @unchecked Sendable {
     }
 
     /// New media session (e.g. after a re-attach): drop stale audio.
-    func resetPlayout() {
+    public func resetPlayout() {
         lock.withLock { jitter.reset() }
     }
 
     // MARK: - Network → speaker
 
-    /// One binary WebSocket message from the bridge.
-    func receive(_ message: Data) {
-        guard let payload = AudioFrame.decode(message) else { return }
-        lock.withLock { jitter.push(payload) }
+    /// One incoming message in this instance's framing. Raw payloads of
+    /// another packet time (e.g. 30 ms) are cut into 20-ms frames.
+    public func receive(_ message: Data) {
+        switch framing {
+        case .audioFrame:
+            guard let payload = AudioFrame.decode(message) else { return }
+            lock.withLock { jitter.push(payload) }
+        case .raw:
+            let frames = Self.frames(fromRaw: message)
+            lock.withLock { for frame in frames { jitter.push(frame) } }
+        }
+    }
+
+    static func frames(fromRaw payload: Data) -> [Data] {
+        let size = AudioFrame.samplesPerFrame
+        return stride(from: 0, to: payload.count, by: size).map { offset in
+            let start = payload.startIndex + offset
+            var frame = Data(payload[start..<min(start + size, payload.endIndex)])
+            if frame.count < size { frame.append(Data(repeating: G711.aLawSilence, count: size - frame.count)) }
+            return frame
+        }
     }
 
     /// Must hold `lock`.
@@ -216,7 +248,12 @@ final class CallAudio: @unchecked Sendable {
         guard let handler else { return }
         for samples in frames {
             let payload = muted ? AudioFrame.silence : G711.encodeALaw(samples)
-            if let message = AudioFrame.encode(aLaw: payload) { handler(message) }
+            switch framing {
+            case .audioFrame:
+                if let message = AudioFrame.encode(aLaw: payload) { handler(message) }
+            case .raw:
+                handler(payload)
+            }
         }
     }
 }

@@ -2271,6 +2271,556 @@
           }
         }
       }
+    },
+    "Ohne Bridge telefoniert Housephone nur im Heim-WLAN. Verbinde dich mit dem WLAN deiner FRITZ!Box.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without a bridge, Housephone only works on your home Wi-Fi. Connect to your FRITZ!Box’s Wi-Fi."
+          }
+        }
+      }
+    },
+    "Housephone ist nicht an der FRITZ!Box angemeldet. Prüfe die Zugangsdaten in den Einstellungen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone isn’t registered with your FRITZ!Box. Check the credentials in Settings."
+          }
+        }
+      }
+    },
+    "Die FRITZ!Box antwortet nicht. Bist du im Heim-WLAN?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The FRITZ!Box isn’t responding. Are you on your home Wi-Fi?"
+          }
+        }
+      }
+    },
+    "Die FRITZ!Box hat die Anmeldung abgelehnt. Prüfe Benutzer und Kennwort für TR-064.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The FRITZ!Box rejected the login. Check the TR-064 user and password."
+          }
+        }
+      }
+    },
+    "Die FRITZ!Box bietet diese Funktion nicht an.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The FRITZ!Box doesn’t offer this feature."
+          }
+        }
+      }
+    },
+    "Die FRITZ!Box hat unerwartet geantwortet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The FRITZ!Box sent an unexpected response."
+          }
+        }
+      }
+    },
+    "Andere …": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other …"
+          }
+        }
+      }
+    },
+    "Host-Name oder IP-Adresse": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Host name or IP address"
+          }
+        }
+      }
+    },
+    "Benutzername": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User name"
+          }
+        }
+      }
+    },
+    "Kennwort": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password"
+          }
+        }
+      }
+    },
+    "IP-Telefon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IP phone"
+          }
+        }
+      }
+    },
+    "Lege in der FRITZ!Box unter Telefonie → Telefoniegeräte → Neues Gerät einrichten ein „Telefon (mit und ohne Anrufbeantworter)“ als „LAN/WLAN (IP-Telefon)“ an und trage hier dessen Benutzernamen und Kennwort ein.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In your FRITZ!Box, go to Telephony → Telephony Devices → Configure New Device, add a “Telephone (with and without answering machine)” as “LAN/WLAN (IP telephone)”, and enter its user name and password here."
+          }
+        }
+      }
+    },
+    "WLAN-Name (SSID)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi name (SSID)"
+          }
+        }
+      }
+    },
+    "Heim-WLAN": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home Wi-Fi"
+          }
+        }
+      }
+    },
+    "Nur in diesem WLAN darf Housephone im Hintergrund auf Anrufe warten. Den Namen liest die App nicht selbst aus, dafür bräuchte sie deinen Standort.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone waits for calls in the background only on this Wi-Fi. The app doesn’t read the name itself; that would require your location."
+          }
+        }
+      }
+    },
+    "Von der FRITZ!Box laden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Load from the FRITZ!Box"
+          }
+        }
+      }
+    },
+    "FRITZ!Box-Benutzer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FRITZ!Box user"
+          }
+        }
+      }
+    },
+    "Optional. Nutze einen eigenen FRITZ!Box-Benutzer mit dem Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional. Use a separate FRITZ!Box user with the permission “Voice messages, fax messages, FRITZ!App Fon and call list”."
+          }
+        }
+      }
+    },
+    "Das geht ohne Bridge nicht": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not available without a bridge"
+          }
+        }
+      }
+    },
+    "Direkt mit FRITZ!Box": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Directly with FRITZ!Box"
+          }
+        }
+      }
+    },
+    "Sichern": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "Nicht gespeichert": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not saved"
+          }
+        }
+      }
+    },
+    "Die Zugangsdaten konnten nicht im Schlüsselbund gespeichert werden.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The credentials couldn’t be saved to the keychain."
+          }
+        }
+      }
+    },
+    "Nur im Heim-WLAN": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home Wi-Fi only"
+          }
+        }
+      }
+    },
+    "Unterwegs bist du nicht erreichbar und kannst nicht anrufen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Away from home, you can’t be reached and can’t make calls."
+          }
+        }
+      }
+    },
+    "Klingeln im Hintergrund nur zu Hause": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rings in the background only at home"
+          }
+        }
+      }
+    },
+    "Außerhalb deines Heim-WLANs wartet Housephone nicht auf Anrufe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outside your home Wi-Fi, Housephone doesn’t wait for calls."
+          }
+        }
+      }
+    },
+    "Klingelt nur bei geöffneter App": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rings only while the app is open"
+          }
+        }
+      }
+    },
+    "Im Hintergrund klingelt es erst, wenn Apple Housephone die Local-Push-Freigabe erteilt hat.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ringing in the background needs Apple to approve Local Push for Housephone."
+          }
+        }
+      }
+    },
+    "Keine Apple Watch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Apple Watch"
+          }
+        }
+      }
+    },
+    "Die Watch telefoniert nur über eine Bridge.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The watch makes calls only through a bridge."
+          }
+        }
+      }
+    },
+    "Standardqualität": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard quality"
+          }
+        }
+      }
+    },
+    "G.711 statt HD-Telefonie (G.722).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "G.711 instead of HD voice (G.722)."
+          }
+        }
+      }
+    },
+    "Nicht angegeben": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not set"
+          }
+        }
+      }
+    },
+    "Direkt per TR-064": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Directly via TR-064"
+          }
+        }
+      }
+    },
+    "Bearbeiten": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
+          }
+        }
+      }
+    },
+    "Nur im Heim-WLAN verfügbar. Housephone ist dann ein IP-Telefon deiner FRITZ!Box, ohne Bridge dazwischen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only available on your home Wi-Fi. Housephone is then an IP phone of your FRITZ!Box, with no bridge in between."
+          }
+        }
+      }
+    },
+    "Grenzen ohne Bridge": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limits without a bridge"
+          }
+        }
+      }
+    },
+    "Direktmodus beenden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn Off Direct Mode"
+          }
+        }
+      }
+    },
+    "Danach kannst du Housephone mit einer Bridge koppeln oder neu einrichten.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afterwards you can pair Housephone with a bridge or set it up again."
+          }
+        }
+      }
+    },
+    "Direktmodus beenden?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off direct mode?"
+          }
+        }
+      }
+    },
+    "Housephone meldet sich von der FRITZ!Box ab und löscht die Zugangsdaten von diesem iPhone.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housephone signs out of the FRITZ!Box and deletes the credentials from this iPhone."
+          }
+        }
+      }
+    },
+    "Angemeldet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registered"
+          }
+        }
+      }
+    },
+    "Unterwegs nicht erreichbar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not reachable away from home"
+          }
+        }
+      }
+    },
+    "Anmeldung abgelehnt": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Login rejected"
+          }
+        }
+      }
+    },
+    "FRITZ!Box-Fehler %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FRITZ!Box error %lld"
+          }
+        }
+      }
+    },
+    "Aus": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        }
+      }
+    },
+    "Ohne Bridge nicht verfügbar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not available without a bridge"
+          }
+        }
+      }
+    },
+    "Die Apple Watch telefoniert nur über eine Bridge. Im Direktmodus klingelt sie nicht mit.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Watch makes calls only through a bridge. In direct mode it doesn’t ring."
+          }
+        }
+      }
+    },
+    "Mit Bridge": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With a bridge"
+          }
+        }
+      }
+    },
+    "Direkt mit FRITZ!Box (nur zu Hause)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Directly with FRITZ!Box (home only)"
+          }
+        }
+      }
+    },
+    "Ohne Bridge, nur im Heim-WLAN, ohne Apple Watch.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No bridge, home Wi-Fi only, no Apple Watch."
+          }
+        }
+      }
+    },
+    "Melde an der FRITZ!Box an …": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registering with the FRITZ!Box …"
+          }
+        }
+      }
+    },
+    "Nur im Heim-WLAN verfügbar – unterwegs nicht erreichbar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home Wi-Fi only – not reachable away from home"
+          }
+        }
+      }
+    },
+    "Die FRITZ!Box lehnt die Anmeldung ab. Zum Prüfen tippen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The FRITZ!Box rejects the login. Tap to check."
+          }
+        }
+      }
     }
   }
 }
