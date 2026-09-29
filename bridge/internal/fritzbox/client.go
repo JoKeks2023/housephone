@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -155,15 +156,20 @@ func (c *Client) secureBase(ctx context.Context) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		port = values["NewSecurityPort"]
-		if port == "" {
-			return "", &Error{Kind: KindProtocol, Err: errors.New("GetSecurityPort returned no port")}
+		// The answer comes unauthenticated over plain HTTP: accept a port
+		// number only, so a forged value such as "1@evil.example" cannot
+		// turn the URL's host into another server.
+		n, err := strconv.Atoi(strings.TrimSpace(values["NewSecurityPort"]))
+		if err != nil || n < 1 || n > 65535 {
+			return "", &Error{Kind: KindProtocol, Err: fmt.Errorf("GetSecurityPort returned an invalid port %q", values["NewSecurityPort"])}
 		}
+		port = strconv.Itoa(n)
 		c.mu.Lock()
 		c.securityPort = port
 		c.mu.Unlock()
 	}
-	return "https://" + net.JoinHostPort(c.cfg.Host, port), nil
+	base := url.URL{Scheme: "https", Host: net.JoinHostPort(c.cfg.Host, port)}
+	return base.String(), nil
 }
 
 // forgetSecurityPort makes the next call ask for the port again, e.g. after
