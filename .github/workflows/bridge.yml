@@ -94,4 +94,10 @@ jobs:
           test "$(cat health.json)" = '{"status":"ok"}'
           # identity.key was created in /data and is readable by the CLI.
           docker exec hardened housephone-bridge identity
+          # The admin socket works in the distroless image (tui without a
+          # terminal prints overview and self-test as text).
+          docker exec hardened housephone-bridge tui | tee tui.txt
+          grep -q "Selbsttest:" tui.txt
+          grep -q "FRITZ!Box-Anmeldung" tui.txt
+          docker exec hardened housephone-bridge devices list
           test "$(docker inspect -f '{{.State.Running}}' hardened)" = true

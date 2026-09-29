@@ -98,8 +98,23 @@ Ohne Docker: `go build -o housephone-bridge ./cmd/housephone-bridge`, dann `HOUS
 ./housephone pair -name "iPhone"   # Kopplungscode + QR-Code
 ./housephone devices list
 ./housephone identity              # Fingerabdruck der Bridge
-./housephone tui                   # Admin-Oberfläche (kommt mit HPHN-28)
+./housephone tui                   # Admin-Oberfläche
 ```
+
+### Admin-Oberfläche (`./housephone tui`)
+
+Die TUI spricht nur über den Unix-Socket `/data/admin.sock` (Rechte 0600) mit der laufenden Bridge, es gibt keinen zusätzlichen Port. Sie passt in 80×24.
+
+| Taste | Ansicht |
+|---|---|
+| `1` Übersicht | FRITZ!Box-Anmeldung, öffentliche IP, Push, TR-064, Geräte, Fingerabdruck; `k` zeigt die wirksame Konfiguration (Secrets geschwärzt) |
+| `2` Geräte | `↑↓` auswählen, `r` umbenennen, `x` entfernen: die Verbindung wird **sofort** getrennt |
+| `3` Kopplung | `n` erzeugt Code + QR-Code und wartet live, bis ein Gerät ihn benutzt; `Esc` widerruft |
+| `4` Anrufe | aktive und letzte Anrufe (Nummern maskiert), Statistik seit Start und heute |
+| `5` Logs | die letzten 1000 Zeilen live; `l` Level, `/` Suche |
+| `6` Selbsttest | grün/gelb/rot je Prüfung, `↑↓` zeigt den Hinweis dazu, `r` prüft erneut |
+
+`?` zeigt die Tastenhilfe, `q` beendet. Ohne Terminal (`./housephone tui | cat`) gibt der Befehl Übersicht und Selbsttest als Text aus. `devices remove` und `devices rename` gehen bei laufender Bridge ebenfalls über den Socket und wirken sofort.
 
 ## 6. iPhone koppeln
 

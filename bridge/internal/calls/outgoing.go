@@ -17,6 +17,9 @@ func (c *call) startOutgoing(conn DeviceConn) {
 	l := &leg{deviceID: conn.DeviceID(), conn: conn, ws: c.m.usesWebSocketAudio(conn.DeviceID())}
 	c.legs[l.deviceID] = l
 	c.log.Info("outgoing call", "device", l.deviceID, "number", logsafe.Number(c.number), "websocketAudio", l.ws)
+	ev := c.event(EventStarted)
+	ev.DeviceID = l.deviceID
+	c.m.emit(ev)
 	if l.ws {
 		c.codec = codec.PCMA
 		c.attachWSMedia(l)
@@ -126,6 +129,7 @@ func (c *call) onDialResult(out OutgoingSIPCall, media SIPMedia, err error) {
 		return
 	}
 	c.phase = phaseConnected
+	c.m.emit(c.event(EventConnected))
 	c.lastState = protocol.CallStateConnected
 	if l != nil {
 		c.sendState(l.conn, protocol.CallStateConnected)

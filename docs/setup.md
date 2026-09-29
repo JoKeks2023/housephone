@@ -24,6 +24,8 @@ Folge [`bridge/README.md`](../bridge/README.md), Schritte 1–5. Deine Werte:
 
 Fertig ist dieser Schritt, wenn `docker compose logs housephone-bridge` die Zeile `registered at FRITZ!Box` zeigt und die FRITZ!Box unter **Telefonie → Telefoniegeräte** das IP-Telefon „Housephone“ als verbunden zeigt. (`curl -s http://localhost:8080/v1/health` sagt ohne Anmeldung nur `{"status":"ok"}`, also dass die Bridge läuft.)
 
+Am schnellsten prüfst du das mit `./housephone tui` (im Ordner der `docker-compose.yml`): Taste `6` zeigt den **Selbsttest** mit grün/gelb/rot je Prüfung (FRITZ!Box-Anmeldung, Push, öffentliche IP, Medienport, öffentliche Adresse, Geräte) und mit `↑↓` den Hinweis, was zu tun ist. Taste `3` koppelt ein Gerät mit QR-Code, Taste `5` zeigt die Logs live.
+
 Der Bridge-Schlüssel liegt danach in `data/identity.key`. Sichere ihn zusammen mit `data/` – geht er verloren, müssen alle Geräte neu gekoppelt werden.
 
 ## 2. App aufs iPhone
@@ -139,6 +141,7 @@ Beides ist auch offline verfügbar, dann mit dem letzten Stand und einem Hinweis
 
 ## 6. Wenn etwas nicht klappt
 
+- **Zuerst:** `./housephone tui`, Taste `6` (Selbsttest).
 - **Server-Seite:** siehe Tabelle *Fehlersuche* in [`bridge/README.md`](../bridge/README.md).
   - `docker compose logs -f housephone-bridge` zeigt Registrierung, Pushes, Anrufe und ICE.
   - Mit `HOUSEPHONE_LOG_LEVEL=debug` wird es ausführlicher.

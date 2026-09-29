@@ -9,7 +9,7 @@
 |---|---|---|---|
 | 1 | Sicherheitsbefunde beheben | HPHN-20 | Widerruf wirkt sofort, Registrar nur im LAN, Limits, Nummern im Log maskiert, Abhängigkeiten aktualisiert |
 | 2 | **T-0004 Kopplung und Anmeldung v2** | HPHN-27 | Secure-Enclave-Schlüssel, beidseitige Prüfung der Bridge-Identität (Fingerabdruck im QR-Code), Ende-zu-Ende-verschlüsselte Signalisierung, 80-Bit-Code nur per `docker exec`, Container-Härtung |
-| 3 | **T-0005 Admin-TUI** | HPHN-28 | `docker compose exec housephone-bridge housephone-bridge tui`: Status, Geräte, Kopplung mit QR, Anrufe live, Statistiken, Logs, Einstellungen, Selbsttest; spricht über einen Unix-Socket mit der Bridge, kein neuer Port |
+| 3 | **T-0005 Admin-TUI** ✓ umgesetzt (Branch `feat/admin-tui`) | HPHN-28 | `./housephone tui`: Status, Geräte (sofort entfernen), Kopplung mit QR, Anrufe live, Statistiken, Logs, Einstellungen (nur Anzeige), Selbsttest; Unix-Socket `/data/admin.sock`, kein neuer Port. Offen: Einstellungen schreibbar machen |
 | 4 | **T-0006 Home Assistant** | HPHN-29 | MQTT-Discovery (nur ausgehend): Status- und Statistik-Sensoren, Ereignis „Anruf eingehend“ für Automationen; Nummern maskiert |
 | 5 | Einrichtung und Praxistest | HPHN-8 | Server, Tunnel, APNs-Key, App auf iPhone und Watch |
 

@@ -31,17 +31,20 @@ type session struct {
 	closeCh chan struct{}
 	revoked bool
 
+	connectedAt time.Time
+
 	sinkMu sync.Mutex
 	sink   calls.AudioSink
 }
 
 func newSession(deviceID string, conn *hp2.Conn) *session {
 	return &session{
-		deviceID: deviceID,
-		conn:     conn,
-		out:      make(chan protocol.Envelope, sendQueue),
-		audio:    make(chan []byte, audioQueue),
-		closeCh:  make(chan struct{}),
+		deviceID:    deviceID,
+		conn:        conn,
+		out:         make(chan protocol.Envelope, sendQueue),
+		audio:       make(chan []byte, audioQueue),
+		closeCh:     make(chan struct{}),
+		connectedAt: time.Now(),
 	}
 }
 

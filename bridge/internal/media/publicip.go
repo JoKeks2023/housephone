@@ -19,9 +19,10 @@ import (
 // PublicIPSource keeps the public IPv4 address current. It is advertised to
 // devices as a server-reflexive ICE candidate on the forwarded media port.
 type PublicIPSource struct {
-	mu  sync.RWMutex
-	ip  string
-	log *slog.Logger
+	mu     sync.RWMutex
+	ip     string
+	source string
+	log    *slog.Logger
 }
 
 // PublicIPConfig selects how the public IP is found. The first non-empty
@@ -84,10 +85,18 @@ func (p *PublicIPSource) Get() string {
 	return p.ip
 }
 
+// Source names where the current IP came from (config, fritzbox, stun, dns …).
+func (p *PublicIPSource) Source() string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.source
+}
+
 func (p *PublicIPSource) set(ip, source string) {
 	p.mu.Lock()
 	changed := p.ip != ip
 	p.ip = ip
+	p.source = source
 	p.mu.Unlock()
 	if changed {
 		p.log.Info("public IP", "ip", ip, "source", source)
