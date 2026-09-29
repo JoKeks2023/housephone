@@ -223,6 +223,10 @@ func (b *Bridge) Run(ctx context.Context) error {
 	srv := &http.Server{
 		Handler:           b.signaling.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
+		// Keep-alive connections without a request are closed; WebSocket
+		// connections are hijacked and not affected.
+		IdleTimeout:    60 * time.Second,
+		MaxHeaderBytes: 16 << 10,
 	}
 	errCh := make(chan error, 2)
 	go func() {
