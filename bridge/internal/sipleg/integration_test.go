@@ -225,6 +225,73 @@ func TestIncomingCallMediaDTMFAndRemoteHangup(t *testing.T) {
 	}
 }
 
+// The watch (websocket-pcma, v1.1) answers the same G.722-first INVITE with
+// PCMA: the 200 OK must contain exactly PCMA and audio flows as PCMA.
+func TestIncomingCallAnsweredWithPCMA(t *testing.T) {
+	e := setup(t, nil)
+	type callResult struct {
+		d   *diago.DialogClientSession
+		med *diago.DialogMedia
+		err error
+	}
+	answered := make(chan callResult, 1)
+	go func() {
+		d, med, err := e.box.Call(context.Background(), "0301234567", "")
+		answered <- callResult{d, med, err}
+	}()
+	call := e.nextIncoming(t)
+	if call.Codec() != codec.G722 || !call.Offers(codec.PCMA) || !call.Offers(codec.PCMU) {
+		t.Fatalf("codec %v, offers PCMA %v", call.Codec(), call.Offers(codec.PCMA))
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	sipMedia, err := call.Answer(ctx, codec.PCMA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := <-answered
+	if res.err != nil {
+		t.Fatal(res.err)
+	}
+	answer := string(res.d.InviteResponse.Body())
+	if !strings.Contains(answer, "RTP/AVP 8 101") || strings.Contains(answer, "G722") {
+		t.Fatalf("answer must contain exactly PCMA + telephone-event:\n%s", answer)
+	}
+
+	boxRTP := res.med.RTPSession()
+	stop := make(chan struct{})
+	defer close(stop)
+	go func() {
+		for i := 0; ; i++ {
+			select {
+			case <-stop:
+				return
+			case <-time.After(20 * time.Millisecond):
+			}
+			_ = boxRTP.WriteRTP(&rtp.Packet{Header: rtp.Header{Version: 2, PayloadType: 8, SequenceNumber: uint16(i), Timestamp: uint32(i * 160), SSRC: 0xF2}, Payload: []byte("alaw-box")})
+			_ = sipMedia.WriteRTP(&rtp.Packet{Header: rtp.Header{Version: 2, PayloadType: 8, SequenceNumber: uint16(i), Timestamp: uint32(i * 160), SSRC: 0xB2}, Payload: []byte("alaw-watch")})
+		}
+	}()
+	readRTP(t, sipMedia.ReadRTP, func(p *rtp.Packet) bool { return p.PayloadType == 8 && bytes.Equal(p.Payload, []byte("alaw-box")) })
+	readRTP(t, boxRTP.ReadRTP, func(p *rtp.Packet) bool { return p.PayloadType == 8 && bytes.Equal(p.Payload, []byte("alaw-watch")) })
+	_ = res.d.Hangup(ctx)
+}
+
+func TestAnswerWithCodecNotOffered(t *testing.T) {
+	e := setup(t, []media.Codec{fakefritz.G722, media.CodecTelephoneEvent8000})
+	go func() { _, _, _ = e.box.Call(context.Background(), "0301234567", "") }()
+	call := e.nextIncoming(t)
+	if call.Offers(codec.PCMA) {
+		t.Fatal("G.722-only INVITE must not offer PCMA")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if _, err := call.Answer(ctx, codec.PCMA); err == nil {
+		t.Fatal("answering with a codec that was not offered must fail")
+	}
+	_ = call.Reject(488, "Not Acceptable Here")
+}
+
 func TestIncomingCallCancelled(t *testing.T) {
 	e := setup(t, nil)
 	ctx, cancel := context.WithCancel(context.Background())

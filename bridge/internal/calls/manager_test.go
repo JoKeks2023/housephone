@@ -43,6 +43,8 @@ func newHarness(t *testing.T, devices ...store.Device) *harness {
 		Devices:         h.dir,
 		Logger:          slog.New(slog.NewTextHandler(io.Discard, nil)),
 		ReattachTimeout: 150 * time.Millisecond,
+		// websocket-pcma pacing; shorter than 20 ms to keep tests fast.
+		AudioFrameInterval: 5 * time.Millisecond,
 	})
 	return h
 }
