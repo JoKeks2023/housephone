@@ -1,7 +1,6 @@
 # ADR-0004: Kopplung und Anmeldung v2 – Ende-zu-Ende gesichert
 
 - Status: angenommen (2026-09-29)
-- Ticket: HPHN-27
 - Ersetzt die Bearer-Anmeldung aus Signalisierung v1. Es gibt keinen Parallelbetrieb, weil noch keine echten Geräte gekoppelt sind.
 
 ## Kontext und Bedrohungsmodell
@@ -133,13 +132,13 @@ HP2-BRIDGE
 
 ### Widerruf und Container
 
-- **Widerruf:** `devices remove` wirkt sofort (HPHN-20): offene Sitzungen werden geschlossen und laufende Anrufe beendet.
+- **Widerruf:** `devices remove` wirkt sofort: offene Sitzungen werden geschlossen und laufende Anrufe beendet.
 - **Docker Compose:** `read_only: true`, `tmpfs: /tmp`, `security_opt: [no-new-privileges:true]`, `cap_drop: [ALL]`, Benutzer ohne Root. Schreibbar ist nur `/data`.
 
 ## Restrisiken (bewusst)
 
 - **Kopplungsanfrage:** Der Code reist nur TLS-geschützt. Ein aktiver Angreifer an der TLS-Terminierung könnte die Anfrage abfangen und sich selbst koppeln. Das echte Gerät bekäme dann einen Fehler, und die Fremdkopplung wäre sichtbar: in `pair`, in der TUI und per `device.paired` auf allen Geräten. Gegenmittel: Kopplung im Heim-WLAN direkt gegen die LAN-Adresse – später als Option.
-- **APNs-Nutzlast:** Nummer und Name des Anrufers gehen über Apple. Die Ende-zu-Ende-Verschlüsselung der Push-Nutzlast kommt mit dem Push-Relay (HPHN-22).
+- **APNs-Nutzlast:** Nummer und Name des Anrufers gehen über Apple. Die Ende-zu-Ende-Verschlüsselung der Push-Nutzlast kommt mit dem Push-Relay.
 - **Zeitfenster ±60 s:** Geräte mit falscher Uhr können sich nicht anmelden. Die Bridge meldet in der `401`-Antwort nur `clock_skew`, falls die Signatur sonst gültig wäre.
 
 ## Testvektoren

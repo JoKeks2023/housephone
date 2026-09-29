@@ -27,7 +27,7 @@
 
 ## Nicht drin (später)
 
-- watchOS-App (HPHN-4)
+- watchOS-App (T-0002)
 - Halten/Makeln/Konferenz
 - TURN-Fallback
 - Trickle-ICE

@@ -1,7 +1,6 @@
 # ADR-0001: Bridge-Architektur für iPhone, Apple Watch und FRITZ!Box
 
 - Status: angenommen (2026-09-29)
-- Tickets: HPHN-2 (Bridge), HPHN-3 (iOS-App), HPHN-4 (watchOS)
 
 ## Kontext
 
@@ -50,7 +49,7 @@ Ein eigener Dienst **„Bridge“** läuft auf dem Heimserver und vermittelt zwi
    - CallKit + PushKit
    - WebRTC über `stasel/WebRTC` (SPM-Binary, BSD)
    - Protokoll- und Zustandslogik im lokalen Swift-Paket `HousephoneKit` (plattformneutral, lokal testbar)
-9. **Watch (HPHN-4):** später.
+9. **Watch:** später.
    - WebRTC gibt es für watchOS nicht.
    - Das Protokoll ist so geschnitten, dass die Bridge für die Watch zusätzlich einen schlanken RTP/SRTP-Medienweg anbieten kann, ohne dass sich an den Nachrichten etwas ändert.
 

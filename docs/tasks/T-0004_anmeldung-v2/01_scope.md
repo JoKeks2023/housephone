@@ -23,5 +23,5 @@
 - Kopplungs-UI aus dem Design-Audit (M4): Spinner im Button, „Später“ statt „Abbrechen“ nach Erfolg, Fehler-Haptik, Code-Anzeige in Vierergruppen
 
 ## Nicht drin
-- Push-Payload verschlüsseln (HPHN-22)
+- Push-Payload verschlüsseln (Push-Relay, siehe `docs/veroeffentlichung.md`)
 - LAN-Kopplung ohne TLS-Terminierung

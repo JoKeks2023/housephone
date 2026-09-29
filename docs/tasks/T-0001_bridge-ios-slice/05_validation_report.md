@@ -13,7 +13,7 @@
 | iOS-App: unsignierter Build `generic/platform=iOS` | `BUILD SUCCEEDED`, keine Warnungen | CI https://github.com/JoKeks2023/housephone/actions/runs/36545230449 |
 | Protokoll Go ↔ Swift | beide Seiten testen gegen dieselben Dateien in `docs/protocol/fixtures/` | – |
 
-## Nicht belegt (braucht Hardware, siehe HPHN-8)
+## Nicht belegt (braucht Hardware)
 
 - Registrierung an der echten FRITZ!Box 6591 und Codec-Aushandlung mit ihr (G.722, RFC 4733)
 - APNs-Zustellung und CallKit-Oberfläche auf einem echten iPhone

@@ -15,7 +15,7 @@
 | Watch-Quellen | `swiftc -typecheck` gegen watchOS-SDK, Swift 6 strikt: 0 Fehler, 0 Warnungen |
 | iOS-App mit eingebetteter Watch-App | unsignierter CI-Build grün (Run 36552902287); Watch-App unter `PlugIns/` mit korrekter Info.plist |
 
-## Nicht belegt (braucht echte Uhr, iPhone, Bridge – siehe HPHN-8)
+## Nicht belegt (braucht echte Uhr, iPhone, Bridge)
 
 - VoIP-Push und CallKit auf watchOS; ob die Uhr beim Klingeln HTTPS abfragen darf
 - Echounterdrückung und Mikrofonformat auf der Uhr, Jitter im echten Netz, TCP-Latenz über Cloudflare Tunnel im Mobilfunk

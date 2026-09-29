@@ -1,6 +1,5 @@
 # T-0004 – Kopplung und Anmeldung v2
 
-**Ticket:** HPHN-27
 **Stand:** 2026-09-29
 
 Wunsch des Nutzers: „bombensicher“, die Bridge als Docker-Container, Kopplung per Einmalcode über die Shell. Umsetzung nach `docs/architecture/ADR-0004-anmeldung-v2.md` und `docs/protocol/signaling-v2.md`.
