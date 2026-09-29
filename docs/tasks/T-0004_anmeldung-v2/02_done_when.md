@@ -13,5 +13,5 @@
   - falsche Bridge-Signatur, fehlender Header oder anderer Bridge-Schlüssel als gepinnt → Abbruch
   - `fp` passt nicht zum Schlüssel → Kopplung abgelehnt
 - [ ] **E2E im Prozess:** Kopplung v2 → WebSocket → eingehender und ausgehender Anruf (WebRTC und `websocket-pcma`) → HTTPS für Telefonbuch und Anrufliste, alles versiegelt.
-- [ ] **Probetelefon:** Echter Anruf über die FRITZ!Box funktioniert weiter (Vortest wie HPHN-8).
+- [ ] **Probetelefon:** Echter Anruf über die FRITZ!Box funktioniert weiter (wie beim Vortest).
 - [ ] **CI:** Bridge und iOS grün.

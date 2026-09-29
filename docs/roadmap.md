@@ -1,32 +1,39 @@
 # Zukunftsplan
 
-**Stand:** 2026-09-29.
+**Stand:** 2026-09-29
 
-- Fertig und gemergt: T-0001 (Bridge + iPhone), T-0002 (Watch), T-0003 (FRITZ!Box-Telefonbuch/-Anrufliste).
-- Vortest gegen die echte FRITZ!Box bestanden: eingehend und ausgehend, Ton in beide Richtungen (HPHN-8).
+## Erledigt
 
-| Reihenfolge | Aufgabe | Huly | Kurz |
-|---|---|---|---|
-| 1 | Sicherheitsbefunde beheben | HPHN-20 | Widerruf wirkt sofort, Registrar nur im LAN, Limits, Nummern im Log maskiert, Abhängigkeiten aktualisiert |
-| 2 | **T-0004 Kopplung und Anmeldung v2** | HPHN-27 | Secure-Enclave-Schlüssel, beidseitige Prüfung der Bridge-Identität (Fingerabdruck im QR-Code), Ende-zu-Ende-verschlüsselte Signalisierung, 80-Bit-Code nur per `docker exec`, Container-Härtung |
-| 3 | **T-0005 Admin-TUI** ✓ umgesetzt (Branch `feat/admin-tui`) | HPHN-28 | `./housephone tui`: Status, Geräte (sofort entfernen), Kopplung mit QR, Anrufe live, Statistiken, Logs, Einstellungen (nur Anzeige), Selbsttest; Unix-Socket `/data/admin.sock`, kein neuer Port. Offen: Einstellungen schreibbar machen |
-| 4 | **T-0006 Home Assistant** | HPHN-29 | MQTT-Discovery (nur ausgehend): Status- und Statistik-Sensoren, Ereignis „Anruf eingehend“ für Automationen; Nummern maskiert |
-| 5 | Einrichtung und Praxistest | HPHN-8 | Server, Tunnel, APNs-Key, App auf iPhone und Watch |
+- Bridge und iPhone-App (T-0001), Watch-App (T-0002), FRITZ!Box-Telefonbuch und -Anrufliste (T-0003)
+- Sicherheitsbefunde behoben
+- Anmeldung v2 mit Secure Enclave und Ende-zu-Ende-Verschlüsselung (T-0004), Design-Durchgang (T-0007)
+- Watch koppelt sich automatisch
+- Bridge-Image auf GHCR
+- Admin-TUI (`./housephone tui`)
+- Vortest gegen die echte FRITZ!Box: eingehend und ausgehend, Ton in beide Richtungen
 
-## Später (Veröffentlichung, siehe `docs/veroeffentlichung.md`)
+## Als Nächstes
 
-| Aufgabe | Huly |
-|---|---|
-| Push-Relay für selbst gehostete Bridges, mit Ende-zu-Ende-verschlüsselter Push-Nutzlast | HPHN-22 |
-| Lizenz: Housephone ohne GPL-Historie | HPHN-23 |
-| App Review: Demo-Zugang, Exportfrage, Markenname | HPHN-24 |
-| Einfachere Einrichtung: IP-Telefon automatisch per TR-064, Home-Assistant-Add-on, fertige Pakete | HPHN-25 |
+| # | Aufgabe | Kurz |
+|:-:|---|---|
+| 1 | **Live-Test auf dem Server** | Einrichtung nach README, Selbsttest in der TUI |
+| 2 | **Zwei Zugänge** | Öffentlich nur Telefonie; Kopplung und Verwaltung nur im Heimnetz oder über Tailscale; zu Hause Direktverbindung zur Bridge ohne Tunnel |
+| 3 | **Verwaltung in der App** | Nur im Heimnetz, Admin-Rolle, Face ID |
+| 4 | **Koppeln im Heimnetz ohne QR** | Bonjour, Bestätigungscode, Freigabe durch ein Admin-Gerät |
+| 5 | **Profile** | Mehrere Nutzer mit eigener Festnetznummer, je ein IP-Telefon an der FRITZ!Box |
+| 6 | **Home Assistant** | MQTT-Discovery (nur ausgehend), Sensoren, Ereignis „Anruf eingehend“ |
+| 7 | *Optional:* Web-UI | Über Tailscale-HTTPS mit Passkey, Zitadel optional |
 
-## Ideen ohne Ticket
+## Später
+
+- Mac-App
+- Veröffentlichung (siehe `docs/veroeffentlichung.md`): Push-Relay, eigenes Repo und Lizenz, Demo-Zugang für App Review, einfachere Einrichtung
+
+## Ideen
 
 - Halten, Makeln, Weiterleiten (SIP REFER)
 - TURN-Fallback für restriktive Mobilfunknetze
-- Anrufbeantworter-Nachrichten der FRITZ!Box in der App abspielen
-- G.722 auf der Watch (libg722 ist gemeinfrei)
+- Anrufbeantworter-Nachrichten abspielen
+- G.722 auf der Watch
 - Liquid-Glass-App-Icon in mehreren Ebenen
-- Web-Dashboard auf der Admin-API, nur im LAN, mit Passkey
+- Schreibbare Einstellungen in der TUI

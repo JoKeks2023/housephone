@@ -1,7 +1,6 @@
 # ADR-0002: Eigenständige Anrufe auf der Apple Watch
 
 - Status: angenommen (2026-09-29)
-- Ticket: HPHN-4
 - Baut auf ADR-0001 und Signalisierung v1 auf.
 
 ## Kontext

@@ -7,7 +7,7 @@
 - Design-Audit mit den Skills `jorisconrad-design-language`, `apple-skills:design`, `apple:visual-qa`, `apple:accessibility`, `emil-design-eng`, `find-animation-opportunities`
 
 Nichts davon lief zur Laufzeit; alle Befunde stammen aus dem Code.
-Umsetzung: HPHN-32 (T-0007). Kopplungs-UI: HPHN-27 (T-0004).
+Umsetzung: T-0007. Kopplungs-UI: T-0004.
 
 ## 1. „Zu nah am Upstream?“ – Nein
 
@@ -18,19 +18,19 @@ Umsetzung: HPHN-32 (T-0007). Kopplungs-UI: HPHN-27 (T-0004).
 | Upstream-Commits in `ios/` und `bridge/` | 0 von 49 |
 | Funktion | Telephone ist ein macOS-SIP-Softphone; Housephone ist eine iOS-/watchOS-App mit eigener Bridge für die FRITZ!Box |
 
-Kein Copycat- bzw. Plagiatsrisiko nach den Richtlinien 4.1, 4.3 und 5.2. Offen ist nur die **Lizenz-Herkunft des Repos** (GPL-3.0, alter macOS-Code im selben Repo). Empfehlung: vor dem Release ein eigenes Repo ohne Telephone-Historie mit eigener Lizenz (HPHN-23).
+Kein Copycat- bzw. Plagiatsrisiko nach den Richtlinien 4.1, 4.3 und 5.2. Offen ist nur die **Lizenz-Herkunft des Repos** (GPL-3.0, alter macOS-Code im selben Repo). Empfehlung: vor dem Release ein eigenes Repo ohne Telephone-Historie mit eigener Lizenz.
 
 ## 2. App Store – was vor einer Einreichung fehlt
 
-| Risiko | Richtlinie | Maßnahme | Ticket |
-|---|---|---|---|
-| Hoch: Prüfer haben keine FRITZ!Box | 2.1 | Demo-Bridge mit Testanschluss plus Review-Notizen | HPHN-24 |
-| Hoch: APNs-Key gehört dem Anbieter | – | Push-Relay | HPHN-22 |
-| Mittel: GPL-Herkunft | 5.2 | eigenes Repo, eigene Lizenz | HPHN-23 |
-| Mittel: `ITSAppUsesNonExemptEncryption: false` | Export | bewusst prüfen und bestätigen | HPHN-24 |
-| Niedrig: Datenschutzerklärung | 5.1.1 | veröffentlichen, URL in ASC | HPHN-24 |
-| Niedrig: Marke „FRITZ!Box“ | 5.2 | nur beschreibend, nicht im Titel oder Icon | HPHN-24 |
-| Prüfen: `aps-environment` | – | Automatisches Signing setzt beim Export vermutlich `production`; beim ersten Archiv kontrollieren | HPHN-24 |
+| Risiko | Richtlinie | Maßnahme |
+|---|---|---|
+| Hoch: Prüfer haben keine FRITZ!Box | 2.1 | Demo-Bridge mit Testanschluss plus Review-Notizen |
+| Hoch: APNs-Key gehört dem Anbieter | – | Push-Relay |
+| Mittel: GPL-Herkunft | 5.2 | eigenes Repo, eigene Lizenz |
+| Mittel: `ITSAppUsesNonExemptEncryption: false` | Export | bewusst prüfen und bestätigen |
+| Niedrig: Datenschutzerklärung | 5.1.1 | veröffentlichen, URL in ASC |
+| Niedrig: Marke „FRITZ!Box“ | 5.2 | nur beschreibend, nicht im Titel oder Icon |
+| Prüfen: `aps-environment` | – | Automatisches Signing setzt beim Export vermutlich `production`; beim ersten Archiv kontrollieren |
 
 **Bereits korrekt:**
 - Jeder VoIP-Push wird an CallKit gemeldet, auch in Sonderfällen.
