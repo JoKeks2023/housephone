@@ -123,7 +123,10 @@ const (
 	// ErrorClockSkew (v2): the request signature is valid but its ts is
 	// more than 60 s off the bridge clock.
 	ErrorClockSkew = "clock_skew"
-	ErrorInternal  = "internal"
+	// ErrorHomeNetworkRequired: pairing and administration are only
+	// available over the private listener (home network / Tailscale).
+	ErrorHomeNetworkRequired = "home_network_required"
+	ErrorInternal            = "internal"
 )
 
 // WebSocket close codes beyond RFC 6455.
@@ -276,6 +279,9 @@ type Welcome struct {
 	// Features lists optional bridge functions (v1.2), e.g.
 	// FeatureFritzBoxPhonebook. Omitted when there are none.
 	Features []string `json:"features,omitempty"`
+	// LanURL is the private listener (home network / Tailscale). Devices
+	// prefer it when reachable; pairing works only there.
+	LanURL string `json:"lanUrl,omitempty"`
 }
 
 // Features announced in welcome (v1.2).
@@ -337,8 +343,10 @@ type CallStatus struct {
 
 // PairCompanion carries a fresh pairing code for a companion device (v1.1).
 type PairCompanion struct {
-	Code      string    `json:"code"`
-	URL       string    `json:"url"`
+	Code string `json:"code"`
+	URL  string `json:"url"`
+	// LanURL is where the watch pairs (private listener, home network).
+	LanURL    string    `json:"lanUrl,omitempty"`
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 

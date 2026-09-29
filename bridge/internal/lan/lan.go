@@ -14,7 +14,19 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
 )
+
+// RouteIP returns the local IPv4 address the system uses to reach host.
+// Nothing is sent: dialing UDP only picks the route.
+func RouteIP(host string, port int) (string, error) {
+	conn, err := net.Dial("udp4", net.JoinHostPort(host, strconv.Itoa(port)))
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+	return conn.LocalAddr().(*net.UDPAddr).IP.String(), nil
+}
 
 // IsLocal reports whether ip is an address inside a home network: private
 // (RFC 1918), unique local (fc00::/7), link-local or loopback.

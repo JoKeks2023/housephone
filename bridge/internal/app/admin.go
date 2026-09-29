@@ -160,7 +160,7 @@ func (s adminService) CreatePairing(name string) (admin.PairingInfo, error) {
 	fp := s.b.Key.Fingerprint()
 	return admin.PairingInfo{
 		Code: pc.Code, Grouped: hp2.GroupCode(pc.Code), Fingerprint: fp, ExpiresAt: pc.ExpiresAt,
-		Link: PairingLink(s.b.cfg.Bridge.PublicURL, pc.Code, fp, s.b.cfg.Bridge.Name),
+		Link: PairingLink(s.b.cfg.Bridge.PublicURL, s.b.lanURL, pc.Code, fp, s.b.cfg.Bridge.Name),
 	}, nil
 }
 

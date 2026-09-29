@@ -37,6 +37,8 @@ func pairConfig(t *testing.T) config.Config {
 	cfg.Bridge.DataDir = t.TempDir()
 	cfg.Bridge.PublicURL = "wss://phone.example.com/v1/ws"
 	cfg.Bridge.Name = "Zuhause"
+	// The LAN address of the private listener (no FRITZ!Box lookup).
+	cfg.SIP.BindHost = "192.168.178.20"
 	return cfg
 }
 
@@ -73,7 +75,8 @@ func TestPairShowsV2LinkAndReportsTheDevice(t *testing.T) {
 	}
 	text := out.String()
 	if !strings.Contains(text, "housephone://pair?v=2&") || !strings.Contains(text, "fp="+key.Fingerprint()) ||
-		!strings.Contains(text, "code="+hp2.NormalizeCode(code)) {
+		!strings.Contains(text, "code="+hp2.NormalizeCode(code)) ||
+		!strings.Contains(text, "lan=ws%3A%2F%2F192.168.178.20%3A8081%2Fv1%2Fws") {
 		t.Fatalf("link missing or not v2:\n%s", text)
 	}
 

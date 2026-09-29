@@ -150,7 +150,7 @@ func TestVectorPairing(t *testing.T) {
 	if link.Code != p.Code || link.Fingerprint != v.Keys.BridgeFingerprint || link.URL != "wss://phone.example.com/v1/ws" || link.Name != "Zuhause" {
 		t.Fatalf("parsed link %+v", link)
 	}
-	eqString(t, "pairing link", FormatPairingLink(link.URL, link.Code, link.Fingerprint, link.Name), p.Link)
+	eqString(t, "pairing link", FormatPairingLink(link.URL, link.LAN, link.Code, link.Fingerprint, link.Name), p.Link)
 }
 
 func TestVectorRequest(t *testing.T) {

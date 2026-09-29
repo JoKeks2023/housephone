@@ -188,12 +188,17 @@ func pair(ctx context.Context, cfg config.Config, name string, out io.Writer, po
 	if err != nil {
 		return err
 	}
+	// Devices pair only over the private listener in the home network.
+	lanURL, err := app.PairingLanURL(ctx, cfg)
+	if err != nil {
+		return err
+	}
 	pairing := store.NewPairing(cfg.Bridge.DataDir)
 	pc, err := pairing.Create(name, time.Now())
 	if err != nil {
 		return err
 	}
-	link := app.PairingLink(cfg.Bridge.PublicURL, pc.Code, key.Fingerprint(), cfg.Bridge.Name)
+	link := app.PairingLink(cfg.Bridge.PublicURL, lanURL, pc.Code, key.Fingerprint(), cfg.Bridge.Name)
 	fmt.Fprintln(out, "Öffne die Housephone-App und scanne diesen QR-Code (die Kopplung erscheint beim ersten Start und nach dem Entkoppeln):")
 	fmt.Fprintln(out)
 	qrterminal.GenerateWithConfig(link, qrterminal.Config{
@@ -210,6 +215,7 @@ func pair(ctx context.Context, cfg config.Config, name string, out io.Writer, po
 	fmt.Fprintf(out, "Code:   %s\n", hp2.GroupCode(pc.Code))
 	fmt.Fprintf(out, "Bridge: %s\n", key.Fingerprint())
 	fmt.Fprintf(out, "Link:   %s\n", link)
+	fmt.Fprintf(out, "Heimnetz: %s (zum Koppeln muss das Gerät im WLAN oder per Tailscale verbunden sein)\n", lanURL)
 	fmt.Fprintf(out, "Gültig: bis %s (einmalig)\n", pc.ExpiresAt.Local().Format("15:04:05"))
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Warte auf das Gerät … (Strg-C bricht ab und macht den Code ungültig)")

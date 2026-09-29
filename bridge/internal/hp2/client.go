@@ -227,7 +227,10 @@ var ErrNotPairingLink = errors.New("not a housephone v2 pairing link")
 
 // PairingLink is a parsed housephone://pair?v=2&… link.
 type PairingLink struct {
-	URL         string
+	URL string
+	// LAN is the private listener (home network) where the device pairs;
+	// empty in links of older bridges.
+	LAN         string
 	Code        string
 	Fingerprint string
 	Name        string
@@ -243,16 +246,19 @@ func ParsePairingLink(link string) (PairingLink, error) {
 	if q.Get("v") != "2" || q.Get("url") == "" || q.Get("code") == "" || q.Get("fp") == "" {
 		return PairingLink{}, ErrNotPairingLink
 	}
-	return PairingLink{URL: q.Get("url"), Code: NormalizeCode(q.Get("code")), Fingerprint: q.Get("fp"), Name: q.Get("name")}, nil
+	return PairingLink{URL: q.Get("url"), LAN: q.Get("lan"), Code: NormalizeCode(q.Get("code")), Fingerprint: q.Get("fp"), Name: q.Get("name")}, nil
 }
 
-// FormatPairingLink builds housephone://pair?v=2&url=…&code=…&fp=…&name=…
-// in the order of the spec, percent-encoding spaces as %20. Readers must
-// not depend on the order.
-func FormatPairingLink(publicURL, code, fingerprint, bridgeName string) string {
+// FormatPairingLink builds housephone://pair?v=2&url=…&lan=…&code=…&fp=…&name=…
+// in the order of the spec, percent-encoding spaces as %20; lan is left out
+// when empty. Readers must not depend on the order.
+func FormatPairingLink(publicURL, lanURL, code, fingerprint, bridgeName string) string {
 	esc := func(s string) string { return strings.ReplaceAll(url.QueryEscape(s), "+", "%20") }
-	return "housephone://pair?v=2&url=" + esc(publicURL) + "&code=" + esc(code) +
-		"&fp=" + esc(fingerprint) + "&name=" + esc(bridgeName)
+	link := "housephone://pair?v=2&url=" + esc(publicURL)
+	if lanURL != "" {
+		link += "&lan=" + esc(lanURL)
+	}
+	return link + "&code=" + esc(code) + "&fp=" + esc(fingerprint) + "&name=" + esc(bridgeName)
 }
 
 // HTTPBase derives the HTTPS base URL from the WebSocket URL of a pairing

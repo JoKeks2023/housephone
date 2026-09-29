@@ -10,7 +10,23 @@ bridge:
   # HTTP/WebSocket-Port. Cloudflare Tunnel (oder ein Reverse Proxy) zeigt hierauf.
   # Nur lokal lauschen: cloudflared läuft auf demselben Host (Host-Netzwerk).
   # ":8080" würde die Bridge im ganzen LAN öffnen.
+  # Hierüber (Tunnel) nur Telefonie gekoppelter Geräte: keine Kopplung.
   listen: "127.0.0.1:8080"
+  # Zweiter Zugang fürs Heimnetz: Telefonie wie oben plus Kopplung (QR-Code,
+  # Apple Watch). Nimmt nur Verbindungen aus trustedNetworks an – localhost
+  # zählt nicht, weil cloudflared von dort kommt. Keine Portfreigabe dafür
+  # einrichten! Leer ("") schaltet ihn ab; dann lässt sich nichts koppeln.
+  privateListen: ":8081"
+  # Absender, die privateListen annimmt (IP oder CIDR). Leer: 10.0.0.0/8,
+  # 172.16.0.0/12, 192.168.0.0/16, fc00::/7 und Link-local.
+  trustedNetworks: []
+  # Tailscale-Adressen (100.64.0.0/10, fd7a:115c:a1e0::/48) zusätzlich
+  # erlauben: Koppeln und direkte Verbindung auch unterwegs per Tailscale.
+  tailscale: false
+  # URL des Heimnetz-Zugangs für die App (landet im QR-Code und in welcome).
+  # Leer: ws://<LAN-IP der Bridge>:<Port von privateListen>/v1/ws. Mit
+  # Tailscale z. B. "ws://bridge.tailXXXX.ts.net:8081/v1/ws".
+  lanUrl: ""
   # Öffentliche WebSocket-URL für die App (landet im Kopplungs-QR-Code).
   publicUrl: "wss://phone.example.com/v1/ws"
   # Geräte (öffentliche Schlüssel), Kopplungscodes, Bridge-ID und der
