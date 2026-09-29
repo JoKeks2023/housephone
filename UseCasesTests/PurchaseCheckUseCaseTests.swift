@@ -16,37 +16,27 @@
 //  GNU General Public License for more details.
 //
 
+import Foundation
+import Testing
 import UseCases
 import UseCasesTestDoubles
-import XCTest
 
-final class PurchaseCheckUseCaseTests: XCTestCase {
-    func testCallsDidCheckPurchaseWhenReceiptIsValid() {
+struct PurchaseCheckUseCaseTests {
+    @Test func callsDidCheckPurchaseWhenReceiptIsValid() async {
         let output = PurchaseCheckUseCaseOutputSpy()
-        let expiration = Date()
-        let sut = PurchaseCheckUseCase(receipt: ValidReceipt(expiration: expiration), output: output)
+        let sut = PurchaseCheckUseCase(receipt: ValidReceipt(), output: output)
 
-        sut.execute()
+        await sut.execute()
 
-        XCTAssertTrue(output.didCallDidCheckPurchase)
-        XCTAssertEqual(output.invokedExpiration, expiration)
+        #expect(output.didCallDidCheckPurchase)
     }
 
-    func testCallsDidFailCheckingPurchaseWhenReceiptIsInvalid() {
+    @Test func callsDidFailCheckingPurchaseWhenReceiptIsInvalid() async {
         let output = PurchaseCheckUseCaseOutputSpy()
         let sut = PurchaseCheckUseCase(receipt: InvalidReceipt(), output: output)
 
-        sut.execute()
+        await sut.execute()
 
-        XCTAssertTrue(output.didCallDidFailCheckingPurchase)
-    }
-
-    func testCallsDidFailCheckingPurchaseWhenThereAreNoActivePurchases() {
-        let output = PurchaseCheckUseCaseOutputSpy()
-        let sut = PurchaseCheckUseCase(receipt: NoActivePurchasesReceipt(), output: output)
-
-        sut.execute()
-
-        XCTAssertTrue(output.didCallDidFailCheckingPurchase)
+        #expect(output.didCallDidFailCheckingPurchase)
     }
 }

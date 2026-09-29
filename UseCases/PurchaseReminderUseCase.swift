@@ -22,6 +22,7 @@ public protocol PurchaseReminderUseCaseOutput {
     func remindAboutPurchasing()
 }
 
+@MainActor
 public final class PurchaseReminderUseCase: NSObject {
     private let accounts: Accounts
     private let receipt: Receipt
@@ -40,11 +41,12 @@ public final class PurchaseReminderUseCase: NSObject {
     }
 }
 
-extension PurchaseReminderUseCase: UseCase {
-    public func execute() {
+extension PurchaseReminderUseCase: AsyncUseCase {
+    @MainActor
+    public func execute() async {
         if accounts.haveEnabled && shouldRemind() {
-            receipt.validate(completion: remindIfNotPurchased)
-            self.updateSettings()
+            remindIfNotPurchased(await receipt.isValid())
+            updateSettings()
         }
     }
 
@@ -52,12 +54,9 @@ extension PurchaseReminderUseCase: UseCase {
         return lastVersionDoesNotMatch() || isLastDateLaterThanNow() || haveThirtyDaysPassedSinceLastDate()
     }
 
-    private func remindIfNotPurchased(_ result: ReceiptValidationResult) {
-        switch result {
-        case .receiptIsInvalid, .noActivePurchases:
-            self.output.remindAboutPurchasing()
-        default:
-            break
+    private func remindIfNotPurchased(_ isPurchased: Bool) {
+        if !isPurchased {
+            output.remindAboutPurchasing()
         }
     }
 
@@ -77,6 +76,14 @@ extension PurchaseReminderUseCase: UseCase {
     private func haveThirtyDaysPassedSinceLastDate() -> Bool {
         guard let date = thirtyDays(after: settings.date) else { return false }
         return now >= date
+    }
+}
+
+extension PurchaseReminderUseCase: UseCase {
+    @objc public func execute() {
+        Task {
+            await execute()
+        }
     }
 }
 

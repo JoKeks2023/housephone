@@ -17,6 +17,7 @@
 
 import Cocoa
 
+@MainActor
 @objc protocol MenuBarControllerDelegate: AnyObject {
     func menuBarControllerDidRequestShowWindow()
     func menuBarControllerDidRequestShowPreferences()
@@ -24,6 +25,7 @@ import Cocoa
     func menuBarControllerDidRequestQuit()
 }
 
+@MainActor
 @objc class MenuBarController: NSObject {
     private var statusItem: NSStatusItem?
     private let menu = NSMenu()

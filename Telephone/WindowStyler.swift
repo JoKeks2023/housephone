@@ -18,6 +18,7 @@
 import Cocoa
 
 /// Provides modern styling for windows on macOS 13+
+@MainActor
 @objc class WindowStyler: NSObject {
     
     /// Apply modern styling to a window

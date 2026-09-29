@@ -16,14 +16,7 @@
 //  GNU General Public License for more details.
 //
 
-public protocol StoreEventTarget: AnyObject {
-    func didStartPurchasingProduct(withIdentifier identifier: String)
-
-    func didPurchase()
-    func didFailPurchasing(error: String)
-    func didCancelPurchasing()
-
-    func didRestorePurchases()
-    func didFailRestoringPurchases(error: String)
-    func didCancelRestoringPurchases()
+@MainActor
+public protocol StoreEventTarget: AnyObject, Sendable {
+    func didPurchase() async
 }

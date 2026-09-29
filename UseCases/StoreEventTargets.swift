@@ -16,10 +16,13 @@
 //  GNU General Public License for more details.
 //
 
+@MainActor
 public final class StoreEventTargets {
-    private var targets: [StoreEventTarget] = []
+    private var targets: [StoreEventTarget]
 
-    public init() {}
+    public init(targets: [StoreEventTarget]) {
+        self.targets = targets
+    }
 
     public func add(_ target: StoreEventTarget) {
         targets.append(target)
@@ -27,31 +30,9 @@ public final class StoreEventTargets {
 }
 
 extension StoreEventTargets: StoreEventTarget {
-    public func didStartPurchasingProduct(withIdentifier identifier: String) {
-        targets.forEach { $0.didStartPurchasingProduct(withIdentifier: identifier) }
-    }
-
-    public func didPurchase() {
-        targets.forEach { $0.didPurchase() }
-     }
-
-    public func didFailPurchasing(error: String) {
-        targets.forEach { $0.didFailPurchasing(error: error) }
-    }
-
-    public func didCancelPurchasing() {
-        targets.forEach { $0.didCancelPurchasing() }
-    }
-
-    public func didRestorePurchases() {
-        targets.forEach { $0.didRestorePurchases() }
-    }
-
-    public func didFailRestoringPurchases(error: String) {
-        targets.forEach { $0.didFailRestoringPurchases(error: error) }
-    }
-
-    public func didCancelRestoringPurchases() {
-        targets.forEach { $0.didCancelRestoringPurchases() }
+    public func didPurchase() async {
+        for target in targets {
+            await target.didPurchase()
+        }
     }
 }
