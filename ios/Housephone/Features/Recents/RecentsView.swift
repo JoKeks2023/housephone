@@ -8,11 +8,20 @@ struct RecentsView: View {
         case missed
     }
 
+    enum Source: String {
+        case housephone
+        case fritzBox
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Environment(CallCenter.self) private var callCenter
     @Environment(ContactsDirectory.self) private var contacts
+    @Environment(FritzBoxData.self) private var fritzBox
     @Query(sort: \CallRecord.date, order: .reverse) private var records: [CallRecord]
     @State private var filter: Filter = .all
+    @AppStorage("recents.source") private var source: Source = .housephone
+
+    private var showsFritzBox: Bool { fritzBox.showsHistory && source == .fritzBox }
 
     private var visibleRecords: [CallRecord] {
         filter == .all ? records : records.filter(\.isMissed)
@@ -21,33 +30,24 @@ struct RecentsView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if records.isEmpty {
-                    EmptyStateView(
-                        symbol: "clock",
-                        title: "Noch keine Anrufe",
-                        message: "Anrufe über Housephone erscheinen hier – und in der Telefon-App."
-                    )
-                } else if visibleRecords.isEmpty {
-                    EmptyStateView(symbol: "phone.arrow.down.left", title: "Keine verpassten Anrufe", message: "Alles erledigt.")
+                if showsFritzBox {
+                    FritzBoxHistoryList(missedOnly: filter == .missed)
                 } else {
-                    List {
-                        ForEach(visibleRecords) { record in
-                            RecentRow(record: record, contactName: contacts.name(for: record.number)) {
-                                call(record)
-                            }
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    delete(record)
-                                } label: {
-                                    Label("Löschen", systemImage: "trash")
-                                }
-                            }
-                        }
-                    }
-                    .listStyle(.plain)
+                    housephoneList
                 }
             }
             .navigationTitle("Anrufe")
+            .safeAreaBar(edge: .top) {
+                if fritzBox.showsHistory {
+                    Picker("Quelle", selection: $source) {
+                        Text("Housephone").tag(Source.housephone)
+                        Text("FRITZ!Box").tag(Source.fritzBox)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, Theme.Space.s4)
+                    .padding(.bottom, Theme.Space.s2)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Picker("Filter", selection: $filter) {
@@ -57,7 +57,7 @@ struct RecentsView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 200)
                 }
-                if !records.isEmpty {
+                if !showsFritzBox, !records.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
                             Button("Alle Einträge löschen", systemImage: "trash", role: .destructive) {
@@ -68,6 +68,37 @@ struct RecentsView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /// Calls made or received with Housephone on this iPhone.
+    private var housephoneList: some View {
+        Group {
+            if records.isEmpty {
+                EmptyStateView(
+                    symbol: "clock",
+                    title: "Noch keine Anrufe",
+                    message: "Anrufe über Housephone erscheinen hier – und in der Telefon-App."
+                )
+            } else if visibleRecords.isEmpty {
+                EmptyStateView(symbol: "phone.arrow.down.left", title: "Keine verpassten Anrufe", message: "Alles erledigt.")
+            } else {
+                List {
+                    ForEach(visibleRecords) { record in
+                        RecentRow(record: record, contactName: contacts.name(for: record.number)) {
+                            call(record)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                delete(record)
+                            } label: {
+                                Label("Löschen", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+                .listStyle(.plain)
             }
         }
     }

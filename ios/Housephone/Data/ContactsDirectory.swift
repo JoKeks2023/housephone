@@ -28,6 +28,9 @@ final class ContactsDirectory {
     @ObservationIgnored private let store = CNContactStore()
     @ObservationIgnored private var namesByNumber: [String: String] = [:]
     @ObservationIgnored private var changeObserver: (any NSObjectProtocol)?
+    /// Names for numbers that are not in the iPhone's contacts, e.g. from
+    /// the FRITZ!Box phonebook.
+    @ObservationIgnored var fallbackName: ((String) -> String?)?
     @ObservationIgnored private let logger = Logger(subsystem: "com.jorisconrad.housephone", category: "contacts")
 
     init() {
@@ -73,11 +76,12 @@ final class ContactsDirectory {
         }
     }
 
-    /// Name of the contact with this number, if any. Synchronous so the
+    /// Name of the contact with this number, if any: iPhone contacts first,
+    /// then `fallbackName` (the FRITZ!Box phonebook). Synchronous so the
     /// VoIP push handler can use it before reporting to CallKit.
     func name(for number: String) -> String? {
         guard let key = PhoneNumber.matchKey(number) else { return nil }
-        return namesByNumber[key]
+        return namesByNumber[key] ?? fallbackName?(number)
     }
 
     /// Runs off the main actor: enumerating a large address book takes a while.

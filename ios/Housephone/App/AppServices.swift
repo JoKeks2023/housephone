@@ -13,6 +13,7 @@ final class AppServices {
     let modelContainer: ModelContainer
     let contacts: ContactsDirectory
     let bridge: BridgeConnection
+    let fritzBox: FritzBoxData
     let callCenter: CallCenter
     let watchLink: WatchLink
     let appModel: AppModel
@@ -21,6 +22,10 @@ final class AppServices {
         modelContainer = Self.makeModelContainer()
         contacts = ContactsDirectory()
         bridge = BridgeConnection(store: KeychainCredentialStore())
+        fritzBox = FritzBoxData(bridge: bridge)
+        // Caller names for numbers only the FRITZ!Box phonebook knows — also
+        // for a push that launches the app, from the cached phonebook.
+        contacts.fallbackName = { [fritzBox] number in fritzBox.name(for: number) }
         callCenter = CallCenter(bridge: bridge, contacts: contacts, modelContainer: modelContainer)
         watchLink = WatchLink(bridge: bridge)
         appModel = AppModel()

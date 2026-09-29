@@ -15,6 +15,7 @@ struct HousephoneApp: App {
                 .environment(services.callCenter)
                 .environment(services.watchLink)
                 .environment(services.contacts)
+                .environment(services.fritzBox)
                 .environment(services.appModel)
                 .modelContainer(services.modelContainer)
                 .onOpenURL { url in
@@ -28,6 +29,7 @@ struct HousephoneApp: App {
             guard phase == .active else { return }
             services.bridge.refresh()
             services.contacts.reload()
+            Task { await services.fritzBox.refreshAfterConnect() }
         }
     }
 
