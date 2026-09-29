@@ -244,9 +244,25 @@ Auf [developer.apple.com → Identifiers](https://developer.apple.com/account/re
 
 Im Terminal erscheint ein **QR-Code**. In der App → **QR-Code scannen** → **Mikrofon erlauben** → fertig ✅
 
+- **Koppeln geht nur zu Hause:** Das iPhone muss im **Heim-WLAN** sein (oder per **Tailscale** verbunden, siehe unten). Gekoppelt wird über den privaten Zugang der Bridge (Port `8081`), nicht über den Tunnel. Unterwegs zeigt die App „Zum Koppeln ins Heim-WLAN oder Tailscale“.
+- Für Port `8081` **keine Portfreigabe** in der FRITZ!Box einrichten. Er nimmt ohnehin nur Verbindungen aus dem Heimnetz an.
 - Die App prüft dabei, dass sie **deine** Bridge erreicht; der Fingerabdruck steckt im QR-Code.
 - `pair` meldet, welches Gerät den Code benutzt hat. Warst du es nicht, reicht `./housephone devices remove <ID>`.
-- **Die Watch koppelt sich automatisch.** Auf der Uhr musst du nie etwas scannen.
+- **Die Watch koppelt sich automatisch**, sobald das iPhone im Heimnetz ist. Auf der Uhr musst du nie etwas scannen.
+- Zu Hause telefoniert die App direkt über das WLAN mit der Bridge, unterwegs über den Tunnel. Sie wechselt von selbst.
+
+<details>
+<summary><b>Mit Tailscale</b> (Koppeln und Direktverbindung auch unterwegs)</summary>
+
+Läuft auf dem Server Tailscale, in `config.yaml` unter `bridge:` eintragen:
+
+```yaml
+  tailscale: true
+  lanUrl: "ws://100.x.y.z:8081/v1/ws"   # Tailscale-IP des Servers (tailscale ip -4)
+```
+
+Die IP statt des MagicDNS-Namens nehmen: iOS lässt unverschlüsselte Verbindungen nur zu IP-Adressen und lokalen Namen zu. Die Verbindung ist trotzdem Ende-zu-Ende gesichert.
+</details>
 
 ### 8 · Optional: Telefonbuch & Anrufliste
 
@@ -298,6 +314,7 @@ Alle Befehle im Ordner `housephone/bridge`:
 | Klingelt, aber kein Ton unterwegs | UDP-Freigabe 50000 fehlt (1c) |
 | Kein Ton zu Hause | iPhone im Gast-WLAN? Server und iPhone müssen im selben Netz sein |
 | „Bridge nicht erreichbar“ | Tunnel läuft? (`docker compose ps`) `publicUrl` = Hostname aus Schritt 3? |
+| „Zum Koppeln ins Heim-WLAN oder Tailscale“ | iPhone ins Heim-WLAN (nicht Gast-WLAN). Stimmt die Adresse unter `Heimnetz:` bei `pair`? Sonst `bridge.lanUrl` setzen |
 | „Bridge nicht vertrauenswürdig“ | Die Bridge hat einen neuen Schlüssel (`data/` gelöscht?), neu koppeln |
 | „Uhrzeit prüfen“ | Die Uhr von iPhone oder Server geht falsch |
 | Telefonbuch fehlt | Schritt 8; der FRITZ!Box-Benutzer braucht das Recht „…Anrufliste“ |

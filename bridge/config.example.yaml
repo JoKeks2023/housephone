@@ -25,7 +25,8 @@ bridge:
   tailscale: false
   # URL des Heimnetz-Zugangs für die App (landet im QR-Code und in welcome).
   # Leer: ws://<LAN-IP der Bridge>:<Port von privateListen>/v1/ws. Mit
-  # Tailscale z. B. "ws://bridge.tailXXXX.ts.net:8081/v1/ws".
+  # Tailscale die Tailscale-IP des Servers, z. B. "ws://100.101.102.103:8081/v1/ws"
+  # (kein MagicDNS-Name: iOS erlaubt ws:// nur zu IPs und lokalen Namen).
   lanUrl: ""
   # Öffentliche WebSocket-URL für die App (landet im Kopplungs-QR-Code).
   publicUrl: "wss://phone.example.com/v1/ws"
