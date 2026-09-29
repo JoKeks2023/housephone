@@ -18,10 +18,12 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"text/tabwriter"
 	"time"
+	"unicode"
 
 	"github.com/mdp/qrterminal/v3"
 
@@ -178,7 +180,7 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 		}
 		names := make(map[string]string, len(list))
 		for _, d := range list {
-			names[d.ID] = d.Name
+			names[d.ID] = displayName(d.Name)
 		}
 		tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 		fmt.Fprintln(tw, "ID\tNAME\tPLATTFORM\tPUSH\tGEKOPPELT\tÜBER\tZULETZT GESEHEN")
@@ -198,7 +200,7 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 					via = "entferntes Gerät " + d.PairedBy
 				}
 			}
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", d.ID, d.Name, d.Platform, pushInfo, d.CreatedAt.Local().Format("02.01.2006 15:04"), via, lastSeen)
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", d.ID, displayName(d.Name), displayName(d.Platform), pushInfo, d.CreatedAt.Local().Format("02.01.2006 15:04"), via, lastSeen)
 		}
 		return tw.Flush()
 	}
@@ -206,6 +208,17 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 		return removeDevice(reg, store.NewPairing(cfg.Bridge.DataDir), args[1:], out)
 	}
 	return fmt.Errorf("unbekannter devices-Befehl %q (list|remove)", args[0])
+}
+
+// displayName prints stored names safely: names with characters that are
+// not printable (older entries could contain terminal escapes) are quoted.
+func displayName(s string) string {
+	for _, r := range s {
+		if !unicode.IsPrint(r) {
+			return strconv.Quote(s)
+		}
+	}
+	return s
 }
 
 // removeDevice removes a device and, unless -keep-companions is given, the
@@ -241,16 +254,16 @@ func removeDevice(reg *store.Devices, pairing *store.Pairing, args []string, out
 	if err := pairing.RemoveByParent(id); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "Gerät %s (%s) entfernt.\n", dev.ID, dev.Name)
+	fmt.Fprintf(out, "Gerät %s (%s) entfernt.\n", dev.ID, displayName(dev.Name))
 	for _, c := range companions {
 		if *keep {
-			fmt.Fprintf(out, "Behalten: %s (%s), gekoppelt über dieses Gerät.\n", c.ID, c.Name)
+			fmt.Fprintf(out, "Behalten: %s (%s), gekoppelt über dieses Gerät.\n", c.ID, displayName(c.Name))
 			continue
 		}
 		if err := reg.Remove(c.ID); err != nil && !errors.Is(err, store.ErrDeviceNotFound) {
 			return err
 		}
-		fmt.Fprintf(out, "Ebenfalls entfernt: %s (%s), gekoppelt über dieses Gerät.\n", c.ID, c.Name)
+		fmt.Fprintf(out, "Ebenfalls entfernt: %s (%s), gekoppelt über dieses Gerät.\n", c.ID, displayName(c.Name))
 	}
 	fmt.Fprintln(out, "Offene Verbindungen trennt die laufende Bridge innerhalb von 10 s; laufende Anrufe dieser Geräte werden beendet.")
 	return nil

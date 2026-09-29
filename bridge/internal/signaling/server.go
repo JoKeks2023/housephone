@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/coder/websocket"
 	"github.com/google/uuid"
@@ -357,18 +358,18 @@ func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.Pai
 	if err != nil {
 		return protocol.PairOK{}, &pairError{protocol.ErrorInternal, "internal error", http.StatusInternalServerError}
 	}
-	name := strings.TrimSpace(pc.Name)
+	name := sanitizeName(pc.Name)
 	if name == "" {
-		name = strings.TrimSpace(p.DeviceName)
+		name = sanitizeName(p.DeviceName)
 	}
 	if name == "" {
 		name = p.Platform
 	}
 	dev := store.Device{
 		ID:         uuid.NewString(),
-		Name:       truncateRunes(name, maxDeviceNameRunes),
+		Name:       name,
 		Platform:   p.Platform,
-		Model:      truncateRunes(p.Model, maxDeviceNameRunes),
+		Model:      sanitizeName(p.Model),
 		SecretHash: auth.HashSecret(secret),
 		PairedBy:   pc.ParentID,
 		CreatedAt:  now.UTC(),
@@ -407,6 +408,26 @@ func (s *Server) checkCompanionCode(pc store.PairingCode, platform string) error
 
 func validPlatform(p string) bool {
 	return p == protocol.PlatformIOS || p == protocol.PlatformWatchOS
+}
+
+// sanitizeName cleans a device name or model from a client: control
+// characters (terminal escapes, line breaks) and bidi overrides are removed,
+// so a device cannot hide or disguise entries in devices list or the logs;
+// the result is trimmed and cut to maxDeviceNameRunes.
+func sanitizeName(s string) string {
+	clean := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || isBidiControl(r) {
+			return -1
+		}
+		return r
+	}, s)
+	return truncateRunes(strings.TrimSpace(clean), maxDeviceNameRunes)
+}
+
+// isBidiControl reports embedding, override and isolate controls as well as
+// the directional marks.
+func isBidiControl(r rune) bool {
+	return (r >= 0x202A && r <= 0x202E) || (r >= 0x2066 && r <= 0x2069) || r == 0x200E || r == 0x200F || r == 0x061C
 }
 
 func truncateRunes(s string, n int) string {

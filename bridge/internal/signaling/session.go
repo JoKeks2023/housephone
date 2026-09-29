@@ -344,7 +344,7 @@ func (srv *Server) pairCompanion(sess *session, env protocol.Envelope) {
 		return
 	}
 	srv.companions.fail(sess.deviceID)
-	pc, err := srv.cfg.Pairing.CreateCompanion(sess.deviceID, truncateRunes(strings.TrimSpace(req.DeviceName), maxDeviceNameRunes), protocol.PlatformWatchOS, srv.cfg.Now())
+	pc, err := srv.cfg.Pairing.CreateCompanion(sess.deviceID, sanitizeName(req.DeviceName), protocol.PlatformWatchOS, srv.cfg.Now())
 	if err != nil {
 		srv.log.Error("creating companion pairing code failed", "device", sess.deviceID, "error", err)
 		sess.Send(errorEnvelope(protocol.ErrorInternal, "Kopplungscode konnte nicht erzeugt werden"))
@@ -459,8 +459,10 @@ func (srv *Server) applyDeviceChanges(id string, ch deviceChanges) {
 		if ch.pushEnvironment != nil && *ch.pushEnvironment != "" && validEnvironment(*ch.pushEnvironment) {
 			d.PushEnvironment = *ch.pushEnvironment
 		}
-		if ch.name != nil && *ch.name != "" {
-			d.Name = truncateRunes(*ch.name, maxDeviceNameRunes)
+		if ch.name != nil {
+			if name := sanitizeName(*ch.name); name != "" {
+				d.Name = name
+			}
 		}
 		if ch.mediaCapabilities != nil {
 			d.MediaCapabilities = knownCapabilities(*ch.mediaCapabilities)
