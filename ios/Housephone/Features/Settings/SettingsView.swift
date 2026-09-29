@@ -58,7 +58,7 @@ struct SettingsView: View {
             .navigationTitle("Einstellungen")
             .confirmationDialog("Kopplung aufheben?", isPresented: $confirmsUnpair, titleVisibility: .visible) {
                 Button("Kopplung aufheben", role: .destructive) {
-                    bridge.unpair()
+                    Task { await bridge.unpair() }
                 }
             } message: {
                 Text("Die Zugangsdaten werden von diesem iPhone gelöscht.")

@@ -109,7 +109,16 @@ final class BridgeConnection {
         onPairingChanged?(true)
     }
 
-    func unpair() {
+    /// Asks the bridge to forget this device (best effort, at most 3 s),
+    /// then removes the local credentials. Works offline too: the bridge
+    /// then drops the push token once APNs reports it as unregistered.
+    func unpair() async {
+        if isOnline, let client {
+            let sent = await Self.attempt(within: .seconds(3)) {
+                try await client.send(.deviceUnpair)
+            }
+            if !sent { logger.info("Bridge not told about unpairing; continuing locally") }
+        }
         stopClient()
         try? store.delete()
         credentials = nil
@@ -130,6 +139,20 @@ final class BridgeConnection {
     }
 
     // MARK: - Private
+
+    /// Runs `operation` and reports whether it finished successfully in time.
+    private static func attempt(within limit: Duration, _ operation: @escaping @Sendable () async throws -> Void) async -> Bool {
+        await withTaskGroup(of: Bool.self) { group in
+            group.addTask { (try? await operation()) != nil }
+            group.addTask {
+                try? await Task.sleep(for: limit)
+                return false
+            }
+            let first = await group.next() ?? false
+            group.cancelAll()
+            return first
+        }
+    }
 
     private func stopClient() {
         eventsTask?.cancel()

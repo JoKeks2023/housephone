@@ -313,6 +313,8 @@ public enum SignalingMessage: Sendable, Equatable {
     case pair(PairRequest)
     case hello(Hello)
     case deviceUpdate(DeviceUpdate)
+    /// Removes this device from the bridge. The bridge closes the connection.
+    case deviceUnpair
     case callAttach(CallReference)
     case callDial(DialRequest)
     case callAnswer(SessionAnswer)
@@ -338,6 +340,7 @@ public enum SignalingMessage: Sendable, Equatable {
         case .pair: "pair"
         case .hello: "hello"
         case .deviceUpdate: "device.update"
+        case .deviceUnpair: "device.unpair"
         case .callAttach: "call.attach"
         case .callDial: "call.dial"
         case .callAnswer: "call.answer"
@@ -369,7 +372,7 @@ public enum SignalingMessage: Sendable, Equatable {
         case .callState(let payload): payload.callId
         case .callEnded(let payload): payload.callId
         case .error(let payload): payload.callId
-        case .pair, .hello, .deviceUpdate, .pairOK, .welcome, .status, .unknown: nil
+        case .pair, .hello, .deviceUpdate, .deviceUnpair, .pairOK, .welcome, .status, .unknown: nil
         }
     }
 }
@@ -394,6 +397,7 @@ extension SignalingMessage: Codable {
         case "pair": self = .pair(try payload(PairRequest.self))
         case "hello": self = .hello(try payload(Hello.self))
         case "device.update": self = .deviceUpdate(try payload(DeviceUpdate.self))
+        case "device.unpair": self = .deviceUnpair
         case "call.attach": self = .callAttach(try payload(CallReference.self))
         case "call.dial": self = .callDial(try payload(DialRequest.self))
         case "call.answer": self = .callAnswer(try payload(SessionAnswer.self))
@@ -433,7 +437,7 @@ extension SignalingMessage: Codable {
         case .callState(let payload): try container.encode(payload, forKey: .payload)
         case .callEnded(let payload): try container.encode(payload, forKey: .payload)
         case .error(let payload): try container.encode(payload, forKey: .payload)
-        case .unknown: try container.encode(EmptyPayload(), forKey: .payload)
+        case .deviceUnpair, .unknown: try container.encode(EmptyPayload(), forKey: .payload)
         }
     }
 }
