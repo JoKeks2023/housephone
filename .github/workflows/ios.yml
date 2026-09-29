@@ -87,6 +87,22 @@ jobs:
           lipo -info "$watch/HousephoneWatch"
           echo "Swift files compiled for watchOS: $(grep -c 'SwiftCompile.*HousephoneWatch' build.log || true)"
 
+      - name: Check privacy manifests and licenses
+        working-directory: ios
+        run: |
+          app="DerivedData/Build/Products/Debug-iphoneos/Housephone.app"
+          watch="$app/PlugIns/HousephoneWatch.app"
+          for bundle in "$app" "$watch"; do
+            manifest="$bundle/PrivacyInfo.xcprivacy"
+            test -f "$manifest" || { echo "::error::Missing $manifest"; exit 1; }
+            plutil -lint "$manifest"
+            plutil -p "$manifest" | grep -E 'NSPrivacyAccessedAPIType"|NSPrivacyTracking"'
+          done
+          test -f "$app/Frameworks/WebRTC.framework/PrivacyInfo.xcprivacy" && echo "WebRTC ships its own privacy manifest"
+          count=$(ls "$app"/*.txt | wc -l | tr -d ' ')
+          echo "Bundled license texts: $count"
+          test "$count" -ge 11 || { echo "::error::Expected at least 11 license texts in the app bundle"; exit 1; }
+
       - name: Upload build log
         if: failure()
         uses: actions/upload-artifact@v4

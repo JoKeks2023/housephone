@@ -20,8 +20,14 @@
   - Housephone in ein **eigenes Repository ohne Telephone-Historie** überführen oder die neuen Teile ausdrücklich eigenständig lizenzieren.
   - Das ist eine rechtliche Entscheidung des Nutzers.
 - **Abhängigkeiten:**
-  - WebRTC (BSD) und pion (MIT) verlangen eine Lizenznennung; in der App gehört dazu eine „Danksagungen“-Seite.
-  - diago/sipgo stehen unter MPL-2.0 bzw. BSD-2. MPL heißt: geänderte Dateien offenlegen, sonst keine Pflichten.
+  - ✅ **Danksagungen in der App** (Einstellungen → Über → Danksagungen, 2026-09-29):
+    - Die iPhone-App liefert nur über WebRTC (stasel/WebRTC 153.0.0) fremden Code aus.
+    - Welche Komponenten darin stecken, ist an der Binary belegt: Pfade und Versionskennungen in den Strings.
+    - Nachgewiesen: WebRTC, BoringSSL, libSRTP, Opus, Abseil, Protocol Buffers, LLVM libc++abi, libvpx (+ PATENTS), libaom, dav1d, libyuv.
+    - Die Lizenztexte liegen wörtlich aus den offiziellen Quellen unter `ios/Housephone/Resources/Licenses/`. Die Datei zu libaom stammt aus dem Release v3.15.1.
+  - **Offen:** Die Volltexte von **libyuv** und der **WebRTC-PATENTS** gibt es nur bei googlesource, das am 2026-09-29 durchgehend mit 503 antwortete. Beide sind vorerst in der App verlinkt; vor einem Release einbetten.
+  - Die Watch-App und HousephoneKit nutzen keine Fremdbibliotheken.
+  - Die Bridge wird nicht mit der App ausgeliefert. pion (MIT) und diago/sipgo (MPL-2.0 bzw. BSD-2) betreffen ihre eigene Verteilung. MPL heißt: geänderte Dateien offenlegen, sonst keine Pflichten.
 
 ## 3. Marke
 
@@ -32,12 +38,17 @@
 - **Zugang für die Prüfer:** Die Prüfer haben keine FRITZ!Box. Nötig ist ein **Demo-Zugang**: eine Demo-Bridge des Anbieters mit Testanschluss oder ein Demo-Modus in der App.
 - **Begründung für VoIP-Hintergrund und PushKit:** Echte VoIP-Anrufe über CallKit sind vorhanden. In den Review-Notizen den Ablauf erklären.
 - **Datenschutz:**
-  - Privacy Manifest (`PrivacyInfo.xcprivacy`) für Required-Reason-APIs (z. B. UserDefaults)
-  - Nutzungsbeschreibungen für Mikrofon, Kamera und Kontakte sind vorhanden
-  - App-Datenschutzangaben: Mit Push-Relay erhebt der Anbieter Push-Tokens
+  - ✅ **Privacy Manifest** in iPhone- und Watch-App (`ios/Housephone/Resources/PrivacyInfo.xcprivacy`, `ios/HousephoneWatch/Resources/PrivacyInfo.xcprivacy`; die CI prüft, dass beide in den Bundles liegen):
+    - **Kein Tracking.**
+    - **`NSPrivacyCollectedDataTypes` ist leer.** Die Apps senden Daten (Nummern, Namen, Push-Token, Ton) nur an die **eigene Bridge des Nutzers**; der Entwickler betreibt sie nicht und hat keinen Zugriff. Nach Apples Definition ist das keine Datenerhebung durch den Entwickler.
+    - **Required-Reason-API:** Nur UserDefaults mit Grund **CA92.1** (nur für die App selbst lesbar). Das iPhone nutzt es über `@AppStorage` für Ansichtseinstellungen, die Watch für Kopplungsdatum und letzte Anrufe. Datei-Zeitstempel, Systemstartzeit, Speicherplatz-APIs und aktive Tastaturen verwendet der eigene Code nicht; das ist per Code-Suche geprüft.
+    - **WebRTC** bringt ein eigenes Manifest mit (Systemstartzeit 35F9.1/8FFB.1, Datei-Zeitstempel C617.1).
+  - **Muss nachgezogen werden, sobald es das Push-Relay gibt:** Dann erhebt der Anbieter Push-Tokens und Gerätekennungen. Manifest (`NSPrivacyCollectedDataTypeDeviceID`, Zweck App-Funktion) und App-Datenschutzangaben anpassen.
+  - Nutzungsbeschreibungen für Mikrofon, Kamera und Kontakte sind vorhanden.
 - **Verschlüsselung/Export:**
   - Die App nutzt Standardverschlüsselung (TLS, DTLS-SRTP).
   - In App Store Connect muss die Exportfrage beantwortet werden; rechtlich prüfen, ob die Ausnahme für Standardverschlüsselung greift.
+  - **Achtung:** In `ios/project.yml` steht bereits `ITSAppUsesNonExemptEncryption: false`, für iPhone und Watch. Das ist eine Erklärung gegenüber Apple und sollte vor einem Release bewusst bestätigt oder geändert werden.
 
 ## 5. Einrichtung für normale Nutzer
 
