@@ -67,6 +67,10 @@ type Bridge struct {
 	engine    *media.Engine
 	signaling *signaling.Server
 	listener  net.Listener
+	// privateListener serves the home network (nil if disabled).
+	privateListener net.Listener
+	trustedNetworks []*net.IPNet
+	lanURL          string
 	// directory is nil unless fritzbox.username is configured.
 	directory *fritzbox.Directory
 
@@ -127,6 +131,10 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		log.Info("FRITZ!Box address fixed", "registrar", cfg.SIP.Registrar, "ip", registrar)
 	}
 	trustedProxies, err := cfg.Bridge.TrustedProxyNets()
+	if err != nil {
+		return nil, err
+	}
+	b.trustedNetworks, err = cfg.Bridge.TrustedNetworkNets()
 	if err != nil {
 		return nil, err
 	}
@@ -233,12 +241,28 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		return nil, err
 	}
 	b.manager.SetSIP(b.sip)
+	if cfg.Bridge.PrivateListen != "" {
+		b.privateListener, err = net.Listen("tcp", cfg.Bridge.PrivateListen)
+		if err != nil {
+			b.engine.Close()
+			return nil, fmt.Errorf("listen %s (bridge.privateListen): %w", cfg.Bridge.PrivateListen, err)
+		}
+		// The bound port (the configured one may be 0).
+		bound := cfg
+		host, _, _ := net.SplitHostPort(cfg.Bridge.PrivateListen)
+		_, port, _ := net.SplitHostPort(b.privateListener.Addr().String())
+		bound.Bridge.PrivateListen = net.JoinHostPort(host, port)
+		b.lanURL = LanURL(bound, b.sip.BindHost())
+	} else {
+		log.Warn("bridge.privateListen is empty: devices cannot pair")
+	}
 	b.signaling = signaling.New(signaling.Config{
 		BridgeID:          identity.ID,
 		BridgeName:        cfg.Bridge.Name,
 		BridgeVersion:     version.Version,
 		Identity:          key,
 		PublicURL:         cfg.Bridge.PublicURL,
+		LanURL:            b.lanURL,
 		PushTopic:         cfg.APNs.Topic,
 		TrustProxyHeaders: cfg.Bridge.TrustProxyHeaders,
 		TrustedProxies:    trustedProxies,
@@ -251,29 +275,48 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 
 	b.listener, err = net.Listen("tcp", cfg.Bridge.Listen)
 	if err != nil {
+		if b.privateListener != nil {
+			b.privateListener.Close()
+		}
 		b.engine.Close()
 		return nil, fmt.Errorf("listen %s: %w", cfg.Bridge.Listen, err)
 	}
 	return b, nil
 }
 
-// Addr is the HTTP listen address.
+// Addr is the public HTTP listen address.
 func (b *Bridge) Addr() string { return b.listener.Addr().String() }
+
+// PrivateAddr is the private (home network) listen address, empty if
+// disabled.
+func (b *Bridge) PrivateAddr() string {
+	if b.privateListener == nil {
+		return ""
+	}
+	return b.privateListener.Addr().String()
+}
+
+// LanURL is the private listener URL sent to devices.
+func (b *Bridge) LanURL() string { return b.lanURL }
 
 // SIPRegistered reports the FRITZ!Box registration.
 func (b *Bridge) SIPRegistered() bool { return b.sip.Registered() }
 
 // Run serves until ctx ends, then shuts down gracefully.
 func (b *Bridge) Run(ctx context.Context) error {
-	srv := &http.Server{
-		Handler:           b.signaling.Handler(),
-		ReadHeaderTimeout: 10 * time.Second,
-		// Keep-alive connections without a request are closed; WebSocket
-		// connections are hijacked and not affected.
-		IdleTimeout:    60 * time.Second,
-		MaxHeaderBytes: 16 << 10,
+	newServer := func(h http.Handler) *http.Server {
+		return &http.Server{
+			Handler:           h,
+			ReadHeaderTimeout: 10 * time.Second,
+			// Keep-alive connections without a request are closed; WebSocket
+			// connections are hijacked and not affected.
+			IdleTimeout:    60 * time.Second,
+			MaxHeaderBytes: 16 << 10,
+		}
 	}
-	errCh := make(chan error, 3)
+	srv := newServer(b.signaling.PublicHandler())
+	var privateSrv *http.Server
+	errCh := make(chan error, 4)
 	if !b.noAdmin {
 		// The admin API is a convenience: without it the bridge still
 		// serves calls, so a problem is logged instead of stopping it.
@@ -294,6 +337,14 @@ func (b *Bridge) Run(ctx context.Context) error {
 			errCh <- fmt.Errorf("http: %w", err)
 		}
 	}()
+	if b.privateListener != nil {
+		privateSrv = newServer(b.signaling.PrivateHandler(b.trustedNetworks))
+		go func() {
+			if err := privateSrv.Serve(b.privateListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				errCh <- fmt.Errorf("http (private): %w", err)
+			}
+		}()
+	}
 	sipCtx, stopSIP := context.WithCancel(context.Background())
 	sipDone := make(chan struct{})
 	go func() {
@@ -307,7 +358,8 @@ func (b *Bridge) Run(ctx context.Context) error {
 	} else {
 		b.log.Info("FRITZ!Box phonebook and call list not configured (fritzbox.username)")
 	}
-	b.log.Info("bridge running", "version", version.Version, "listen", b.Addr(), "bridgeId", b.Identity.ID, "publicUrl", b.cfg.Bridge.PublicURL)
+	b.log.Info("bridge running", "version", version.Version, "listen", b.Addr(), "privateListen", b.PrivateAddr(),
+		"bridgeId", b.Identity.ID, "publicUrl", b.cfg.Bridge.PublicURL, "lanUrl", b.lanURL)
 
 	var runErr error
 	select {
@@ -324,6 +376,9 @@ func (b *Bridge) Run(ctx context.Context) error {
 		b.admin.Close(shutdownCtx)
 	}
 	_ = srv.Shutdown(shutdownCtx)
+	if privateSrv != nil {
+		_ = privateSrv.Shutdown(shutdownCtx)
+	}
 	stopSIP()
 	select {
 	case <-sipDone:
@@ -334,9 +389,10 @@ func (b *Bridge) Run(ctx context.Context) error {
 }
 
 // PairingLink builds the housephone://pair link (v2) for a code; the
-// fingerprint lets the device check it pairs with this bridge.
-func PairingLink(publicURL, code, fingerprint, bridgeName string) string {
-	return hp2.FormatPairingLink(publicURL, code, fingerprint, bridgeName)
+// fingerprint lets the device check it pairs with this bridge, and the
+// device pairs over lanURL (the private listener).
+func PairingLink(publicURL, lanURL, code, fingerprint, bridgeName string) string {
+	return hp2.FormatPairingLink(publicURL, lanURL, code, fingerprint, bridgeName)
 }
 
 // LoadIdentityKey loads the bridge's Ed25519 key from the data directory,

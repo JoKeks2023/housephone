@@ -7,7 +7,12 @@ import Security
 /// key (`keyTag` in the `DeviceKeyStore`), and `bridgePublicKey` is the
 /// bridge identity pinned at pairing against the QR code's fingerprint.
 public struct BridgeCredentials: Codable, Equatable, Sendable {
+    /// The public URL (Cloudflare Tunnel), usable from anywhere.
     public var bridgeURL: URL
+    /// The private listener in the home network (or via Tailscale). Used
+    /// instead of `bridgeURL` whenever it answers; updated from `welcome`.
+    /// `nil` for bridges without one and for older stored credentials.
+    public var lanURL: URL?
     public var deviceId: DeviceID
     public var bridgeId: String
     public var bridgeName: String
@@ -16,8 +21,9 @@ public struct BridgeCredentials: Codable, Equatable, Sendable {
     /// Tag of this device's signing key in the `DeviceKeyStore`.
     public var keyTag: String
 
-    public init(bridgeURL: URL, deviceId: DeviceID, bridgeId: String, bridgeName: String, bridgePublicKey: Data, keyTag: String) {
+    public init(bridgeURL: URL, lanURL: URL? = nil, deviceId: DeviceID, bridgeId: String, bridgeName: String, bridgePublicKey: Data, keyTag: String) {
         self.bridgeURL = bridgeURL
+        self.lanURL = lanURL
         self.deviceId = deviceId
         self.bridgeId = bridgeId
         self.bridgeName = bridgeName

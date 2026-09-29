@@ -5,6 +5,9 @@ public enum BridgeHTTPError: Error, Equatable, Sendable {
     case invalidBridgeURL
     case unexpectedStatus(Int)
     case invalidResponse
+    /// The private listener from the pairing link did not answer: the
+    /// device is not in the home network (or Tailscale is off).
+    case homeNetworkRequired
 }
 
 /// A call as `GET /v1/calls/{callId}` reports it for this device.
@@ -106,7 +109,7 @@ public struct BridgeHTTPClient: Sendable {
     /// failure the new key is deleted again; an existing pairing and its
     /// key stay untouched.
     public func pair(link: PairingLink, deviceName: String, platform: DevicePlatform, model: String?) async throws -> BridgeCredentials {
-        guard let url = Self.endpoint("pair", for: link.bridgeURL) else { throw BridgeHTTPError.invalidBridgeURL }
+        guard let url = Self.endpoint("pair", for: link.pairingURL) else { throw BridgeHTTPError.invalidBridgeURL }
         let tag = "device-" + UUID().uuidString.lowercased()
         let key = try keyStore.makeKey(tag: tag)
         do {
@@ -119,8 +122,20 @@ public struct BridgeHTTPClient: Sendable {
                 nonce: try Self.randomBytes(HP2.nonceLength)
             )
             let body = try SignalingCoding.makeEncoder().encode(request)
-            let (data, response) = try await session.data(for: makeRequest(method: "POST", url: url, body: body))
+            let (data, response): (Data, URLResponse)
+            do {
+                var request = makeRequest(method: "POST", url: url, body: body)
+                if link.lanURL != nil { request.timeoutInterval = Self.lanPairingTimeout }
+                (data, response) = try await session.data(for: request)
+            } catch let error as URLError where link.lanURL != nil && Self.isUnreachable(error) {
+                throw BridgeHTTPError.homeNetworkRequired
+            }
             guard let http = response as? HTTPURLResponse else { throw BridgeHTTPError.invalidResponse }
+            // The private listener refuses addresses outside the home network.
+            if http.statusCode == 403,
+               (try? SignalingCoding.makeDecoder().decode(SignalingErrorPayload.self, from: data))?.code == .homeNetworkRequired {
+                throw BridgeHTTPError.homeNetworkRequired
+            }
             guard (200..<300).contains(http.statusCode) else { throw Self.failure(status: http.statusCode, body: data) }
             guard let result = try? SignalingCoding.makeDecoder().decode(PairingResult.self, from: data) else {
                 throw BridgeHTTPError.invalidResponse
@@ -129,6 +144,20 @@ public struct BridgeHTTPClient: Sendable {
         } catch {
             try? keyStore.deleteKey(tag: tag)
             throw error
+        }
+    }
+
+    /// A host in the home network answers fast or not at all.
+    static let lanPairingTimeout: TimeInterval = 8
+
+    /// Errors meaning "that address can't be reached from here".
+    static func isUnreachable(_ error: URLError) -> Bool {
+        switch error.code {
+        case .timedOut, .cannotConnectToHost, .cannotFindHost, .networkConnectionLost,
+             .notConnectedToInternet, .dnsLookupFailed:
+            true
+        default:
+            false
         }
     }
 

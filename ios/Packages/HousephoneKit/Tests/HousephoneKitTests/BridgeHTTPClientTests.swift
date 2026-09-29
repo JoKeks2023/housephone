@@ -157,6 +157,37 @@ struct BridgeHTTPClientTests {
         #expect(sent.platform == .watchos && sent.model == "Watch7,1")
     }
 
+    func lanLink() -> PairingLink {
+        PairingLink(
+            bridgeURL: URL(string: "wss://phone.example.com/v1/ws")!, lanURL: URL(string: "ws://192.168.178.20:8081/v1/ws")!,
+            code: "K7P2XH9QRMW4DZT8", bridgeName: "Zuhause", fingerprint: bridge.fingerprint
+        )
+    }
+
+    @Test func pairsOverTheLanListenerAndKeepsBothURLs() async throws {
+        let log = RequestLog()
+        let client = BridgeHTTPClient(session: StubURLProtocol.session(pairingHandler(log: log)), keyStore: InMemoryDeviceKeyStore())
+        let paired = try await client.pair(link: lanLink(), deviceName: "iPhone", platform: .ios, model: nil)
+        #expect(log.last?.url.absoluteString == "http://192.168.178.20:8081/v1/pair")
+        #expect(paired.bridgeURL == URL(string: "wss://phone.example.com/v1/ws"))
+        #expect(paired.lanURL == URL(string: "ws://192.168.178.20:8081/v1/ws"))
+    }
+
+    @Test func refusedOutsideTheHomeNetwork() async throws {
+        let body = Data(#"{"code":"home_network_required","message":"only reachable from the home network"}"#.utf8)
+        let keyStore = InMemoryDeviceKeyStore()
+        let client = BridgeHTTPClient(session: StubURLProtocol.session { _, _ in .init(status: 403, body: body) }, keyStore: keyStore)
+        await #expect(throws: BridgeHTTPError.homeNetworkRequired) {
+            try await client.pair(link: lanLink(), deviceName: "iPhone", platform: .ios, model: nil)
+        }
+        #expect(keyStore.tags.isEmpty)
+    }
+
+    @Test(arguments: [URLError.Code.timedOut, .cannotConnectToHost, .cannotFindHost])
+    func unreachableLanListenerMeansNotAtHome(code: URLError.Code) {
+        #expect(BridgeHTTPClient.isUnreachable(URLError(code)))
+    }
+
     @Test func pairingWithAnotherBridgeFailsAndLeavesNoKey() async throws {
         let keyStore = InMemoryDeviceKeyStore()
         // Someone answers with a valid-looking pairing, signed by their own key.

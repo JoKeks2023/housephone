@@ -24,6 +24,11 @@ public enum SignalingClientError: Error, Equatable, Sendable {
 /// key, the bridge's `101` must carry a valid signature of the pinned
 /// bridge key before anything is sent, and every frame after that is a
 /// sealed binary frame.
+///
+/// Routes: every connection attempt prefers the bridge's private listener
+/// (`lanURL`, home network or Tailscale) when `route` finds it reachable,
+/// and falls back to the public URL. `networkPathChanged(_:)` moves an open
+/// connection over when the better route changes.
 public actor SignalingClient {
     public enum ConnectionState: Sendable, Equatable {
         case disconnected
@@ -56,6 +61,9 @@ public actor SignalingClient {
     public enum Event: Sendable, Equatable {
         case state(ConnectionState)
         case message(SignalingMessage)
+        /// The route of the connection that is about to report
+        /// `.connected`: the private listener (`viaLAN`) or the public URL.
+        case route(url: URL, viaLAN: Bool)
     }
 
     public struct Configuration: Sendable {
@@ -78,6 +86,16 @@ public actor SignalingClient {
     private let audioContinuation: AsyncStream<Data>.Continuation
 
     public let credentials: BridgeCredentials
+    /// The private listener; starts from the credentials and follows
+    /// `welcome.lanUrl`.
+    public private(set) var lanURL: URL?
+    /// The URL of the current (or last) connection.
+    public private(set) var activeURL: URL?
+    private let route: BridgeRouteChooser?
+    private var path: NetworkPathInfo?
+    /// Set when a route change closed the connection on purpose: reconnect
+    /// at once instead of backing off.
+    private var reconnectNow = false
     private let factory: any WebSocketTransportFactory
     private let keyStore: any DeviceKeyStore
     private let now: @Sendable () -> Date
@@ -97,10 +115,13 @@ public actor SignalingClient {
         hello: Hello,
         keyStore: any DeviceKeyStore = KeychainDeviceKeyStore(),
         factory: any WebSocketTransportFactory = URLSessionWebSocketFactory(),
+        route: BridgeRouteChooser? = nil,
         configuration: Configuration = Configuration(),
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.credentials = credentials
+        self.lanURL = credentials.lanURL
+        self.route = route
         self.hello = hello
         self.keyStore = keyStore
         self.factory = factory
@@ -156,6 +177,50 @@ public actor SignalingClient {
         case .connecting, .unauthorized:
             break
         }
+    }
+
+    // MARK: - Routes
+
+    /// Call on every network path change (`NetworkPathObserver`). Joining
+    /// the home network (or Tailscale) moves the connection to the private
+    /// listener; leaving it moves it to the public URL. Calls re-attach on
+    /// the new connection like after any reconnect.
+    public func networkPathChanged(_ newPath: NetworkPathInfo) async {
+        guard newPath != path else { return }
+        path = newPath
+        guard newPath.isSatisfied else { return }
+        switch state {
+        case .waitingToReconnect:
+            backoffTask?.cancel()
+        case .connected:
+            guard let route, let current = activeURL else { return }
+            let preferred = await route.url(publicURL: credentials.bridgeURL, lanURL: lanURL, path: newPath)
+            // The state may have changed while probing.
+            guard case .connected = state, activeURL == current, let transport else { return }
+            if preferred != current {
+                logger.info("Network changed; switching route")
+                reconnectNow = true
+                transport.close()
+            } else {
+                refreshConnection()
+            }
+        default:
+            break
+        }
+    }
+
+    private func chooseURL() async -> URL {
+        guard let route else { return credentials.bridgeURL }
+        return await route.url(publicURL: credentials.bridgeURL, lanURL: lanURL, path: path)
+    }
+
+    /// Adopts the private listener announced in `welcome`.
+    private func adoptLanURL(from welcome: Welcome) {
+        guard let url = welcome.lanUrl,
+              let scheme = url.scheme?.lowercased(), scheme == "ws" || scheme == "wss",
+              url.host()?.isEmpty == false
+        else { return }
+        lanURL = url
     }
 
     // MARK: - Sending
@@ -249,10 +314,13 @@ public actor SignalingClient {
                     // Without its key this device can't prove who it is.
                     throw SignalingClientError.unauthorized
                 }
+                let url = await chooseURL()
+                try Task.checkCancellation()
+                activeURL = url
                 let exchange = try HP2Signer(credentials: credentials, key: key, now: now)
-                    .exchange(method: "GET", url: credentials.bridgeURL, body: nil)
+                    .exchange(method: "GET", url: url, body: nil)
                 let transport = try await factory.connect(
-                    to: credentials.bridgeURL,
+                    to: url,
                     headers: ["Authorization": exchange.authorization.headerValue]
                 )
                 // Assign first, so the cleanup below closes it on cancellation.
@@ -275,6 +343,8 @@ public actor SignalingClient {
 
                 try await transport.send(binary: try seal(HP2FrameCipher.jsonPlaintext(SignalingCoding.encode(.hello(hello)))))
                 let welcome = try await awaitWelcome(on: transport)
+                adoptLanURL(from: welcome)
+                eventContinuation.yield(.route(url: url, viaLAN: url != credentials.bridgeURL && url == lanURL))
 
                 attempt = 0
                 setState(.connected(welcome))
@@ -305,6 +375,10 @@ public actor SignalingClient {
 
             closeTransport()
             guard !Task.isCancelled else { break }
+            if reconnectNow {
+                reconnectNow = false
+                continue
+            }
 
             attempt += 1
             setState(.waitingToReconnect(attempt: attempt))

@@ -21,7 +21,7 @@ public struct CompanionPairingInstruction: Equatable, Sendable {
     /// `fingerprint`: the iPhone's pinned `BridgeCredentials.bridgeFingerprint`.
     public init(pairing: CompanionPairing, bridgeName: String?, fingerprint: String) {
         self.init(
-            link: PairingLink(bridgeURL: pairing.url, code: pairing.code, bridgeName: bridgeName, fingerprint: fingerprint),
+            link: PairingLink(bridgeURL: pairing.url, lanURL: pairing.lanUrl, code: pairing.code, bridgeName: bridgeName, fingerprint: fingerprint),
             expiresAt: pairing.expiresAt
         )
     }
@@ -29,7 +29,7 @@ public struct CompanionPairingInstruction: Equatable, Sendable {
     public static let messageType = "housephone.pair"
 
     public var dictionary: [String: Any] {
-        [
+        var dictionary: [String: Any] = [
             "type": Self.messageType,
             "url": link.bridgeURL.absoluteString,
             "code": link.code,
@@ -37,6 +37,8 @@ public struct CompanionPairingInstruction: Equatable, Sendable {
             "bridgeName": link.bridgeName ?? "",
             "expiresAt": expiresAt.timeIntervalSince1970,
         ]
+        if let lanURL = link.lanURL { dictionary["lan"] = lanURL.absoluteString }
+        return dictionary
     }
 
     public init?(dictionary: [String: Any]) {
@@ -50,8 +52,9 @@ public struct CompanionPairingInstruction: Equatable, Sendable {
               let expires = dictionary["expiresAt"] as? Double
         else { return nil }
         let name = (dictionary["bridgeName"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        let lanURL = (dictionary["lan"] as? String).flatMap(URL.init(string:))
         self.init(
-            link: PairingLink(bridgeURL: url, code: code, bridgeName: name, fingerprint: fingerprint),
+            link: PairingLink(bridgeURL: url, lanURL: lanURL, code: code, bridgeName: name, fingerprint: fingerprint),
             expiresAt: Date(timeIntervalSince1970: expires)
         )
     }

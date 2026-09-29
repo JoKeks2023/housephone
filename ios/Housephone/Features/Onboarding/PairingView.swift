@@ -163,6 +163,8 @@ private enum PairingFailure: Equatable {
     case codeInvalid
     case rateLimited
     case unreachable
+    /// The private listener from the link didn't answer: not at home.
+    case homeNetworkRequired
     /// The bridge doesn't hold the key from the QR code's fingerprint.
     case bridgeMismatch
     case untrusted
@@ -174,6 +176,10 @@ private enum PairingFailure: Equatable {
         switch error {
         case HP2Error.bridgeIdentityMismatch:
             self = .bridgeMismatch
+        case BridgeHTTPError.homeNetworkRequired:
+            self = .homeNetworkRequired
+        case SignalingClientError.bridge(let payload) where payload.code == .homeNetworkRequired:
+            self = .homeNetworkRequired
         case is HP2Error, SignalingClientError.untrustedBridge:
             self = .untrusted
         case SignalingClientError.clockSkew:
@@ -198,6 +204,7 @@ private enum PairingFailure: Equatable {
         case .codeInvalid: "Der Code ist abgelaufen oder wurde schon benutzt. Erzeuge auf dem Server mit „housephone-bridge pair“ einen neuen."
         case .rateLimited: "Zu viele Versuche. Warte eine Minute und versuche es dann erneut."
         case .unreachable: "Die Bridge ist nicht erreichbar. Prüfe die Adresse und deine Internetverbindung."
+        case .homeNetworkRequired: "Zum Koppeln ins Heim-WLAN oder Tailscale"
         case .bridgeMismatch: "Diese Bridge ist nicht die aus dem QR-Code. Die Kopplung wurde abgebrochen."
         case .untrusted: "Bridge nicht vertrauenswürdig. Die Kopplung wurde abgebrochen."
         case .clockSkew: "Uhrzeit des iPhones prüfen: Sie weicht zu stark von der Bridge ab."

@@ -183,7 +183,7 @@ func TestDeriveKeysRejectsLowOrderPoint(t *testing.T) {
 }
 
 func TestPairingLinkRoundTrip(t *testing.T) {
-	link := FormatPairingLink("wss://phone.example.com/v1/ws", "K7P2XH9QRMW4DZT8", "fp_1", "Bei Joris")
+	link := FormatPairingLink("wss://phone.example.com/v1/ws", "", "K7P2XH9QRMW4DZT8", "fp_1", "Bei Joris")
 	if strings.Contains(link, "+") {
 		t.Fatalf("spaces not percent-encoded: %s", link)
 	}

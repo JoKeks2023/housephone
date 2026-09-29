@@ -832,6 +832,16 @@
         }
       }
     },
+    "Zum Koppeln ins Heim-WLAN oder Tailscale": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect to your home Wi-Fi or Tailscale to pair"
+          }
+        }
+      }
+    },
     "Zurückrufen": {
       "localizations": {
         "en": {

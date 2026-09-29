@@ -221,13 +221,17 @@ public struct Welcome: Codable, Sendable, Equatable {
     /// Extra functions (v1.2), e.g. the FRITZ!Box phonebook. `nil` from
     /// bridges before v1.2.
     public var features: [BridgeFeature]?
+    /// The bridge's private listener (home network / Tailscale), preferred
+    /// when reachable. `nil` from bridges without one.
+    public var lanUrl: URL?
 
-    public init(bridgeId: String, bridgeName: String, bridgeVersion: String, sipRegistered: Bool, features: [BridgeFeature]? = nil) {
+    public init(bridgeId: String, bridgeName: String, bridgeVersion: String, sipRegistered: Bool, features: [BridgeFeature]? = nil, lanUrl: URL? = nil) {
         self.bridgeId = bridgeId
         self.bridgeName = bridgeName
         self.bridgeVersion = bridgeVersion
         self.sipRegistered = sipRegistered
         self.features = features
+        self.lanUrl = lanUrl
     }
 
     public func supports(_ feature: BridgeFeature) -> Bool {
@@ -239,11 +243,14 @@ public struct Welcome: Codable, Sendable, Equatable {
 public struct CompanionPairing: Codable, Sendable, Equatable {
     public var code: String
     public var url: URL
+    /// Where the companion pairs (private listener, home network).
+    public var lanUrl: URL?
     public var expiresAt: Date
 
-    public init(code: String, url: URL, expiresAt: Date) {
+    public init(code: String, url: URL, lanUrl: URL? = nil, expiresAt: Date) {
         self.code = code
         self.url = url
+        self.lanUrl = lanUrl
         self.expiresAt = expiresAt
     }
 }
@@ -428,6 +435,9 @@ public struct SignalingErrorCode: RawRepresentable, Codable, Sendable, Hashable 
     public static let clockSkew = Self(rawValue: "clock_skew")
     /// Too many parallel calls for this device or the bridge.
     public static let tooManyCalls = Self(rawValue: "too_many_calls")
+    /// Pairing only works over the private listener (home network or
+    /// Tailscale), not through the public tunnel.
+    public static let homeNetworkRequired = Self(rawValue: "home_network_required")
     public static let `internal` = Self(rawValue: "internal")
 }
 
