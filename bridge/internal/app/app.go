@@ -10,11 +10,13 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
+	"github.com/JoKeks2023/housephone/bridge/internal/fritzbox"
 	"github.com/JoKeks2023/housephone/bridge/internal/media"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/push"
@@ -48,6 +50,8 @@ type Bridge struct {
 	engine    *media.Engine
 	signaling *signaling.Server
 	listener  net.Listener
+	// directory is nil unless fritzbox.username is configured.
+	directory *fritzbox.Directory
 }
 
 // New prepares all components; nothing is served before Run. The context
@@ -104,17 +108,42 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		log.Warn("APNs is not configured: devices only ring while the app is open")
 	}
 
+	var callerNames func(string) string
+	var directory signaling.Directory
+	if cfg.FritzBox.Enabled() {
+		loc, err := time.LoadLocation(cfg.FritzBox.Timezone)
+		if err != nil {
+			b.engine.Close()
+			return nil, fmt.Errorf("fritzbox.timezone: %w", err)
+		}
+		b.directory = fritzbox.NewDirectory(fritzbox.DirectoryConfig{
+			Source: fritzbox.NewClient(fritzbox.ClientConfig{
+				Host:      cfg.FritzBoxHost(),
+				PlainPort: strconv.Itoa(cfg.FritzBox.Port),
+				Username:  cfg.FritzBox.Username,
+				Password:  cfg.FritzBox.Password,
+				Logger:    log,
+			}),
+			Location:    loc,
+			CountryCode: cfg.FritzBox.CountryCode,
+			Logger:      log,
+		})
+		callerNames = b.directory.CallerName
+		directory = b.directory
+	}
+
 	iceServers := []protocol.ICEServer{}
 	if len(cfg.Media.STUN) > 0 {
 		iceServers = append(iceServers, protocol.ICEServer{URLs: cfg.Media.STUN})
 	}
 	b.manager = calls.NewManager(calls.Options{
-		BridgeID:   identity.ID,
-		ICEServers: iceServers,
-		Peers:      b.engine,
-		Pusher:     pusher,
-		Devices:    b.Devices,
-		Logger:     log,
+		BridgeID:    identity.ID,
+		ICEServers:  iceServers,
+		Peers:       b.engine,
+		Pusher:      pusher,
+		Devices:     b.Devices,
+		Logger:      log,
+		CallerNames: callerNames,
 	})
 	b.sip, err = sipleg.New(sipleg.Config{
 		Registrar:      cfg.SIP.Registrar,
@@ -144,6 +173,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		Devices:           b.Devices,
 		Pairing:           b.Pairing,
 		Hub:               b.manager,
+		Directory:         directory,
 		Logger:            log,
 	})
 
@@ -181,6 +211,11 @@ func (b *Bridge) Run(ctx context.Context) error {
 			errCh <- err
 		}
 	}()
+	if b.directory != nil {
+		go b.directory.Warmup(ctx)
+	} else {
+		b.log.Info("FRITZ!Box phonebook and call list not configured (fritzbox.username)")
+	}
 	b.log.Info("bridge running", "version", version.Version, "listen", b.Addr(), "bridgeId", b.Identity.ID, "publicUrl", b.cfg.Bridge.PublicURL)
 
 	var runErr error
