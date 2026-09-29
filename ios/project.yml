@@ -122,6 +122,10 @@ targets:
           - voip
           - audio
         NSMicrophoneUsageDescription: Housephone braucht das Mikrofon, damit dich dein Gegenüber hört, wenn du an der Watch telefonierst.
+        # The watch pairs over the bridge's private listener (ws:// in the
+        # home network); HP2 authenticates and seals everything on it.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:

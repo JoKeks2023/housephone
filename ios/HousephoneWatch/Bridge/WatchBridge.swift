@@ -275,6 +275,8 @@ final class WatchBridge {
             String(localized: "Zu viele Versuche. Warte eine Minute und versuche es dann erneut.")
         case HP2Error.bridgeIdentityMismatch:
             String(localized: "Diese Bridge ist nicht die, mit der das iPhone gekoppelt ist.")
+        case BridgeHTTPError.homeNetworkRequired:
+            String(localized: "Zum Koppeln ins Heim-WLAN oder Tailscale")
         case let error as URLError where error.code == .notConnectedToInternet || error.code == .networkConnectionLost:
             String(localized: "Die Watch ist offline. Verbinde sie mit dem iPhone oder einem WLAN.")
         case is URLError:

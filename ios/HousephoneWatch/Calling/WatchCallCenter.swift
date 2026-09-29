@@ -254,6 +254,8 @@ final class WatchCallCenter: NSObject {
             }
         case .message(let message):
             handle(message)
+        case .route:
+            break
         }
     }
 

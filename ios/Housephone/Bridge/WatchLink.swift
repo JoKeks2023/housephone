@@ -50,12 +50,13 @@ final class WatchLink: NSObject {
 
     // MARK: - Pairing
 
-    /// Pairs the watch without any tap once the iPhone is paired and online
-    /// and the watch app is installed. Called when the bridge connects and
-    /// whenever the watch's state changes (e.g. the app gets installed).
+    /// Pairs the watch without any tap once the iPhone is paired, connected
+    /// through the home network (pairing only works there) and the watch app
+    /// is installed. Called when the bridge connects and whenever the
+    /// watch's state changes (e.g. the app gets installed).
     func autoPairIfNeeded() {
         guard isSupported, isActivated, isWatchPaired, isAppInstalled,
-              bridge.isPaired, bridge.isOnline,
+              bridge.isPaired, bridge.isOnline, bridge.isOnHomeNetwork,
               !isPairedWithBridge, watchState?.phase != .pairing, pairing == .idle
         else { return }
         if let last = lastAutoPairAttempt, Date().timeIntervalSince(last) < Self.autoPairInterval { return }
@@ -66,6 +67,10 @@ final class WatchLink: NSObject {
 
     func pairWatch() async {
         guard isSupported, isActivated, isWatchPaired, isAppInstalled else { return }
+        guard bridge.isOnHomeNetwork else {
+            pairing = .failed(Self.homeNetworkMessage)
+            return
+        }
         pairing = .requestingCode
         let instruction: CompanionPairingInstruction
         do {
@@ -77,6 +82,9 @@ final class WatchLink: NSObject {
                 bridgeName: bridge.welcome?.bridgeName ?? credentials.bridgeName,
                 fingerprint: credentials.bridgeFingerprint
             )
+        } catch SignalingClientError.bridge(let payload) where payload.code == .homeNetworkRequired {
+            pairing = .failed(Self.homeNetworkMessage)
+            return
         } catch {
             logger.error("Companion code failed: \(String(describing: error), privacy: .public)")
             pairing = .failed(String(localized: "Die Bridge hat keinen Kopplungscode geliefert. Prüfe, ob sie erreichbar ist."))
@@ -119,6 +127,10 @@ final class WatchLink: NSObject {
         for transfer in WCSession.default.outstandingUserInfoTransfers where companionMessageType(of: transfer.userInfo) == type {
             transfer.cancel()
         }
+    }
+
+    static var homeNetworkMessage: String {
+        String(localized: "Zum Koppeln ins Heim-WLAN oder Tailscale")
     }
 
     func cancelPairing() {

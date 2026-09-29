@@ -38,6 +38,9 @@ final class BridgeConnection {
     /// Increases with every successful (re)connection. Calls use it to
     /// know whether they still need to attach on the current connection.
     private(set) var generation = 0
+    /// The current connection runs over the bridge's private listener
+    /// (home Wi-Fi or Tailscale). Pairing the watch needs it.
+    private(set) var isOnHomeNetwork = false
 
     /// Called for every message from the bridge.
     @ObservationIgnored var onMessage: ((SignalingMessage) -> Void)?
@@ -52,6 +55,9 @@ final class BridgeConnection {
     @ObservationIgnored private var eventsTask: Task<Void, Never>?
     @ObservationIgnored private var companionWaiter: CheckedContinuation<CompanionPairing, any Error>?
     @ObservationIgnored private var companionTimeout: Task<Void, Never>?
+    @ObservationIgnored private let pathObserver = NetworkPathObserver()
+    @ObservationIgnored private var pathStarted = false
+    @ObservationIgnored private var lastPath: NetworkPathInfo?
     @ObservationIgnored private let logger = Logger(subsystem: "com.jorisconrad.housephone", category: "bridge")
 
     init(store: any CredentialStore, keyStore: any DeviceKeyStore = KeychainDeviceKeyStore()) {
@@ -77,15 +83,21 @@ final class BridgeConnection {
 
     func start() {
         guard let credentials, client == nil else { return }
-        let client = SignalingClient(credentials: credentials, hello: makeHello(), keyStore: keyStore)
+        let client = SignalingClient(credentials: credentials, hello: makeHello(), keyStore: keyStore, route: BridgeRouteChooser())
         self.client = client
+        startPathObserver()
         status = .connecting
         eventsTask = Task { [weak self] in
             for await event in client.events {
                 self?.handle(event)
             }
         }
-        Task { await client.start() }
+        let path = lastPath
+        Task {
+            // The first attempt already knows the network.
+            if let path { await client.networkPathChanged(path) }
+            await client.start()
+        }
     }
 
     /// App became active or a push arrived: reconnect now instead of
@@ -162,6 +174,7 @@ final class BridgeConnection {
         }
         credentials = nil
         welcome = nil
+        isOnHomeNetwork = false
         pushToken = nil
         problem = nil
         newlyPairedDevice = nil
@@ -217,6 +230,34 @@ final class BridgeConnection {
 
     // MARK: - Private
 
+    /// Network changes (joining the home Wi-Fi, leaving it, Tailscale on or
+    /// off) go to the current client, which moves the connection to the
+    /// better route; calls re-attach through `onConnected`.
+    private func startPathObserver() {
+        guard !pathStarted else { return }
+        pathStarted = true
+        pathObserver.start { [weak self] path in
+            Task { @MainActor in
+                guard let self else { return }
+                lastPath = path
+                guard let client else { return }
+                await client.networkPathChanged(path)
+            }
+        }
+    }
+
+    /// Keeps the private listener announced in `welcome` for the next start.
+    private func adoptLanURL(_ lanURL: URL?) {
+        guard let lanURL, var updated = credentials, updated.lanURL != lanURL else { return }
+        updated.lanURL = lanURL
+        do {
+            try store.save(updated)
+            credentials = updated
+        } catch {
+            logger.error("Could not save the LAN address: \(String(describing: error), privacy: .public)")
+        }
+    }
+
     /// Runs `operation` and reports whether it finished successfully in time.
     private static func attempt(within limit: Duration, _ operation: @escaping @Sendable () async throws -> Void) async -> Bool {
         await withTaskGroup(of: Bool.self) { group in
@@ -246,6 +287,7 @@ final class BridgeConnection {
             switch state {
             case .connected(let welcome):
                 self.welcome = welcome
+                adoptLanURL(welcome.lanUrl)
                 problem = nil
                 status = .online(sipRegistered: welcome.sipRegistered)
                 generation += 1
@@ -255,6 +297,7 @@ final class BridgeConnection {
                 if !isOnline { status = .connecting }
             case .waitingToReconnect, .disconnected:
                 status = .offline
+                isOnHomeNetwork = false
                 finishCompanionRequest(.failure(SignalingClientError.connectionClosed))
             case .unauthorized:
                 status = .rejected
@@ -269,6 +312,9 @@ final class BridgeConnection {
                 problem = .clockSkew
                 finishCompanionRequest(.failure(SignalingClientError.clockSkew))
             }
+        case .route(let url, let viaLAN):
+            isOnHomeNetwork = viaLAN
+            logger.info("Route: \(viaLAN ? "home network" : "public", privacy: .public) (\(url.host() ?? "", privacy: .public))")
         case .message(let message):
             switch message {
             case .status(let bridgeStatus):
