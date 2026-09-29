@@ -8,18 +8,14 @@ struct RecentsView: View {
         case missed
     }
 
-    enum Source: String {
-        case housephone
-        case fritzBox
-    }
-
     @Environment(\.modelContext) private var modelContext
     @Environment(CallCenter.self) private var callCenter
     @Environment(ContactsDirectory.self) private var contacts
     @Environment(FritzBoxData.self) private var fritzBox
     @Query(sort: \CallRecord.date, order: .reverse) private var records: [CallRecord]
     @State private var filter: Filter = .all
-    @AppStorage("recents.source") private var source: Source = .housephone
+    @State private var confirmsDeleteAll = false
+    @AppStorage("recents.source") private var source: ListSource = .iPhone
 
     private var showsFritzBox: Bool { fritzBox.showsHistory && source == .fritzBox }
 
@@ -32,42 +28,41 @@ struct RecentsView: View {
             Group {
                 if showsFritzBox {
                     FritzBoxHistoryList(missedOnly: filter == .missed)
+                        .transition(.opacity)
                 } else {
                     housephoneList
+                        .transition(.opacity)
                 }
             }
+            .motion(Theme.Motion.snappy, value: showsFritzBox)
             .navigationTitle("Anrufe")
+            .listSourceMenu($source, isAvailable: fritzBox.showsHistory)
             .safeAreaBar(edge: .top) {
-                if fritzBox.showsHistory {
-                    Picker("Quelle", selection: $source) {
-                        Text("Housephone").tag(Source.housephone)
-                        Text("FRITZ!Box").tag(Source.fritzBox)
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, Theme.Space.s4)
-                    .padding(.bottom, Theme.Space.s2)
+                Picker("Filter", selection: $filter) {
+                    Text("Alle").tag(Filter.all)
+                    Text("Verpasst").tag(Filter.missed)
                 }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, Theme.Space.s4)
+                .padding(.bottom, Theme.Space.s2)
             }
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Picker("Filter", selection: $filter) {
-                        Text("Alle").tag(Filter.all)
-                        Text("Verpasst").tag(Filter.missed)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 200)
-                }
                 if !showsFritzBox, !records.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
                             Button("Alle Einträge löschen", systemImage: "trash", role: .destructive) {
-                                deleteAll()
+                                confirmsDeleteAll = true
                             }
                         } label: {
                             Label("Mehr", systemImage: "ellipsis")
                         }
                     }
                 }
+            }
+            .confirmationDialog("Alle Anrufe löschen?", isPresented: $confirmsDeleteAll, titleVisibility: .visible) {
+                Button("Alle löschen", role: .destructive) { deleteAll() }
+            } message: {
+                Text("Die Anrufliste in Housephone wird geleert. Die Anrufliste der Telefon-App bleibt, wie sie ist.")
             }
         }
     }
@@ -86,20 +81,47 @@ struct RecentsView: View {
             } else {
                 List {
                     ForEach(visibleRecords) { record in
-                        RecentRow(record: record, contactName: contacts.name(for: record.number)) {
-                            call(record)
-                        }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                delete(record)
-                            } label: {
-                                Label("Löschen", systemImage: "trash")
+                        recentRow(record)
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    delete(record)
+                                } label: {
+                                    Label("Löschen", systemImage: "trash")
+                                }
                             }
-                        }
                     }
                 }
                 .listStyle(.plain)
+                .motion(Theme.Motion.standard, value: filter)
             }
+        }
+    }
+
+    private func recentRow(_ record: CallRecord) -> some View {
+        let contactName = contacts.name(for: record.number)
+        let recordedName = record.name.flatMap { $0.isEmpty ? nil : $0 }
+        let detail: String = if let duration = record.duration, duration >= 1 {
+            duration.callDurationText
+        } else {
+            String(localized: record.outcome.label)
+        }
+        return CallHistoryRow(
+            name: contactName ?? recordedName,
+            number: record.number,
+            symbol: Self.symbol(for: record),
+            detail: detail,
+            isMissed: record.isMissed,
+            date: record.date
+        ) {
+            call(record)
+        }
+    }
+
+    private static func symbol(for record: CallRecord) -> String {
+        switch (record.direction, record.outcome) {
+        case (.incoming, .missed): "phone.arrow.down.left.fill"
+        case (.incoming, _): "phone.arrow.down.left"
+        case (.outgoing, _): "phone.arrow.up.right"
         }
     }
 
@@ -120,77 +142,54 @@ struct RecentsView: View {
     }
 }
 
-private struct RecentRow: View {
-    let record: CallRecord
-    let contactName: String?
-    let onCall: () -> Void
+/// Where a list's entries come from. Calls and Contacts offer the same
+/// choice with the same words, in the same order.
+enum ListSource: String, CaseIterable {
+    case iPhone
+    case fritzBox
 
-    private var title: String {
-        if let contactName { return contactName }
-        if let name = record.name, !name.isEmpty { return name }
-        return record.number.isEmpty ? String(localized: "Unbekannt") : record.number
-    }
-
-    private var directionSymbol: String {
-        switch (record.direction, record.outcome) {
-        case (.incoming, .missed): "phone.arrow.down.left.fill"
-        case (.incoming, _): "phone.arrow.down.left"
-        case (.outgoing, _): "phone.arrow.up.right"
+    var title: LocalizedStringKey {
+        switch self {
+        case .iPhone: "Dieses iPhone"
+        case .fritzBox: "FRITZ!Box"
         }
     }
 
-    var body: some View {
-        Button(action: onCall) {
-            HStack(spacing: Theme.Space.s3) {
-                AvatarView(name: contactName ?? record.name, size: 40)
+    var symbol: String {
+        switch self {
+        case .iPhone: "iphone"
+        case .fritzBox: "house"
+        }
+    }
+}
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(record.isMissed ? Theme.danger : Color.primary)
-                        .lineLimit(1)
-                    HStack(spacing: Theme.Space.s1) {
-                        Image(systemName: directionSymbol)
-                            .imageScale(.small)
-                            .accessibilityHidden(true)
-                        Text(subtitle)
+extension View {
+    /// The source switch as a title menu with the current source as the
+    /// subtitle, like Mail's mailboxes. Only when the FRITZ!Box offers the
+    /// data; otherwise the plain large title stays.
+    func listSourceMenu(_ source: Binding<ListSource>, isAvailable: Bool) -> some View {
+        modifier(ListSourceMenu(source: source, isAvailable: isAvailable))
+    }
+}
+
+private struct ListSourceMenu: ViewModifier {
+    @Binding var source: ListSource
+    let isAvailable: Bool
+
+    func body(content: Content) -> some View {
+        if isAvailable {
+            content
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationSubtitle(Text(source.title))
+                .toolbarTitleMenu {
+                    Picker("Quelle", selection: $source) {
+                        ForEach(ListSource.allCases, id: \.self) { option in
+                            Label(option.title, systemImage: option.symbol).tag(option)
+                        }
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
                 }
-
-                Spacer(minLength: Theme.Space.s2)
-
-                Text(record.date, format: Self.dateFormat(for: record.date))
-                    .font(.subheadline)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(record.number.isEmpty)
-        .accessibilityElement(children: .combine)
-        .accessibilityHint(Text("Zurückrufen"))
-    }
-
-    private var subtitle: String {
-        var parts: [String] = []
-        if contactName != nil || record.name != nil, !record.number.isEmpty {
-            parts.append(record.number)
-        }
-        if let duration = record.duration, duration >= 1 {
-            parts.append(duration.callDurationText)
         } else {
-            parts.append(String(localized: record.outcome.label))
+            content
         }
-        return parts.joined(separator: " · ")
-    }
-
-    private static func dateFormat(for date: Date) -> Date.FormatStyle {
-        Calendar.current.isDateInToday(date)
-            ? .dateTime.hour().minute()
-            : .dateTime.day().month(.abbreviated)
     }
 }

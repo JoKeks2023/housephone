@@ -1,0 +1,76 @@
+{
+  "description": "HP2 test vectors (ADR-0004). base64url without padding, hex lowercase. ECDSA signatures are random: implementations must VERIFY the given ones and may not expect to reproduce them. Everything else is deterministic.",
+  "frames": [
+    {
+      "counter": "0",
+      "direction": "deviceToBridge",
+      "plaintextHex": "007b2274797065223a2268656c6c6f222c227061796c6f6164223a7b2261707056657273696f6e223a22312e3020283129222c22706c6174666f726d223a22696f73227d7d",
+      "sealedHex": "c8643b074a0984ded76c4b03470fec4ab503e0303169799026f4afd73a5fb9c977d064f1aaf4e15e7c2762cda663e591212c26191082e674f96a3604bddb32a996986ab7e18535fedddbc0a6f2723f1abb190246b4"
+    },
+    {
+      "counter": "0",
+      "direction": "bridgeToDevice",
+      "plaintextHex": "007b2274797065223a2277656c636f6d65222c227061796c6f6164223a7b226272696467654964223a2265376131633364352d306632622d346436652d386139632d316233643566376139633265222c226272696467654e616d65223a225a756861757365222c2262726964676556657273696f6e223a22302e342e30222c2273697052656769737465726564223a747275657d7d",
+      "sealedHex": "eb7476af86a07d968666b735a437b9b39900d049814ad53277d46bbcc7e8bdb62b9446fc909c25a07bfbf7894bbb9c79f261894870f93b090b4e0bc00c4ac7b890f0675d373d17a21467dcea1d250199b54578b079c76ddd54d88686318f488df76f7b5be0242d37f6a41b6219c768fc059145a806e23ababa0743afdc5b4b224bcee28345e3798cb80f4ad96b4c668fe72a62387c4535f67d3c1052e5dda3099138001c22"
+    },
+    {
+      "counter": "1",
+      "direction": "deviceToBridge",
+      "plaintextHex": "01d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5",
+      "sealedHex": "4f99ff30c88f90a97cfbd093d3d68c0b059602a5dfaf7d7a3771ed3a059e20249775069b53a0c455d20a5b7592620d9f395283bb32fba218e302ec6948da343d6153c86d48d8a77b55b298033ae3fd52833ad43efc3e4c308ade54e3a21cf99e5d21e9c57573ba66806649db4406aeccf0b970303906c61cf3930f605ed10b9dd6351b842e74581daf2f3c05dd1de59e9ace1a0bd81a208f2e186fad6893926abbde9913e881b5dee8b79323237eddfc83"
+    }
+  ],
+  "ids": {
+    "bridgeId": "e7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e",
+    "deviceId": "9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d"
+  },
+  "keyDerivation": {
+    "bridgeToDeviceKeyHex": "efabd41001eae74b91f582791dc0d626534f82a93dac90238ee952bbdfa8d7d8",
+    "deviceToBridgeKeyHex": "854c34c69aabf6a470c10422415c8398be5def73e9154001a5fede38037ce774",
+    "hkdfInfo": "HP2-KEYS\ne7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\n9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d\nhSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo\n3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08",
+    "hkdfSaltHex": "f0e1d2c3b4a5968778695a4b3c2d1e0f",
+    "okmHex": "854c34c69aabf6a470c10422415c8398be5def73e9154001a5fede38037ce774efabd41001eae74b91f582791dc0d626534f82a93dac90238ee952bbdfa8d7d8",
+    "sharedSecretHex": "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742"
+  },
+  "keys": {
+    "bridgeEd25519SeedHex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+    "bridgeEphemeralPrivateX25519Hex": "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb",
+    "bridgeEphemeralPublic": "3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08",
+    "bridgeFingerprint": "If4x36FUomFia_hUBG_SJxt77UtqvkWqWId-9H-XIbk",
+    "bridgePublicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+    "deviceEphemeralPrivateX25519Hex": "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
+    "deviceEphemeralPublic": "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo",
+    "devicePrivateKeyScalarHex": "c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721",
+    "devicePublicKeyX963": "BGD-1LolWp0xyWHrdMY1bWjASbiSO2H6bOZpYi5g8p-2eQP-EAi4vJmkGunpVii8ZPLxsgwtfp9Rd6PClNRGIpk"
+  },
+  "pairing": {
+    "code": "K7P2XH9QRMW4DZT8",
+    "link": "housephone://pair?v=2&url=wss%3A%2F%2Fphone.example.com%2Fv1%2Fws&code=K7P2XH9QRMW4DZT8&fp=If4x36FUomFia_hUBG_SJxt77UtqvkWqWId-9H-XIbk&name=Zuhause",
+    "nonce": "AAECAwQFBgcICQoLDA0ODw",
+    "proofMessage": "HP2-PAIR-PROOF\nK7P2XH9QRMW4DZT8\nAAECAwQFBgcICQoLDA0ODw\nBGD-1LolWp0xyWHrdMY1bWjASbiSO2H6bOZpYi5g8p-2eQP-EAi4vJmkGunpVii8ZPLxsgwtfp9Rd6PClNRGIpk",
+    "proofSignature": "KkpmPq2N4dE49tt9YvHznvphlsccZP_c6hSxteApHoyQbNmOzTzRKSrkFi6TnNEH4SMHWKK-n0FvvQttEE7TtA",
+    "responseMessage": "HP2-PAIR\ne7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\n9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d\nBGD-1LolWp0xyWHrdMY1bWjASbiSO2H6bOZpYi5g8p-2eQP-EAi4vJmkGunpVii8ZPLxsgwtfp9Rd6PClNRGIpk\nAAECAwQFBgcICQoLDA0ODw\nK7P2XH9QRMW4DZT8",
+    "responseSignature": "wFd23zjeHffDWiA6EoDdqNeCsLg_klmRBgyWVuCBhff0YoghgsNUxwdTgybBvGOu-vZVKKt9eFZTKCfpgT64Aw"
+  },
+  "request": {
+    "authorizationHeader": "HP2 id=9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d, ts=1790000000, nonce=8OHSw7Sllod4aVpLPC0eDw, epk=hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo, sig=4yC9Miloa3PRisaAdHL3zAduMsI_sDed9KiDJcDW5nPSw98LI2wPsurOilGAgth7ctABhWHg7gheJxz8VLbzmQ",
+    "body": "{\"pushToken\":\"a1b2\",\"pushEnvironment\":\"production\"}",
+    "bodySha256Hex": "d4d80807a976c2f50c9581a4d91a55f326228ebf45088024d49618980df1470c",
+    "method": "PUT",
+    "nonce": "8OHSw7Sllod4aVpLPC0eDw",
+    "path": "/v1/device",
+    "signature": "4yC9Miloa3PRisaAdHL3zAduMsI_sDed9KiDJcDW5nPSw98LI2wPsurOilGAgth7ctABhWHg7gheJxz8VLbzmQ",
+    "signedMessage": "HP2-AUTH\nPUT\n/v1/device\ne7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\n9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d\n1790000000\n8OHSw7Sllod4aVpLPC0eDw\nhSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo\nd4d80807a976c2f50c9581a4d91a55f326228ebf45088024d49618980df1470c",
+    "ts": "1790000000"
+  },
+  "response": {
+    "bridgeHeader": "epk=3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08, sig=nh0u5GuZFveMzXuMSLKHAxvAghKT_vOp231QgPs21ic_6RmAVxmHqWBDSjhK1b7n5tHbWMkGCooV2plQj0Z3AA",
+    "plaintextBody": "{\"status\":\"ok\"}",
+    "sealedBodyHex": "902d27af9ea46dc79e7ee23fa376ab146194828a8ee1de24240ccdd3395ea4",
+    "signature": "nh0u5GuZFveMzXuMSLKHAxvAghKT_vOp231QgPs21ic_6RmAVxmHqWBDSjhK1b7n5tHbWMkGCooV2plQj0Z3AA",
+    "signedMessage": "HP2-BRIDGE\ne7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\n9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d\n8OHSw7Sllod4aVpLPC0eDw\nhSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo\n3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08\n200\n790de2c8242a56b4d4e3f43038c71974cadd7b8f1bdb6aaa8d2170754e4a31be",
+    "status": "200",
+    "upgrade101Signature": "zVKaOmpNOgbIynRhqNOOsicWlwzTtB6LDjngXnkcxdeyuhKbbBDTOOBO3Q2yYV718RCQyLGxgGtUsm6sHXGpCg",
+    "upgrade101SignedMessage": "HP2-BRIDGE\ne7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\n9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d\n8OHSw7Sllod4aVpLPC0eDw\nhSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo\n3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08\n101\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

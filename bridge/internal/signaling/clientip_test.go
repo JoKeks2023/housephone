@@ -11,7 +11,7 @@ import (
 // Security review N4: proxy headers are only believed from a trusted proxy.
 func TestClientIPTrustsProxyHeadersOnlyFromTrustedProxies(t *testing.T) {
 	_, office, _ := net.ParseCIDR("192.168.10.0/24")
-	s := New(Config{TrustProxyHeaders: true, TrustedProxies: []*net.IPNet{office}})
+	s := New(Config{Identity: testIdentity(t), TrustProxyHeaders: true, TrustedProxies: []*net.IPNet{office}})
 	for _, tc := range []struct {
 		remote, cf, xff, want string
 	}{
@@ -37,7 +37,7 @@ func TestClientIPTrustsProxyHeadersOnlyFromTrustedProxies(t *testing.T) {
 		}
 	}
 
-	off := New(Config{TrustProxyHeaders: false})
+	off := New(Config{Identity: testIdentity(t), TrustProxyHeaders: false})
 	r := httptest.NewRequest("GET", "/v1/ws", nil)
 	r.RemoteAddr = "127.0.0.1:5000"
 	r.Header.Set("CF-Connecting-IP", "203.0.113.7")

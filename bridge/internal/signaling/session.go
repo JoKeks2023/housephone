@@ -10,6 +10,7 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
+	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
@@ -21,7 +22,7 @@ const audioQueue = 25
 // calls.DeviceConn.
 type session struct {
 	deviceID string
-	conn     *websocket.Conn
+	conn     *hp2.Conn
 	out      chan protocol.Envelope
 	audio    chan []byte
 
@@ -34,7 +35,7 @@ type session struct {
 	sink   calls.AudioSink
 }
 
-func newSession(deviceID string, conn *websocket.Conn) *session {
+func newSession(deviceID string, conn *hp2.Conn) *session {
 	return &session{
 		deviceID: deviceID,
 		conn:     conn,
@@ -114,18 +115,23 @@ func (s *session) close(code websocket.StatusCode, reason string) {
 	s.closed = true
 	close(s.closeCh)
 	s.mu.Unlock()
-	go func() { _ = s.conn.Close(code, reason) }()
+	go func() { _ = s.conn.WS().Close(code, reason) }()
 }
 
 // runDevice serves an authenticated device until the connection ends.
-func (srv *Server) runDevice(ctx context.Context, conn *websocket.Conn, dev store.Device, ip string) {
-	defer conn.CloseNow()
+func (srv *Server) runDevice(ctx context.Context, conn *hp2.Conn, dev store.Device, ip string) {
+	defer conn.WS().CloseNow()
 	log := srv.log.With("device", dev.ID, "name", dev.Name)
 
 	env, err := readEnvelope(ctx, conn, srv.cfg.FirstMessageWait)
+	if errors.Is(err, hp2.ErrIntegrity) {
+		srv.warnClient("sealed frame rejected", ip, "device", dev.ID)
+		_ = conn.WS().Close(websocket.StatusCode(protocol.CloseIntegrity), "integrity")
+		return
+	}
 	if err != nil || env.Type != protocol.TypeHello {
 		_ = writeEnvelope(ctx, conn, errorEnvelope(protocol.ErrorBadRequest, "hello expected"))
-		_ = conn.Close(websocket.StatusPolicyViolation, "hello expected")
+		_ = conn.WS().Close(websocket.StatusPolicyViolation, "hello expected")
 		return
 	}
 	var hello protocol.Hello
@@ -203,7 +209,7 @@ func (srv *Server) runDevice(ctx context.Context, conn *websocket.Conn, dev stor
 	}
 	srv.cfg.Hub.DeviceConnected(sess)
 
-	srv.readLoop(ctx, sess)
+	srv.readLoop(ctx, sess, ip)
 
 	sess.close(websocket.StatusNormalClosure, "")
 	cancel()
@@ -223,24 +229,40 @@ func (srv *Server) runDevice(ctx context.Context, conn *websocket.Conn, dev stor
 // readLoop handles device messages until the connection ends. Once the
 // session is closing (revoked, unpaired) it keeps reading but ignores
 // messages, so the close handshake can finish and the device receives the
-// close code; runDevice's grace period bounds the wait.
-func (srv *Server) readLoop(ctx context.Context, sess *session) {
+// close code; runDevice's grace period bounds the wait. A frame that fails
+// authentication, repeats or skips a counter, or is not a sealed binary
+// frame ends the connection with close code 4002 (v2).
+func (srv *Server) readLoop(ctx context.Context, sess *session, ip string) {
 	for {
-		typ, data, err := sess.conn.Read(ctx)
+		typ, plaintext, err := sess.conn.Read(ctx)
+		if errors.Is(err, hp2.ErrIntegrity) {
+			if !sess.isClosed() {
+				srv.warnClient("sealed frame rejected", ip, "device", sess.deviceID)
+				sess.close(websocket.StatusCode(protocol.CloseIntegrity), "integrity")
+			}
+			// Keep reading (everything fails now) until the device answers
+			// the close frame, so it receives 4002.
+			continue
+		}
 		if err != nil {
 			return
 		}
 		if sess.isClosed() {
 			continue
 		}
-		if typ == websocket.MessageBinary {
-			// websocket-pcma audio (v1.1); ignored without an active call.
+		switch typ {
+		case hp2.FrameAudio:
+			// websocket-pcma audio (v1.1 frame format); ignored without an
+			// active call.
 			if sink := sess.audioSink(); sink != nil {
-				sink.DeviceAudio(data)
+				sink.DeviceAudio(plaintext)
 			}
 			continue
+		case hp2.FrameJSON:
+		default:
+			continue // reserved type bytes are ignored
 		}
-		env, err := protocol.ParseEnvelope(data)
+		env, err := protocol.ParseEnvelope(plaintext[1:])
 		if err != nil {
 			return
 		}
@@ -266,11 +288,12 @@ func (srv *Server) readLoop(ctx context.Context, sess *session) {
 				sess.Send(errorEnvelope(protocol.ErrorInternal, "Gerät konnte nicht entfernt werden"))
 				continue
 			}
+			srv.nonces.forget(sess.deviceID)
 			srv.log.Info("device unpaired itself", "device", sess.deviceID)
 			sess.close(websocket.StatusNormalClosure, "unpaired")
 		case protocol.TypePairCompanionRequest:
 			srv.pairCompanion(sess, env)
-		case protocol.TypeHello, protocol.TypePair:
+		case protocol.TypeHello:
 			sess.Send(errorEnvelope(protocol.ErrorBadRequest, env.Type+" is not allowed here"))
 		default:
 			srv.cfg.Hub.HandleDeviceMessage(sess, env)
@@ -307,6 +330,7 @@ func (srv *Server) revokeIfRemoved(sess *session) bool {
 	sess.revoked = true
 	sess.mu.Unlock()
 	if !already {
+		srv.nonces.forget(sess.deviceID)
 		srv.log.Info("device was removed while connected; closing", "device", sess.deviceID)
 		srv.cfg.Hub.DeviceRevoked(sess)
 		sess.close(websocket.StatusCode(protocol.CloseRevoked), "revoked")
@@ -383,7 +407,7 @@ func (srv *Server) writeLoop(ctx context.Context, sess *session) {
 				return
 			}
 		case frame := <-sess.audio:
-			if err := writeBinary(ctx, sess.conn, frame); err != nil {
+			if err := writeAudio(ctx, sess.conn, frame); err != nil {
 				sess.close(websocket.StatusInternalError, "write failed")
 				return
 			}
@@ -402,7 +426,7 @@ func (srv *Server) pingLoop(ctx context.Context, sess *session) {
 			return
 		case <-ticker.C:
 			pingCtx, cancel := context.WithTimeout(ctx, srv.cfg.PingInterval)
-			err := sess.conn.Ping(pingCtx)
+			err := sess.conn.WS().Ping(pingCtx)
 			cancel()
 			if err != nil {
 				sess.close(websocket.StatusGoingAway, "ping timeout")

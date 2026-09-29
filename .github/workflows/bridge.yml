@@ -64,3 +64,34 @@ jobs:
         run: docker build --build-arg VERSION=${{ github.sha }} -t housephone-bridge:ci bridge
       - name: smoke test image
         run: docker run --rm housephone-bridge:ci version
+      - name: start hardened (read-only root, no capabilities, only /data writable)
+        run: |
+          cat > "$RUNNER_TEMP/config.yaml" <<'EOF'
+          bridge:
+            listen: "0.0.0.0:8080"
+          sip:
+            registrar: "192.168.178.1"
+            username: "ci"
+          media:
+            detectPublicIp: false
+            publicIpFromRouter: false
+            stun: []
+          EOF
+          chmod 644 "$RUNNER_TEMP/config.yaml"
+          docker run -d --name hardened \
+            --read-only --tmpfs /tmp \
+            --security-opt no-new-privileges:true --cap-drop ALL \
+            -p 127.0.0.1:18080:8080 \
+            -v "$RUNNER_TEMP/config.yaml:/config/config.yaml:ro" \
+            -v housephone-data:/data \
+            -e HOUSEPHONE_SIP_PASSWORD=ci \
+            housephone-bridge:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/v1/health > health.json; then break; fi
+            sleep 1
+          done
+          docker logs hardened
+          test "$(cat health.json)" = '{"status":"ok"}'
+          # identity.key was created in /data and is readable by the CLI.
+          docker exec hardened housephone-bridge identity
+          test "$(docker inspect -f '{{.State.Running}}' hardened)" = true

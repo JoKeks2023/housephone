@@ -22,7 +22,9 @@ Folge [`bridge/README.md`](../bridge/README.md), Schritte 1–5. Deine Werte:
 - **Team-ID:** `T9CA6D7T8N`, **Topic:** `com.jorisconrad.housephone.voip`. Beides steht schon so in `config.example.yaml`.
 - **Anschluss:** Vodafone Red Business hat eine öffentliche IPv4, die sich ändern kann. Die Bridge fragt sie alle 30 s bei der FRITZ!Box ab (UPnP), du musst nichts eintragen.
 
-Fertig ist dieser Schritt, wenn `curl -s http://localhost:8080/v1/health` auf dem Server `"sipRegistered":true` meldet und die FRITZ!Box unter **Telefonie → Telefoniegeräte** das IP-Telefon „Housephone“ als verbunden zeigt.
+Fertig ist dieser Schritt, wenn `docker compose logs housephone-bridge` die Zeile `registered at FRITZ!Box` zeigt und die FRITZ!Box unter **Telefonie → Telefoniegeräte** das IP-Telefon „Housephone“ als verbunden zeigt. (`curl -s http://localhost:8080/v1/health` sagt ohne Anmeldung nur `{"status":"ok"}`, also dass die Bridge läuft.)
+
+Der Bridge-Schlüssel liegt danach in `data/identity.key`. Sichere ihn zusammen mit `data/` – geht er verloren, müssen alle Geräte neu gekoppelt werden.
 
 ## 2. App aufs iPhone
 
@@ -52,12 +54,16 @@ Auf dem Server:
 docker compose exec housephone-bridge housephone-bridge pair -name "iPhone"
 ```
 
-In der App öffnet sich beim ersten Start die Kopplung:
+Das Terminal zeigt QR-Code, Link, Code (`XXXX-XXXX-XXXX-XXXX`) und den Fingerabdruck der Bridge und wartet. In der App öffnet sich beim ersten Start die Kopplung:
 
 1. **QR-Code scannen.** Alternativ den Link aus dem Terminal kopieren und in der App einfügen.
 2. **Mikrofon erlauben.** Kontakte sind optional; ohne sie siehst du nur Nummern.
 
+Das Terminal meldet danach **Gekoppelt** mit Name, Modell und Schlüssel-Fingerabdruck des iPhones. Ist das nicht dein Gerät: `housephone-bridge devices remove <id>` (steht in der Ausgabe). Strg-C vor dem Koppeln macht den Code ungültig.
+
 Unter **Einstellungen** steht danach **Verbunden** (grün). Steht dort „FRITZ!Box nicht angemeldet“, stimmt Schritt 1 noch nicht.
+
+Die Uhr von iPhone und Server dürfen höchstens 60 s auseinanderliegen (automatische Zeit am iPhone und NTP auf dem Server genügen), sonst lehnt die Bridge Anfragen mit `clock_skew` ab.
 
 ### Apple Watch koppeln
 

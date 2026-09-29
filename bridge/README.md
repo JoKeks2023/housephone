@@ -79,7 +79,7 @@ chmod 600 secrets/*
 # In docker-compose.yml: HOUSEPHONE_APNS_KEY_ID und user: "$(id -u):$(id -g)" eintragen
 CLOUDFLARE_TUNNEL_TOKEN=... docker compose up -d
 docker compose logs -f housephone-bridge    # erwartet: "registered at FRITZ!Box"
-curl -s http://localhost:8080/v1/health     # {"sipRegistered":true,...}
+curl -s http://localhost:8080/v1/health     # {"status":"ok"} (Details nur für gekoppelte Geräte)
 ```
 
 Ohne Docker: `go build -o housephone-bridge ./cmd/housephone-bridge`, dann `HOUSEPHONE_SIP_PASSWORD=... ./housephone-bridge -config config.yaml serve` (z. B. als systemd-Dienst).
@@ -90,7 +90,16 @@ Ohne Docker: `go build -o housephone-bridge ./cmd/housephone-bridge`, dann `HOUS
 docker compose exec housephone-bridge housephone-bridge pair -name "iPhone Joris"
 ```
 
-Die Bridge zeigt einen QR-Code, einen Link und einen 10-stelligen Code an. Gültig sind sie 10 Minuten und nur einmal. In der App erscheint die Kopplung beim ersten Start (und nach „Kopplung aufheben“): **QR-Code scannen** oder den Link einfügen.
+Die Bridge zeigt einen QR-Code, einen Link, einen 16-stelligen Code (`XXXX-XXXX-XXXX-XXXX`) und ihren Fingerabdruck an. Gültig sind sie 10 Minuten und nur einmal. In der App erscheint die Kopplung beim ersten Start (und nach „Kopplung aufheben“): **QR-Code scannen** oder den Link einfügen.
+
+Der Befehl wartet, bis ein Gerät den Code benutzt hat, und zeigt dann Name, Modell, Plattform und den Fingerabdruck seines Schlüssels. **Warst du das nicht, entferne das Gerät sofort** (`devices remove <id>`, steht in der Ausgabe). Strg-C bricht ab und macht den Code ungültig.
+
+So funktioniert die Anmeldung (Details: `docs/architecture/ADR-0004-anmeldung-v2.md`):
+
+- Jedes Gerät erzeugt beim Koppeln einen eigenen Schlüssel im Secure Enclave und beweist, dass es ihn besitzt. Die Bridge speichert nur den öffentlichen Schlüssel; es gibt kein Geheimnis, das kopiert werden könnte.
+- Der QR-Code enthält den Fingerabdruck der Bridge. Die App koppelt nur mit der Bridge, deren Schlüssel dazu passt, und prüft danach jede Antwort. `housephone-bridge identity` zeigt ihn jederzeit, z. B. zum Vergleich mit dem `fp=` eines Kopplungslinks.
+- Jede Anfrage ist signiert und nur einmal gültig; Uhrzeit von Gerät und Server dürfen höchstens 60 s abweichen. Antworten, Telefonbuch, Anrufliste und die ganze WebSocket-Verbindung sind zusätzlich Ende-zu-Ende verschlüsselt. Der Cloudflare Tunnel sieht nur verschlüsselte Daten.
+- Koppelt sich ein neues Gerät, erfahren alle verbundenen Geräte davon.
 
 ## 7. Apple Watch
 
@@ -99,7 +108,8 @@ Für die Watch musst du auf dem Server und an der FRITZ!Box nichts einrichten:
 - **Keine neue Portfreigabe:** Die Watch hat kein WebRTC. Ihr Ton läuft als A-law (8 kHz) in 20-ms-Rahmen über dieselbe WebSocket-Verbindung wie die Signalisierung, also durch den Cloudflare Tunnel. Die UDP-Freigabe 50000 braucht nur das iPhone.
 - **Koppeln:** Die Watch wird über das gekoppelte iPhone gekoppelt (**Einstellungen → Apple Watch koppeln**). Das iPhone holt dafür einen frischen Code bei der Bridge und gibt ihn an die Uhr weiter. Die Uhr meldet sich danach selbst per HTTPS an (`POST /v1/pair`, `PUT /v1/device`).
   - Der Code gilt nur für eine Watch und nur, solange das iPhone gekoppelt ist. `devices list` zeigt in der Spalte „ÜBER“, über welches iPhone eine Watch gekoppelt wurde.
-  - Entfernst du ein verlorenes iPhone, entfernt `devices remove` dessen Watches automatisch mit: Sie wurden mit den Zugangsdaten des iPhones gekoppelt und gelten deshalb als mitbetroffen.
+  - Die Uhr erzeugt dabei ihren eigenen Schlüssel; den Fingerabdruck der Bridge bekommt sie vom iPhone.
+  - Entfernst du ein verlorenes iPhone, entfernt `devices remove` dessen Watches automatisch mit: Sie wurden über das iPhone gekoppelt und gelten deshalb als mitbetroffen.
   - watchOS erlaubt WebSocket nur während eines Anrufs. Die Uhr öffnet sie deshalb erst, wenn der VoIP-Push kommt.
 - **Push:** Die Watch-App hat ein eigenes APNs-Topic (`com.jorisconrad.housephone.watchkitapp.voip`). Derselbe APNs-Key aus Schritt 3 gilt für alle Apps deines Teams.
   - Die Bridge akzeptiert nur Topics, die mit dem Bundle aus `apns.topic` beginnen (hier `com.jorisconrad.housephone.`) und auf `.voip` enden.
@@ -143,7 +153,8 @@ Technik:
 
 | Aufgabe | Befehl |
 |---|---|
-| Geräte anzeigen | `housephone-bridge devices list` |
+| Geräte anzeigen | `housephone-bridge devices list` (Spalte SCHLÜSSEL: Fingerabdruck des Geräteschlüssels) |
+| Fingerabdruck der Bridge | `housephone-bridge identity` – derselbe Wert wie `fp=` im Kopplungslink |
 | Gerät entfernen | `housephone-bridge devices remove <id>` – entfernt auch die Watches, die über dieses iPhone gekoppelt wurden (`-keep-companions` behält sie). Verbundene Geräte trennt die laufende Bridge innerhalb von 10 s. |
 | Version | `housephone-bridge version` |
 | Mehr Logs | `log.level: debug` bzw. `HOUSEPHONE_LOG_LEVEL=debug`. Auf Debug-Stufe kann die SIP-Bibliothek Details der SIP-Nachrichten mitschreiben, also auch Nummern. |
@@ -152,10 +163,11 @@ Technik:
 
 Daten liegen in `data/`:
 - `bridge.json`: Bridge-ID
-- `devices.json`: Geräte mit gehashten Geheimnissen und Push-Tokens
+- `identity.key`: privater Schlüssel der Bridge (Ed25519, Modus 0600). Die Geräte kennen seinen Fingerabdruck und reden nur mit dieser Bridge.
+- `devices.json`: Geräte mit ihren öffentlichen Schlüsseln und Push-Tokens (keine Geheimnisse)
 - `pairing.json`: offene Kopplungscodes
 
-Sichere diesen Ordner. Verlierst du ihn, müssen alle Geräte neu gekoppelt werden.
+Sichere diesen Ordner, vor allem `identity.key`. Verlierst du den Schlüssel, erzeugt die Bridge beim nächsten Start einen neuen. Die Geräte lehnen ihn ab, weil der Fingerabdruck nicht mehr passt; alle müssen neu gekoppelt werden. Die Sicherung ist so vertraulich wie ein Kennwort.
 
 ## Fehlersuche
 
@@ -181,12 +193,13 @@ Sichere diesen Ordner. Verlierst du ihn, müssen alle Geräte neu gekoppelt werd
 
 ### Probetelefon (`housephone-probe`)
 
-Ein minimales „Telefon“ für den Rechner. Damit lassen sich echte Anrufe über die echte FRITZ!Box testen, ohne iPhone, APNs oder Tunnel. Es verbindet sich wie die Watch (`websocket-pcma`, A-law über WebSocket).
+Ein minimales „Telefon“ für den Rechner. Damit lassen sich echte Anrufe über die echte FRITZ!Box testen, ohne iPhone, APNs oder Tunnel. Es verbindet sich wie die Watch (`websocket-pcma`, A-law über WebSocket) und meldet sich mit HP2 an. Sein Schlüssel liegt als Software-Schlüssel in `housephone-probe.json` (Modus 0600) – die Datei wie ein Kennwort behandeln.
 
 ```sh
 go build -o housephone-probe ./cmd/housephone-probe
-housephone-bridge pair -name "Probe"                                   # Code merken
-./housephone-probe -url ws://127.0.0.1:8080/v1/ws -pair <CODE>         # einmal koppeln
+housephone-bridge pair -name "Probe"                                   # Link bzw. Code + Fingerabdruck merken
+./housephone-probe -link 'housephone://pair?v=2&…'                     # einmal koppeln (Link aus pair)
+./housephone-probe -url ws://127.0.0.1:8080/v1/ws -pair <CODE> -fp <FINGERABDRUCK>   # oder so
 ./housephone-probe                                                     # auf Anrufe warten, Echo
 ./housephone-probe -mode tone -record anruf.wav                        # 425-Hz-Ton senden, Empfang aufnehmen
 ./housephone-probe -dial 0170123456                                    # selbst anrufen
@@ -208,9 +221,10 @@ E2E_LOG=1 go test -run EndToEnd -v ./internal/app/
 | `internal/calls` | Anruf-Logik als Actor pro Anruf (eingehend, ausgehend, Multi-Device, Re-Attach) |
 | `internal/sipleg` | FRITZ!Box-Seite (diago/sipgo): Registrierung, INVITE, CANCEL, DTMF (RFC 4733) |
 | `internal/media` | WebRTC (pion) mit einem UDP-Port, öffentliche IP |
-| `internal/signaling` | WebSocket-Server, Kopplung, Auth |
+| `internal/signaling` | WebSocket-Server, Kopplung, Anmeldung (HP2) |
+| `internal/hp2` | Anmeldung v2: Kopplungsnachweis, Signaturen, Sitzungsschlüssel, Verschlüsselung (ADR-0004); Testvektoren in `docs/protocol/fixtures/crypto` |
 | `internal/push` | APNs-VoIP-Push |
 | `internal/fritzbox` | TR-064: Telefonbuch, Anrufliste, Zwischenspeicher, Namen für eingehende Anrufe; `fritzboxtest` ist die Test-FRITZ!Box |
-| `internal/store` | Dateibasierter Speicher (Geräte, Kopplungscodes) |
+| `internal/store` | Dateibasierter Speicher (Geräte, Kopplungscodes, Bridge-Schlüssel) |
 
 Abhängigkeiten: pion ist auf `webrtc v4.2.19` / `ice v4.4.0` festgelegt. Neuere Versionen nutzen `stun/v4`, das nicht zu diago v0.40.0 passt.

@@ -7,11 +7,23 @@ public enum SignalingClientError: Error, Equatable, Sendable {
     case unauthorized
     case bridge(SignalingErrorPayload)
     case connectionClosed
+    /// The response wasn't signed with the pinned bridge key, or a sealed
+    /// frame or body failed authentication. Never falls back to anything
+    /// unauthenticated.
+    case untrustedBridge
+    /// The bridge rejected the request's timestamp: this device's clock is
+    /// off by more than a minute.
+    case clockSkew
 }
 
 /// Keeps one authenticated WebSocket connection to the bridge alive and
 /// reconnects with exponential backoff. Messages and state changes arrive
 /// on `events`, which has exactly one consumer.
+///
+/// Signaling v2 (ADR-0004): the upgrade request is signed with the device
+/// key, the bridge's `101` must carry a valid signature of the pinned
+/// bridge key before anything is sent, and every frame after that is a
+/// sealed binary frame.
 public actor SignalingClient {
     public enum ConnectionState: Sendable, Equatable {
         case disconnected
@@ -20,9 +32,24 @@ public actor SignalingClient {
         case waitingToReconnect(attempt: Int)
         /// The bridge rejected this device. Only pairing again helps.
         case unauthorized
+        /// The bridge failed to prove its identity. Retried only on
+        /// `refreshConnection()`, never without the check.
+        case untrustedBridge
+        /// This device's clock is off. Retried on `refreshConnection()`.
+        case clockSkew
 
         public var welcome: Welcome? {
             if case .connected(let welcome) = self { welcome } else { nil }
+        }
+
+        /// The error of a state that stopped the reconnect loop.
+        var stopError: SignalingClientError? {
+            switch self {
+            case .unauthorized: .unauthorized
+            case .untrustedBridge: .untrustedBridge
+            case .clockSkew: .clockSkew
+            default: nil
+            }
         }
     }
 
@@ -43,7 +70,8 @@ public actor SignalingClient {
 
     public nonisolated let events: AsyncStream<Event>
     private let eventContinuation: AsyncStream<Event>.Continuation
-    /// Binary audio messages from the bridge (`websocket-pcma`), in order.
+    /// Binary audio messages from the bridge (`websocket-pcma`), in order,
+    /// each laid out as `AudioFrame` (type byte `0x01` + 160 bytes).
     /// Separate from `events` so audio never waits behind UI work. Keeps at
     /// most one second; a slow consumer loses the oldest frames.
     public nonisolated let audio: AsyncStream<Data>
@@ -51,12 +79,15 @@ public actor SignalingClient {
 
     public let credentials: BridgeCredentials
     private let factory: any WebSocketTransportFactory
+    private let keyStore: any DeviceKeyStore
+    private let now: @Sendable () -> Date
     private let configuration: Configuration
     private let logger = Logger(subsystem: "com.jorisconrad.housephone", category: "signaling")
 
     public private(set) var state: ConnectionState = .disconnected
     private var hello: Hello
     private var transport: (any WebSocketTransport)?
+    private var cipher: HP2FrameCipher?
     private var runTask: Task<Void, Never>?
     private var backoffTask: Task<Void, any Error>?
     private var waiters: [UUID: CheckedContinuation<Welcome, any Error>] = [:]
@@ -64,13 +95,17 @@ public actor SignalingClient {
     public init(
         credentials: BridgeCredentials,
         hello: Hello,
+        keyStore: any DeviceKeyStore = KeychainDeviceKeyStore(),
         factory: any WebSocketTransportFactory = URLSessionWebSocketFactory(),
-        configuration: Configuration = Configuration()
+        configuration: Configuration = Configuration(),
+        now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.credentials = credentials
         self.hello = hello
+        self.keyStore = keyStore
         self.factory = factory
         self.configuration = configuration
+        self.now = now
         (events, eventContinuation) = AsyncStream.makeStream(of: Event.self, bufferingPolicy: .unbounded)
         (audio, audioContinuation) = AsyncStream.makeStream(of: Data.self, bufferingPolicy: .bufferingNewest(50))
     }
@@ -92,8 +127,7 @@ public actor SignalingClient {
         runTask?.cancel()
         runTask = nil
         backoffTask?.cancel()
-        transport?.close()
-        transport = nil
+        closeTransport()
         failWaiters(SignalingClientError.notConnected)
         setState(.disconnected)
     }
@@ -117,7 +151,7 @@ public actor SignalingClient {
                     transport.close()
                 }
             }
-        case .disconnected:
+        case .disconnected, .untrustedBridge, .clockSkew:
             start()
         case .connecting, .unauthorized:
             break
@@ -128,15 +162,16 @@ public actor SignalingClient {
 
     public func send(_ message: SignalingMessage) async throws {
         guard case .connected = state, let transport else { throw SignalingClientError.notConnected }
-        let text = try SignalingCoding.encode(message)
+        let frame = try seal(HP2FrameCipher.jsonPlaintext(SignalingCoding.encode(message)))
         logger.debug("→ \(message.type, privacy: .public)")
-        try await transport.send(text)
+        try await transport.send(binary: frame)
     }
 
-    /// Sends one binary audio message (`websocket-pcma`).
+    /// Sends one audio message (`websocket-pcma`), laid out as `AudioFrame`.
     public func sendAudio(_ message: Data) async throws {
         guard case .connected = state, let transport else { throw SignalingClientError.notConnected }
-        try await transport.send(binary: message)
+        guard message.first == HP2FrameType.audio.rawValue else { return }
+        try await transport.send(binary: try seal(message))
     }
 
     /// Updates the data sent in `hello`. If connected, tells the bridge
@@ -157,11 +192,17 @@ public actor SignalingClient {
         try? await send(.deviceUpdate(update))
     }
 
-    /// Returns once connected, or throws `timeout`/`unauthorized`.
+    /// Returns once connected, or throws `timeout`, `unauthorized`,
+    /// `untrustedBridge` or `clockSkew`.
     public func waitUntilConnected(timeout: Duration) async throws -> Welcome {
         if let welcome = state.welcome { return welcome }
         if state == .unauthorized { throw SignalingClientError.unauthorized }
-        if runTask == nil { start() }
+        if runTask == nil {
+            // A new attempt after `.untrustedBridge` or `.clockSkew` checks
+            // the bridge from scratch; its outcome decides, not the old state.
+            if state.stopError != nil { setState(.connecting) }
+            start()
+        }
         return try await withTimeout(timeout) {
             try await self.nextConnection()
         }
@@ -175,9 +216,9 @@ public actor SignalingClient {
                     continuation.resume(throwing: CancellationError())
                 } else if let welcome = state.welcome {
                     continuation.resume(returning: welcome)
-                } else if state == .unauthorized {
+                } else if let error = state.stopError {
                     // The attempt may have failed before this waiter registered.
-                    continuation.resume(throwing: SignalingClientError.unauthorized)
+                    continuation.resume(throwing: error)
                 } else {
                     waiters[id] = continuation
                 }
@@ -204,15 +245,35 @@ public actor SignalingClient {
         while !Task.isCancelled {
             setState(.connecting)
             do {
+                guard let key = try keyStore.key(tag: credentials.keyTag) else {
+                    // Without its key this device can't prove who it is.
+                    throw SignalingClientError.unauthorized
+                }
+                let exchange = try HP2Signer(credentials: credentials, key: key, now: now)
+                    .exchange(method: "GET", url: credentials.bridgeURL, body: nil)
                 let transport = try await factory.connect(
                     to: credentials.bridgeURL,
-                    headers: ["Authorization": credentials.authorizationHeader]
+                    headers: ["Authorization": exchange.authorization.headerValue]
                 )
                 // Assign first, so the cleanup below closes it on cancellation.
                 self.transport = transport
                 try Task.checkCancellation()
 
-                try await transport.send(SignalingCoding.encode(.hello(hello)))
+                // Nothing leaves this device before the bridge proved it
+                // holds the pinned key.
+                let keys: HP2SessionKeys
+                do {
+                    keys = try exchange.verifyResponse(
+                        status: 101,
+                        bridgeHeader: transport.upgradeHeader(HP2.bridgeHeaderName),
+                        body: Data()
+                    )
+                } catch {
+                    throw SignalingClientError.untrustedBridge
+                }
+                cipher = HP2FrameCipher(keys: keys)
+
+                try await transport.send(binary: try seal(HP2FrameCipher.jsonPlaintext(SignalingCoding.encode(.hello(hello)))))
                 let welcome = try await awaitWelcome(on: transport)
 
                 attempt = 0
@@ -224,18 +285,25 @@ public actor SignalingClient {
                 try await receiveMessages(on: transport)
             } catch WebSocketTransportError.unauthorized, SignalingClientError.unauthorized {
                 logger.error("Bridge rejected device credentials")
-                transport?.close()
-                transport = nil
-                runTask = nil
-                failWaiters(SignalingClientError.unauthorized)
-                setState(.unauthorized)
+                stopLoop(with: .unauthorized, error: SignalingClientError.unauthorized)
+                return
+            } catch WebSocketTransportError.clockSkew, SignalingClientError.clockSkew {
+                logger.error("Bridge rejected the timestamp: device clock is off")
+                stopLoop(with: .clockSkew, error: SignalingClientError.clockSkew)
+                return
+            } catch SignalingClientError.untrustedBridge {
+                logger.fault("Bridge failed to prove its identity")
+                stopLoop(with: .untrustedBridge, error: SignalingClientError.untrustedBridge)
                 return
             } catch {
-                logger.info("Connection ended: \(String(describing: error), privacy: .public)")
+                if error as? HP2Error == .invalidFrame {
+                    logger.error("Integrity check of a frame failed; reconnecting")
+                } else {
+                    logger.info("Connection ended: \(String(describing: error), privacy: .public)")
+                }
             }
 
-            transport?.close()
-            transport = nil
+            closeTransport()
             guard !Task.isCancelled else { break }
 
             attempt += 1
@@ -249,12 +317,47 @@ public actor SignalingClient {
         if runTask != nil { setState(.disconnected) }
     }
 
+    private func stopLoop(with newState: ConnectionState, error: SignalingClientError) {
+        closeTransport()
+        runTask = nil
+        failWaiters(error)
+        setState(newState)
+    }
+
+    private func closeTransport() {
+        transport?.close()
+        transport = nil
+        cipher = nil
+    }
+
+    private func seal(_ plaintext: Data) throws -> Data {
+        guard cipher != nil else { throw SignalingClientError.notConnected }
+        return try cipher!.seal(plaintext)
+    }
+
+    /// The next frame's plaintext. Text frames and frames that fail
+    /// authentication end the connection.
+    private func receivePlaintext(on transport: any WebSocketTransport) async throws -> Data {
+        guard case .binary(let frame) = try await transport.receive() else { throw HP2Error.invalidFrame }
+        guard cipher != nil else { throw SignalingClientError.notConnected }
+        return try cipher!.open(frame)
+    }
+
+    private func decodeJSON(_ plaintext: Data) -> SignalingMessage? {
+        guard plaintext.first == HP2FrameType.json.rawValue else { return nil }
+        do {
+            return try SignalingCoding.decode(String(decoding: plaintext.dropFirst(), as: UTF8.self))
+        } catch {
+            logger.error("Undecodable message: \(String(describing: error), privacy: .public)")
+            return nil
+        }
+    }
+
     private func awaitWelcome(on transport: any WebSocketTransport) async throws -> Welcome {
         try await withTimeout(configuration.welcomeTimeout, onTimeout: { transport.close() }) {
             while true {
-                guard case .text(let text) = try await transport.receive(),
-                      let message = try? SignalingCoding.decode(text)
-                else { continue }
+                let plaintext = try await self.receivePlaintext(on: transport)
+                guard let message = await self.decodeJSON(plaintext) else { continue }
                 switch message {
                 case .welcome(let welcome):
                     return welcome
@@ -288,15 +391,15 @@ public actor SignalingClient {
         defer { pinger.cancel() }
 
         while true {
-            switch try await transport.receive() {
-            case .text(let text):
-                do {
-                    deliver(try SignalingCoding.decode(text))
-                } catch {
-                    logger.error("Undecodable message: \(String(describing: error), privacy: .public)")
-                }
-            case .binary(let data):
-                audioContinuation.yield(data)
+            let plaintext = try await receivePlaintext(on: transport)
+            switch plaintext.first.flatMap(HP2FrameType.init(rawValue:)) {
+            case .json:
+                if let message = decodeJSON(plaintext) { deliver(message) }
+            case .audio:
+                audioContinuation.yield(plaintext)
+            case nil:
+                // Reserved frame types are ignored.
+                continue
             }
         }
     }
@@ -321,46 +424,6 @@ public actor SignalingClient {
         let capped = min(base, configuration.maximumBackoff)
         // ±20 % jitter so several devices don't reconnect in lockstep.
         return capped * Double.random(in: 0.8...1.2)
-    }
-
-    // MARK: - Pairing
-
-    /// Runs the one-shot pairing exchange: connect without credentials,
-    /// send `pair`, wait for `pair.ok`.
-    public static func pair(
-        link: PairingLink,
-        deviceName: String,
-        platform: DevicePlatform,
-        model: String?,
-        factory: any WebSocketTransportFactory = URLSessionWebSocketFactory(),
-        timeout: Duration = .seconds(15)
-    ) async throws -> BridgeCredentials {
-        let transport = try await factory.connect(to: link.bridgeURL, headers: [:])
-        defer { transport.close() }
-
-        let request = PairRequest(code: link.code, deviceName: deviceName, platform: platform, model: model)
-        try await transport.send(SignalingCoding.encode(.pair(request)))
-
-        let result = try await withTimeout(timeout, onTimeout: { transport.close() }) {
-            while true {
-                let text: String
-                do {
-                    guard case .text(let received) = try await transport.receive() else { continue }
-                    text = received
-                } catch {
-                    throw SignalingClientError.connectionClosed
-                }
-                switch try? SignalingCoding.decode(text) {
-                case .pairOK(let result):
-                    return result
-                case .error(let error):
-                    throw SignalingClientError.bridge(error)
-                default:
-                    continue
-                }
-            }
-        }
-        return BridgeCredentials(bridgeURL: link.bridgeURL, pairing: result)
     }
 }
 

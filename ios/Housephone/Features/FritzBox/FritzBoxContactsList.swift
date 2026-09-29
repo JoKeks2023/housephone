@@ -126,16 +126,18 @@ private struct FritzBoxContactRow: View {
     let contact: FritzBoxContact
     let onCall: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         Button(action: onCall) {
             HStack(spacing: Theme.Space.s3) {
                 AvatarView(name: contact.name, size: 36)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Theme.Space.hairline) {
                     HStack(spacing: Theme.Space.s1) {
                         Text(contact.name)
                             .font(.body.weight(.medium))
                             .foregroundStyle(.primary)
-                            .lineLimit(1)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
                         if contact.favorite {
                             Image(systemName: "star.fill")
                                 .font(.caption2)
@@ -146,18 +148,25 @@ private struct FritzBoxContactRow: View {
                     subtitle
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
                 }
                 Spacer()
                 Image(systemName: "phone")
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowButtonStyle())
         .accessibilityElement(children: .combine)
         .accessibilityHint(Text("Anrufen"))
+        .contextMenu {
+            ForEach(contact.numbers, id: \.self) { number in
+                Button("Nummer kopieren: \(String(localized: number.type.label))", systemImage: "doc.on.doc") {
+                    UIPasteboard.general.string = number.number
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -167,6 +176,7 @@ private struct FritzBoxContactRow: View {
         } else if let number = contact.numbers.first {
             Text("\(String(localized: number.type.label)) · \(number.number)")
                 .monospacedDigit()
+                .accessibilityLabel(Text(AttributedString("\(String(localized: number.type.label)), ") + .spokenNumber(number.number)))
         }
     }
 }

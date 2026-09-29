@@ -1,6 +1,7 @@
 import Foundation
 
-// Wire format of `docs/protocol/signaling-v1.md`. Every message is
+// Wire format of `docs/protocol/signaling-v1.md` (calls) and
+// `signaling-v2.md` (pairing, authentication). Every message is
 // `{"type": "...", "payload": {...}}`; unknown types decode to `.unknown`
 // and unknown fields are ignored.
 
@@ -40,17 +41,26 @@ public struct MediaCapability: RawRepresentable, Codable, Sendable, Hashable {
 
 // MARK: - Device → bridge
 
+/// Body of `POST /v1/pair` (signaling v2). `publicKey` is the device's
+/// P-256 key (X9.63, base64url), `proof` its signature over the code and
+/// `nonce` (see `HP2.pairProofMessage`).
 public struct PairRequest: Codable, Sendable, Equatable {
     public var code: String
     public var deviceName: String
     public var platform: DevicePlatform
     public var model: String?
+    public var publicKey: String
+    public var nonce: String
+    public var proof: String
 
-    public init(code: String, deviceName: String, platform: DevicePlatform, model: String? = nil) {
+    public init(code: String, deviceName: String, platform: DevicePlatform, model: String? = nil, publicKey: String, nonce: String, proof: String) {
         self.code = code
         self.deviceName = deviceName
         self.platform = platform
         self.model = model
+        self.publicKey = publicKey
+        self.nonce = nonce
+        self.proof = proof
     }
 }
 
@@ -171,17 +181,35 @@ public struct DTMFDigits: Codable, Sendable, Equatable {
 
 // MARK: - Bridge → device
 
+/// Response of `POST /v1/pair` (signaling v2). `signature` is the bridge's
+/// Ed25519 signature over the pairing (see `HP2.pairResponseMessage`).
 public struct PairingResult: Codable, Sendable, Equatable {
     public var deviceId: DeviceID
-    public var deviceSecret: String
     public var bridgeId: String
     public var bridgeName: String
+    /// Ed25519 public key (32 bytes), base64url.
+    public var bridgePublicKey: String
+    public var signature: String
 
-    public init(deviceId: DeviceID, deviceSecret: String, bridgeId: String, bridgeName: String) {
+    public init(deviceId: DeviceID, bridgeId: String, bridgeName: String, bridgePublicKey: String, signature: String) {
         self.deviceId = deviceId
-        self.deviceSecret = deviceSecret
         self.bridgeId = bridgeId
         self.bridgeName = bridgeName
+        self.bridgePublicKey = bridgePublicKey
+        self.signature = signature
+    }
+}
+
+/// `device.paired` (v2): another device was just paired with the bridge.
+public struct DevicePaired: Codable, Sendable, Equatable {
+    public var deviceName: String
+    public var platform: DevicePlatform
+    public var pairedAt: Date
+
+    public init(deviceName: String, platform: DevicePlatform, pairedAt: Date) {
+        self.deviceName = deviceName
+        self.platform = platform
+        self.pairedAt = pairedAt
     }
 }
 
@@ -396,6 +424,10 @@ public struct SignalingErrorCode: RawRepresentable, Codable, Sendable, Hashable 
     /// v1.2: TR-064 not set up at the bridge, or the FRITZ!Box refused or
     /// did not answer.
     public static let fritzboxUnavailable = Self(rawValue: "fritzbox_unavailable")
+    /// v2: the request's timestamp is off by more than 60 s.
+    public static let clockSkew = Self(rawValue: "clock_skew")
+    /// Too many parallel calls for this device or the bridge.
+    public static let tooManyCalls = Self(rawValue: "too_many_calls")
     public static let `internal` = Self(rawValue: "internal")
 }
 
@@ -413,9 +445,9 @@ public struct SignalingErrorPayload: Codable, Sendable, Equatable {
 
 // MARK: - Envelope
 
+/// WebSocket messages. Pairing is HTTPS-only since v2 (`POST /v1/pair`).
 public enum SignalingMessage: Sendable, Equatable {
     // Device → bridge
-    case pair(PairRequest)
     case hello(Hello)
     case deviceUpdate(DeviceUpdate)
     /// Removes this device from the bridge. The bridge closes the connection.
@@ -429,8 +461,9 @@ public enum SignalingMessage: Sendable, Equatable {
     case callDTMF(DTMFDigits)
 
     // Bridge → device
-    case pairOK(PairingResult)
     case pairCompanion(CompanionPairing)
+    /// v2: another device was paired with the bridge.
+    case devicePaired(DevicePaired)
     case welcome(Welcome)
     case status(BridgeStatus)
     case callIncoming(IncomingCall)
@@ -445,7 +478,6 @@ public enum SignalingMessage: Sendable, Equatable {
 
     public var type: String {
         switch self {
-        case .pair: "pair"
         case .hello: "hello"
         case .deviceUpdate: "device.update"
         case .deviceUnpair: "device.unpair"
@@ -456,8 +488,8 @@ public enum SignalingMessage: Sendable, Equatable {
         case .callAccept: "call.accept"
         case .callHangup: "call.hangup"
         case .callDTMF: "call.dtmf"
-        case .pairOK: "pair.ok"
         case .pairCompanion: "pair.companion"
+        case .devicePaired: "device.paired"
         case .welcome: "welcome"
         case .status: "status"
         case .callIncoming: "call.incoming"
@@ -484,7 +516,7 @@ public enum SignalingMessage: Sendable, Equatable {
         case .callState(let payload): payload.callId
         case .callEnded(let payload): payload.callId
         case .error(let payload): payload.callId
-        case .pair, .hello, .deviceUpdate, .deviceUnpair, .pairCompanionRequest, .pairOK, .pairCompanion, .welcome, .status, .unknown: nil
+        case .hello, .deviceUpdate, .deviceUnpair, .pairCompanionRequest, .pairCompanion, .devicePaired, .welcome, .status, .unknown: nil
         }
     }
 }
@@ -506,7 +538,6 @@ extension SignalingMessage: Codable {
         }
 
         switch type {
-        case "pair": self = .pair(try payload(PairRequest.self))
         case "hello": self = .hello(try payload(Hello.self))
         case "device.update": self = .deviceUpdate(try payload(DeviceUpdate.self))
         case "device.unpair": self = .deviceUnpair
@@ -517,8 +548,8 @@ extension SignalingMessage: Codable {
         case "call.accept": self = .callAccept(try payload(CallReference.self))
         case "call.hangup": self = .callHangup(try payload(Hangup.self))
         case "call.dtmf": self = .callDTMF(try payload(DTMFDigits.self))
-        case "pair.ok": self = .pairOK(try payload(PairingResult.self))
         case "pair.companion": self = .pairCompanion(try payload(CompanionPairing.self))
+        case "device.paired": self = .devicePaired(try payload(DevicePaired.self))
         case "welcome": self = .welcome(try payload(Welcome.self))
         case "status": self = .status(try payload(BridgeStatus.self))
         case "call.incoming": self = .callIncoming(try payload(IncomingCall.self))
@@ -535,7 +566,6 @@ extension SignalingMessage: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(type, forKey: .type)
         switch self {
-        case .pair(let payload): try container.encode(payload, forKey: .payload)
         case .hello(let payload): try container.encode(payload, forKey: .payload)
         case .deviceUpdate(let payload): try container.encode(payload, forKey: .payload)
         case .callAttach(let payload): try container.encode(payload, forKey: .payload)
@@ -544,8 +574,8 @@ extension SignalingMessage: Codable {
         case .callAccept(let payload): try container.encode(payload, forKey: .payload)
         case .callHangup(let payload): try container.encode(payload, forKey: .payload)
         case .callDTMF(let payload): try container.encode(payload, forKey: .payload)
-        case .pairOK(let payload): try container.encode(payload, forKey: .payload)
         case .pairCompanion(let payload): try container.encode(payload, forKey: .payload)
+        case .devicePaired(let payload): try container.encode(payload, forKey: .payload)
         case .pairCompanionRequest(let payload): try container.encode(payload, forKey: .payload)
         case .welcome(let payload): try container.encode(payload, forKey: .payload)
         case .status(let payload): try container.encode(payload, forKey: .payload)

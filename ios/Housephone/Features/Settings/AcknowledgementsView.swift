@@ -15,10 +15,10 @@ struct AcknowledgementsView: View {
                                 .font(.body.weight(.medium))
                             Text(item.role)
                                 .font(.subheadline)
-                                .foregroundStyle(Theme.textSecondary)
+                                .foregroundStyle(.secondary)
                             Text(item.license)
                                 .font(.caption.monospaced())
-                                .foregroundStyle(Theme.textSecondary)
+                                .foregroundStyle(.secondary)
                         }
                         .padding(.vertical, Theme.Space.s1)
                         .accessibilityElement(children: .combine)
@@ -44,7 +44,7 @@ private struct LicenseView: View {
                 VStack(alignment: .leading, spacing: Theme.Space.s1) {
                     Text(item.role)
                         .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(.secondary)
                     Text(item.license)
                         .font(.callout.monospaced())
                 }
@@ -65,7 +65,7 @@ private struct LicenseView: View {
                         if item.licenseText == nil {
                             Text("Den Lizenztext findest du online:")
                                 .font(.callout)
-                                .foregroundStyle(Theme.textSecondary)
+                                .foregroundStyle(.secondary)
                         }
                         ForEach(item.links, id: \.url) { link in
                             Link(destination: link.url) {
@@ -86,7 +86,7 @@ private struct LicenseView: View {
     private func licenseBlock(_ text: String) -> some View {
         Text(text.trimmingCharacters(in: .whitespacesAndNewlines))
             .font(.footnote.monospaced())
-            .foregroundStyle(Theme.textPrimary)
+            .foregroundStyle(.primary)
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(Theme.Space.s3)

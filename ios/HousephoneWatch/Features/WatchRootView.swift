@@ -24,8 +24,8 @@ struct WatchRootView: View {
                     .transition(.opacity)
             }
         }
-        .animation(WatchTheme.Motion.standard, value: callCenter.activeCall?.id)
-        .animation(WatchTheme.Motion.standard, value: bridge.isPaired)
+        .motion(WatchTheme.Motion.standard, value: callCenter.activeCall?.id)
+        .motion(WatchTheme.Motion.standard, value: bridge.isPaired)
         .onChange(of: bridge.isPaired) { _, paired in
             // Phonebook and call list belong to the bridge that is gone.
             if !paired { fritzBox.clear() }
@@ -35,13 +35,16 @@ struct WatchRootView: View {
             Task { await fritzBox.refreshAll() }
         }
         .alert(
-            callCenter.failure.map { Text($0.message) } ?? Text(verbatim: ""),
+            Text("Anruf nicht möglich"),
             isPresented: Binding(
                 get: { callCenter.failure != nil },
                 set: { if !$0 { callCenter.failure = nil } }
-            )
-        ) {
+            ),
+            presenting: callCenter.failure
+        ) { _ in
             Button("OK") { callCenter.failure = nil }
+        } message: { failure in
+            Text(failure.message)
         }
     }
 }
@@ -65,7 +68,7 @@ struct PairingHintView: View {
                 } else if bridge.isRejected {
                     Text("Kopplung ungültig")
                         .font(.headline)
-                    Text("Die Bridge kennt diese Watch nicht mehr. Koppel sie auf dem iPhone neu.")
+                    Text("Die Bridge kennt diese Watch nicht mehr. Kopple sie auf dem iPhone neu.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -100,8 +103,6 @@ struct WatchHomeView: View {
     @Environment(RecentCalls.self) private var recents
     @Environment(WatchFritzBox.self) private var fritzBox
     @State private var microphone = AVAudioApplication.shared.recordPermission
-    @State private var confirmsUnpair = false
-    @State private var isUnpairing = false
 
     var body: some View {
         List {
@@ -167,36 +168,14 @@ struct WatchHomeView: View {
             }
 
             Section {
-                Button(role: .destructive) {
-                    confirmsUnpair = true
+                NavigationLink {
+                    WatchPairingView()
                 } label: {
-                    if isUnpairing {
-                        HStack(spacing: WatchTheme.Space.s2) {
-                            ProgressView()
-                            Text("Wird entkoppelt …")
-                        }
-                    } else {
-                        Label("Kopplung aufheben", systemImage: "link.badge.minus")
-                    }
+                    Label("Kopplung", systemImage: "link")
                 }
-                .disabled(isUnpairing || callCenter.hasActiveCall)
-            } footer: {
-                Text("Danach klingelt diese Watch nicht mehr. Du kannst sie jederzeit über das iPhone neu koppeln.")
             }
         }
         .navigationTitle(bridge.bridgeName ?? String(localized: "Housephone"))
-        .confirmationDialog("Kopplung aufheben?", isPresented: $confirmsUnpair, titleVisibility: .visible) {
-            Button("Kopplung aufheben", role: .destructive) {
-                isUnpairing = true
-                Task {
-                    await bridge.unpair()
-                    isUnpairing = false
-                }
-            }
-            Button("Abbrechen", role: .cancel) {}
-        } message: {
-            Text("Die Zugangsdaten werden von dieser Watch gelöscht.")
-        }
         .onAppear {
             microphone = AVAudioApplication.shared.recordPermission
         }
@@ -219,7 +198,56 @@ struct WatchHomeView: View {
         case .failed:
             WatchStatus(tone: .warning, label: "Bridge nicht erreichbar")
         case .none:
-            WatchStatus(tone: .neutral, label: "Wartet auf Push-Freigabe")
+            WatchStatus(tone: .neutral, label: "Noch nicht bereit für Anrufe")
+        }
+    }
+}
+
+/// The bridge this watch is paired with, and the way out: unpairing sits
+/// one level deeper so it can't be tapped by accident on the home list.
+struct WatchPairingView: View {
+    @Environment(WatchBridge.self) private var bridge
+    @Environment(WatchCallCenter.self) private var callCenter
+    @State private var confirmsUnpair = false
+    @State private var isUnpairing = false
+
+    var body: some View {
+        List {
+            if let name = bridge.bridgeName {
+                Section("Bridge") {
+                    Text(name)
+                }
+            }
+            Section {
+                Button(role: .destructive) {
+                    confirmsUnpair = true
+                } label: {
+                    if isUnpairing {
+                        HStack(spacing: WatchTheme.Space.s2) {
+                            ProgressView()
+                            Text("Wird entkoppelt …")
+                        }
+                    } else {
+                        Label("Kopplung aufheben", systemImage: "link.badge.minus")
+                    }
+                }
+                .disabled(isUnpairing || callCenter.hasActiveCall)
+            } footer: {
+                Text("Danach klingelt diese Watch nicht mehr. Du kannst sie jederzeit über das iPhone neu koppeln.")
+            }
+        }
+        .navigationTitle("Kopplung")
+        .confirmationDialog("Kopplung aufheben?", isPresented: $confirmsUnpair, titleVisibility: .visible) {
+            Button("Kopplung aufheben", role: .destructive) {
+                isUnpairing = true
+                Task {
+                    await bridge.unpair()
+                    isUnpairing = false
+                }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Die Zugangsdaten werden von dieser Watch gelöscht.")
         }
     }
 }
@@ -234,7 +262,7 @@ struct RecentCallRow: View {
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(call.isMissed ? WatchTheme.danger : .secondary)
                 .frame(width: 16)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: WatchTheme.Space.hairline) {
                 Text(title)
                     .font(.body)
                     .foregroundStyle(call.isMissed ? WatchTheme.danger : .primary)
@@ -274,7 +302,7 @@ struct MissedCallRow: View {
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(WatchTheme.danger)
                 .frame(width: 16)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: WatchTheme.Space.hairline) {
                 Text(name ?? (call.number.isEmpty ? String(localized: "Unbekannt") : call.number))
                     .foregroundStyle(WatchTheme.danger)
                     .lineLimit(1)

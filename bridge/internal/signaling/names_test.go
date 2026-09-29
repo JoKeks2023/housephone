@@ -28,12 +28,12 @@ func TestSanitizeName(t *testing.T) {
 func TestDeviceNamesAreSanitizedWhenStored(t *testing.T) {
 	ts := newTestServer(t)
 	phone := ts.pairDevice(t)
-	res, body := ts.request(t, http.MethodPut, "/v1/device", bearer(phone),
+	res := phone.do(t, http.MethodPut, "/v1/device",
 		protocol.DeviceUpdate{DeviceName: ptr("Watch\r\x1b[2K\x1b[1A\u202E")})
-	if res.StatusCode != http.StatusNoContent {
-		t.Fatalf("PUT: %d %s", res.StatusCode, body)
+	if res.Status != http.StatusNoContent {
+		t.Fatalf("PUT: %d %s", res.Status, res.Body)
 	}
-	dev, err := ts.devices.Get(phone.DeviceID)
+	dev, err := ts.devices.Get(phone.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

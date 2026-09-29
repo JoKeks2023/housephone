@@ -4,6 +4,7 @@
 //
 //	housephone-bridge [-config config.yaml] serve
 //	housephone-bridge [-config config.yaml] pair [-name "iPhone Joris"]
+//	housephone-bridge [-config config.yaml] identity
 //	housephone-bridge [-config config.yaml] devices list
 //	housephone-bridge [-config config.yaml] devices remove <device-id>
 //	housephone-bridge version
@@ -29,6 +30,7 @@ import (
 
 	"github.com/JoKeks2023/housephone/bridge/internal/app"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
+	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 	"github.com/JoKeks2023/housephone/bridge/internal/version"
 )
@@ -46,6 +48,8 @@ func usage(w io.Writer) {
 Befehle:
   serve                     Bridge starten
   pair [-name NAME]         Kopplungscode + QR-Code für ein neues Gerät erzeugen
+                            und warten, bis es gekoppelt ist (Strg-C: Code ungültig)
+  identity                  Fingerabdruck der Bridge anzeigen
   devices list              Gekoppelte Geräte anzeigen
   devices remove <id>       Gerät entfernen
   version                   Version anzeigen
@@ -100,7 +104,15 @@ func run(args []string, stdout, stderr io.Writer) error {
 		if err := cfg.ValidatePair(); err != nil {
 			return err
 		}
-		return pair(cfg, *name, stdout)
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return pair(ctx, cfg, *name, stdout, 500*time.Millisecond)
+	case "identity":
+		cfg, err := config.Load(*configPath, true)
+		if err != nil {
+			return err
+		}
+		return identity(cfg, stdout)
 	case "devices":
 		cfg, err := config.Load(*configPath, true)
 		if err != nil {
@@ -142,12 +154,27 @@ func serve(cfg config.Config, logOut io.Writer) error {
 	return bridge.Run(ctx)
 }
 
-func pair(cfg config.Config, name string, out io.Writer) error {
-	pc, err := store.NewPairing(cfg.Bridge.DataDir).Create(name, time.Now())
+// errPairingAborted and errPairingExpired end the pair command without a
+// new device.
+var (
+	errPairingAborted = errors.New("abgebrochen – der Code ist jetzt ungültig")
+	errPairingExpired = errors.New("der Code ist abgelaufen, es wurde kein Gerät gekoppelt")
+)
+
+// pair creates a one-time code, shows it as QR code, link and grouped
+// text, and waits until a device used it (and reports which one) or the
+// code expired. Cancelling ctx (Ctrl-C) revokes the code.
+func pair(ctx context.Context, cfg config.Config, name string, out io.Writer, poll time.Duration) error {
+	key, err := app.LoadIdentityKey(cfg.Bridge.DataDir, true)
 	if err != nil {
 		return err
 	}
-	link := app.PairingLink(cfg.Bridge.PublicURL, pc.Code, cfg.Bridge.Name)
+	pairing := store.NewPairing(cfg.Bridge.DataDir)
+	pc, err := pairing.Create(name, time.Now())
+	if err != nil {
+		return err
+	}
+	link := app.PairingLink(cfg.Bridge.PublicURL, pc.Code, key.Fingerprint(), cfg.Bridge.Name)
 	fmt.Fprintln(out, "Öffne die Housephone-App und scanne diesen QR-Code (die Kopplung erscheint beim ersten Start und nach dem Entkoppeln):")
 	fmt.Fprintln(out)
 	qrterminal.GenerateWithConfig(link, qrterminal.Config{
@@ -161,9 +188,83 @@ func pair(cfg config.Config, name string, out io.Writer) error {
 		QuietZone:      2,
 	})
 	fmt.Fprintln(out)
-	fmt.Fprintf(out, "Code:   %s\n", pc.Code)
+	fmt.Fprintf(out, "Code:   %s\n", hp2.GroupCode(pc.Code))
+	fmt.Fprintf(out, "Bridge: %s\n", key.Fingerprint())
 	fmt.Fprintf(out, "Link:   %s\n", link)
 	fmt.Fprintf(out, "Gültig: bis %s (einmalig)\n", pc.ExpiresAt.Local().Format("15:04:05"))
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Warte auf das Gerät … (Strg-C bricht ab und macht den Code ungültig)")
+
+	ticker := time.NewTicker(poll)
+	defer ticker.Stop()
+	for {
+		used, found, err := pairing.UsedBy(pc.Code, time.Now())
+		if err != nil {
+			return err
+		}
+		if found {
+			return reportPaired(cfg, used, out)
+		}
+		if !time.Now().Before(pc.ExpiresAt) {
+			return errPairingExpired
+		}
+		select {
+		case <-ctx.Done():
+			revoked, err := pairing.Revoke(pc.Code)
+			if err != nil {
+				return err
+			}
+			if !revoked {
+				// Used in the meantime: report the device instead.
+				if used, found, err := pairing.UsedBy(pc.Code, time.Now()); err == nil && found {
+					return reportPaired(cfg, used, out)
+				}
+			}
+			return errPairingAborted
+		case <-ticker.C:
+		}
+	}
+}
+
+// reportPaired shows which device used the code, so an unexpected pairing
+// is noticed right away.
+func reportPaired(cfg config.Config, used store.UsedCode, out io.Writer) error {
+	dev, err := store.NewDevices(cfg.Bridge.DataDir).Get(used.DeviceID)
+	if err != nil {
+		return fmt.Errorf("code von Gerät %s benutzt, das nicht mehr gekoppelt ist: %w", used.DeviceID, err)
+	}
+	model := dev.Model
+	if model == "" {
+		model = "–"
+	}
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Gekoppelt:")
+	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(tw, "  Gerät:\t%s\n", displayName(dev.Name))
+	fmt.Fprintf(tw, "  Modell:\t%s\n", displayName(model))
+	fmt.Fprintf(tw, "  Plattform:\t%s\n", displayName(dev.Platform))
+	fmt.Fprintf(tw, "  Schlüssel:\t%s\n", hp2.KeyFingerprint(dev.PublicKey))
+	fmt.Fprintf(tw, "  ID:\t%s\n", dev.ID)
+	if err := tw.Flush(); err != nil {
+		return err
+	}
+	fmt.Fprintln(out, "Warst du das nicht? Sofort entfernen: housephone-bridge devices remove", dev.ID)
+	return nil
+}
+
+// identity shows the bridge's fingerprint, which the apps pin when
+// pairing (the fp parameter of the pairing link).
+func identity(cfg config.Config, out io.Writer) error {
+	key, err := app.LoadIdentityKey(cfg.Bridge.DataDir, false)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(out, "Fingerabdruck der Bridge (steht als fp= in jedem Kopplungslink):")
+	fmt.Fprintf(out, "  %s\n", key.Fingerprint())
+	fmt.Fprintf(out, "  %s\n", hp2.FingerprintHex(key.PublicKey()))
+	fmt.Fprintln(out)
+	fmt.Fprintf(out, "Schlüsseldatei: %s\n", store.IdentityKeyPath(cfg.Bridge.DataDir))
+	fmt.Fprintln(out, "Sichere sie zusammen mit dem Datenverzeichnis. Geht sie verloren, müssen alle Geräte neu gekoppelt werden.")
 	return nil
 }
 
@@ -183,7 +284,7 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 			names[d.ID] = displayName(d.Name)
 		}
 		tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(tw, "ID\tNAME\tPLATTFORM\tPUSH\tGEKOPPELT\tÜBER\tZULETZT GESEHEN")
+		fmt.Fprintln(tw, "ID\tNAME\tPLATTFORM\tSCHLÜSSEL\tPUSH\tGEKOPPELT\tÜBER\tZULETZT GESEHEN")
 		for _, d := range list {
 			pushInfo := "nein"
 			if d.PushToken != "" {
@@ -200,7 +301,11 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 					via = "entferntes Gerät " + d.PairedBy
 				}
 			}
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", d.ID, displayName(d.Name), displayName(d.Platform), pushInfo, d.CreatedAt.Local().Format("02.01.2006 15:04"), via, lastSeen)
+			keyInfo := hp2.KeyFingerprint(d.PublicKey)
+			if d.PublicKey == "" {
+				keyInfo = "fehlt (neu koppeln)"
+			}
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", d.ID, displayName(d.Name), displayName(d.Platform), keyInfo, pushInfo, d.CreatedAt.Local().Format("02.01.2006 15:04"), via, lastSeen)
 		}
 		return tw.Flush()
 	}

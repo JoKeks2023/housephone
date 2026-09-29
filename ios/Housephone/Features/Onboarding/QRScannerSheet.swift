@@ -39,6 +39,8 @@ struct QRScannerSheet: View {
                 }
             }
         }
+        // The camera needs the full height; no half-height detent.
+        .presentationDetents([.large])
         .sensoryFeedback(.success, trigger: foundTrigger)
     }
 

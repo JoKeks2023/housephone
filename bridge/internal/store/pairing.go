@@ -13,8 +13,9 @@ import (
 // PairingCodeAlphabet avoids look-alikes (no 0 O 1 I): 32 symbols.
 const PairingCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
-// PairingCodeLength is the number of characters in a pairing code.
-const PairingCodeLength = 10
+// PairingCodeLength is the number of characters in a pairing code: 16 of
+// 32 symbols are 80 bits (signaling v2).
+const PairingCodeLength = 16
 
 // PairingTTL is how long a pairing code stays valid.
 const PairingTTL = 10 * time.Minute
@@ -36,8 +37,97 @@ type PairingCode struct {
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 
+// UsedCode records which device paired with a code, so the waiting pair
+// command can report it.
+type UsedCode struct {
+	Code     string    `json:"code"`
+	DeviceID string    `json:"deviceId"`
+	UsedAt   time.Time `json:"usedAt"`
+}
+
 type pairingFile struct {
 	Codes []PairingCode `json:"codes"`
+	Used  []UsedCode    `json:"used,omitempty"`
+}
+
+// NormalizeCode is the canonical form of a typed code: upper case without
+// the grouping hyphens and spaces (XXXX-XXXX-XXXX-XXXX).
+func NormalizeCode(code string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '-', ' ', '\t':
+			return -1
+		}
+		return r
+	}, strings.ToUpper(strings.TrimSpace(code)))
+}
+
+// RecordUse notes that deviceID paired with code; the record expires after
+// PairingTTL.
+func (p *Pairing) RecordUse(code, deviceID string, now time.Time) error {
+	return withLock(p.path, func() error {
+		var f pairingFile
+		if err := readJSON(p.path, &f); err != nil {
+			return err
+		}
+		f.Used = append(pruneUsed(f.Used, now), UsedCode{Code: NormalizeCode(code), DeviceID: deviceID, UsedAt: now.UTC()})
+		return writeJSON(p.path, f)
+	})
+}
+
+// UsedBy returns the device that paired with code, if any.
+func (p *Pairing) UsedBy(code string, now time.Time) (UsedCode, bool, error) {
+	var out UsedCode
+	var found bool
+	err := withLock(p.path, func() error {
+		var f pairingFile
+		if err := readJSON(p.path, &f); err != nil {
+			return err
+		}
+		for _, u := range pruneUsed(f.Used, now) {
+			if u.Code == NormalizeCode(code) {
+				out, found = u, true
+			}
+		}
+		return nil
+	})
+	return out, found, err
+}
+
+// Revoke drops an open code (pair command interrupted). It reports whether
+// the code was still open.
+func (p *Pairing) Revoke(code string) (bool, error) {
+	var removed bool
+	err := withLock(p.path, func() error {
+		var f pairingFile
+		if err := readJSON(p.path, &f); err != nil {
+			return err
+		}
+		kept := f.Codes[:0]
+		for _, pc := range f.Codes {
+			if pc.Code == NormalizeCode(code) {
+				removed = true
+				continue
+			}
+			kept = append(kept, pc)
+		}
+		if !removed {
+			return nil
+		}
+		f.Codes = kept
+		return writeJSON(p.path, f)
+	})
+	return removed, err
+}
+
+func pruneUsed(used []UsedCode, now time.Time) []UsedCode {
+	out := make([]UsedCode, 0, len(used))
+	for _, u := range used {
+		if now.Sub(u.UsedAt) < PairingTTL {
+			out = append(out, u)
+		}
+	}
+	return out
 }
 
 // Pairing is the file-backed store of pending pairing codes (pairing.json).
@@ -131,10 +221,10 @@ func (p *Pairing) RemoveByParent(parentID string) error {
 	})
 }
 
-// Consume validates and removes a code. Comparison is case-insensitive and
-// constant-time per stored code.
+// Consume validates and removes a code. Comparison ignores case, hyphens
+// and spaces and is constant-time per stored code.
 func (p *Pairing) Consume(code string, now time.Time) (PairingCode, error) {
-	normalized := []byte(strings.ToUpper(strings.TrimSpace(code)))
+	normalized := []byte(NormalizeCode(code))
 	var found PairingCode
 	err := withLock(p.path, func() error {
 		var f pairingFile

@@ -3,6 +3,9 @@ import Foundation
 public enum WebSocketTransportError: Error, Equatable, Sendable {
     /// The bridge rejected the credentials (HTTP 401 on upgrade).
     case unauthorized
+    /// 401, and the bridge's clock differs from ours by more than a minute:
+    /// the signed timestamp was outside the bridge's window.
+    case clockSkew
     /// The upgrade failed with another HTTP status.
     case httpStatus(Int)
     case closed
@@ -23,6 +26,8 @@ public protocol WebSocketTransport: Sendable {
     func receive() async throws -> WebSocketMessage
     func sendPing() async throws
     func close()
+    /// A header of the upgrade (`101`) response, e.g. `HP2-Bridge`.
+    func upgradeHeader(_ name: String) -> String?
 }
 
 public protocol WebSocketTransportFactory: Sendable {
@@ -55,13 +60,27 @@ public struct URLSessionWebSocketFactory: WebSocketTransportFactory {
         } catch {
             task.cancel(with: .goingAway, reason: nil)
             if let response = task.response as? HTTPURLResponse, response.statusCode != 101 {
-                throw response.statusCode == 401
-                    ? WebSocketTransportError.unauthorized
-                    : WebSocketTransportError.httpStatus(response.statusCode)
+                guard response.statusCode == 401 else { throw WebSocketTransportError.httpStatus(response.statusCode) }
+                // The body of a failed upgrade isn't readable here; the Date
+                // header tells a wrong clock from a rejected device.
+                throw Self.isClockSkewed(serverDate: response.value(forHTTPHeaderField: "Date"))
+                    ? WebSocketTransportError.clockSkew
+                    : WebSocketTransportError.unauthorized
             }
             throw error
         }
         return transport
+    }
+
+    /// Whether an HTTP `Date` header is more than 60 s away from our clock.
+    static func isClockSkewed(serverDate: String?, now: Date = Date()) -> Bool {
+        guard let serverDate else { return false }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "GMT")
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+        guard let date = formatter.date(from: serverDate) else { return false }
+        return abs(date.timeIntervalSince(now)) > 60
     }
 }
 
@@ -106,5 +125,9 @@ final class URLSessionWebSocket: WebSocketTransport, @unchecked Sendable {
 
     func close() {
         task.cancel(with: .normalClosure, reason: nil)
+    }
+
+    func upgradeHeader(_ name: String) -> String? {
+        (task.response as? HTTPURLResponse)?.value(forHTTPHeaderField: name)
     }
 }

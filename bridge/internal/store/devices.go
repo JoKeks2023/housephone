@@ -12,11 +12,13 @@ var ErrDeviceNotFound = errors.New("device not found")
 
 // Device is a paired phone or watch.
 type Device struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	Platform        string `json:"platform"`
-	Model           string `json:"model,omitempty"`
-	SecretHash      string `json:"secretHash"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Platform string `json:"platform"`
+	Model    string `json:"model,omitempty"`
+	// PublicKey is the device's P-256 signing key (base64url X9.63,
+	// signaling v2). The bridge never stores a device secret.
+	PublicKey       string `json:"publicKey"`
 	PushToken       string `json:"pushToken,omitempty"`
 	PushEnvironment string `json:"pushEnvironment,omitempty"`
 	// PushTopic overrides the configured APNs topic (e.g. the watch app's).

@@ -29,6 +29,12 @@ struct RootView: View {
         }
         .fullScreenCover(isPresented: callScreenPresented) {
             InCallView()
+                // A call never goes away by accident; it ends or minimizes
+                // with its own buttons.
+                .interactiveDismissDisabled(true)
+        }
+        .onChange(of: callCenter.activeCall?.id) { _, _ in
+            appModel.isCallMinimized = false
         }
         .sheet(item: $appModel.pairingLink) { link in
             PairingView(link: link)
@@ -61,23 +67,69 @@ struct RootView: View {
 
     private var callScreenPresented: Binding<Bool> {
         Binding(
-            get: { callCenter.activeCall != nil },
+            get: { callCenter.activeCall != nil && !appModel.isCallMinimized },
             set: { presented in
-                // Swiping the cover away is not possible; ending happens via
-                // the end button. Nothing to do here.
-                _ = presented
+                // Interactive dismissal is disabled; the only way out while
+                // the call runs is the minimize button.
+                if !presented, callCenter.activeCall != nil { appModel.isCallMinimized = true }
             }
         )
     }
 }
 
-struct MainTabView: View {
+/// The running call as a glass pill above the tab bar; tap to return.
+private struct CallPill: View {
+    @Environment(CallCenter.self) private var callCenter
+    @Environment(ContactsDirectory.self) private var contacts
     @Environment(AppModel.self) private var appModel
 
     var body: some View {
+        if let call = callCenter.activeCall {
+            Button {
+                appModel.isCallMinimized = false
+            } label: {
+                HStack(spacing: Theme.Space.s2) {
+                    Image(systemName: "phone.fill")
+                        .foregroundStyle(Theme.call)
+                        .accessibilityHidden(true)
+                    Text(contacts.name(for: call.remoteNumber) ?? call.remoteName ?? (call.remoteNumber.isEmpty ? String(localized: "Unbekannt") : call.remoteNumber))
+                        .font(.subheadline.weight(.medium))
+                        .lineLimit(1)
+                    Spacer(minLength: Theme.Space.s2)
+                    if call.phase == .connected, let connectedAt = call.connectedAt {
+                        Text(timerInterval: connectedAt...Date.distantFuture, countsDown: false)
+                            .font(.subheadline)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal, Theme.Space.s4)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Zurück zum Anruf"))
+        }
+    }
+}
+
+struct MainTabView: View {
+    @Environment(AppModel.self) private var appModel
+    @Environment(CallCenter.self) private var callCenter
+
+    var body: some View {
+        if #available(iOS 26.1, *) {
+            tabs.tabViewBottomAccessory(isEnabled: appModel.isCallMinimized && callCenter.activeCall != nil) {
+                CallPill()
+            }
+        } else {
+            tabs
+        }
+    }
+
+    private var tabs: some View {
         @Bindable var appModel = appModel
 
-        TabView(selection: $appModel.selectedTab) {
+        return TabView(selection: $appModel.selectedTab) {
             Tab("Anrufe", systemImage: "clock", value: AppModel.Tab.recents) {
                 RecentsView()
             }
@@ -92,5 +144,6 @@ struct MainTabView: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
+        .devicePairedBanner()
     }
 }

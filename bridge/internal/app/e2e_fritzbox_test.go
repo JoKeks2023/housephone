@@ -3,7 +3,6 @@ package app_test
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"os"
 	"reflect"
@@ -13,26 +12,24 @@ import (
 
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
 	"github.com/JoKeks2023/housephone/bridge/internal/fritzbox/fritzboxtest"
+	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 )
 
-func (w *world) get(t *testing.T, d *device, path string, header http.Header) (*http.Response, []byte) {
+type answer struct {
+	StatusCode int
+	Header     http.Header
+}
+
+// get sends a signed GET; every answer with a body must arrive sealed and
+// signed by the bridge (checked by the client), body is the opened answer.
+func (w *world) get(t *testing.T, d *device, path string, header http.Header) (answer, []byte) {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodGet, "http://"+w.bridge.Addr()+path, nil)
-	if err != nil {
-		t.Fatal(err)
+	res := d.do(http.MethodGet, path, nil, header)
+	if len(res.Body) > 0 && res.Header.Get("Content-Type") != hp2.SealedContentType {
+		t.Fatalf("%s: answer not sealed (%s)", path, res.Header.Get("Content-Type"))
 	}
-	req.Header.Set("Authorization", d.auth)
-	for k, v := range header {
-		req.Header[k] = v
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	return res, body
+	return answer{StatusCode: res.Status, Header: res.Header}, res.Body
 }
 
 func withFritzBoxTR064(box *fritzboxtest.Box) func(*config.Config) {

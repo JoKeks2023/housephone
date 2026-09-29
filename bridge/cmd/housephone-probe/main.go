@@ -3,9 +3,14 @@
 // test real calls through a real FRITZ!Box from a computer, without an
 // iPhone, APNs or a tunnel.
 //
-//	housephone-probe -url ws://127.0.0.1:8080/v1/ws -pair K7P2XH9QRM   # pair once
-//	housephone-probe -url ws://127.0.0.1:8080/v1/ws                    # answer calls (echo)
-//	housephone-probe -url ws://127.0.0.1:8080/v1/ws -dial 0170123456   # call out
+// It speaks signaling v2 (HP2): a software P-256 key instead of the Secure
+// Enclave, pairing over HTTPS with the bridge fingerprint from the pair
+// command, signed requests and sealed frames.
+//
+//	housephone-probe -link 'housephone://pair?v=2&…'                                  # pair once (link from pair)
+//	housephone-probe -url ws://127.0.0.1:8080/v1/ws -pair K7P2-XH9Q-RMW4-DZT8 -fp …   # or code + fingerprint
+//	housephone-probe                                                                  # answer calls (echo)
+//	housephone-probe -dial 0170123456                                                 # call out
 //
 // In echo mode the caller hears themselves; in tone mode a 425 Hz tone.
 // Received audio levels are printed once per second.
@@ -13,6 +18,7 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
@@ -27,23 +33,30 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coder/websocket"
-
+	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 )
 
 const frameBytes = 160 // 20 ms of A-law at 8 kHz
 
+// credentials is what the probe keeps after pairing (file mode 0600). A
+// real device keeps its key in the Secure Enclave; the probe stores the
+// P-256 scalar, so the file must be treated like a password.
 type credentials struct {
-	URL          string `json:"url"`
-	DeviceID     string `json:"deviceId"`
-	DeviceSecret string `json:"deviceSecret"`
-	BridgeName   string `json:"bridgeName"`
+	URL               string `json:"url"`
+	DeviceID          string `json:"deviceId"`
+	BridgeID          string `json:"bridgeId"`
+	BridgeName        string `json:"bridgeName"`
+	BridgeFingerprint string `json:"bridgeFingerprint"`
+	BridgePublicKey   string `json:"bridgePublicKey"`
+	PrivateKey        string `json:"privateKey"`
 }
 
 func main() {
 	url := flag.String("url", "ws://127.0.0.1:8080/v1/ws", "WebSocket URL of the bridge")
-	pairCode := flag.String("pair", "", "pairing code (from `housephone-bridge pair`); pairs and saves credentials")
+	link := flag.String("link", "", "pairing link housephone://pair?v=2&… (from `housephone-bridge pair`); pairs and saves credentials")
+	pairCode := flag.String("pair", "", "pairing code (from `housephone-bridge pair`), with -fp and -url; pairs and saves credentials")
+	fingerprint := flag.String("fp", "", "bridge fingerprint for -pair (`housephone-bridge identity`)")
 	credsFile := flag.String("creds", "housephone-probe.json", "credentials file")
 	mode := flag.String("mode", "echo", "audio sent to the other side: echo | tone | silence")
 	dial := flag.String("dial", "", "call this number instead of waiting for incoming calls")
@@ -54,15 +67,25 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if *pairCode != "" {
-		creds, err := pair(ctx, *url, *pairCode)
+	if *link != "" || *pairCode != "" {
+		target := hp2.PairingLink{URL: *url, Code: *pairCode, Fingerprint: *fingerprint}
+		if *link != "" {
+			parsed, err := hp2.ParsePairingLink(*link)
+			if err != nil {
+				fail("Kopplungslink: %v", err)
+			}
+			target = parsed
+		} else if target.Fingerprint == "" {
+			fail("-pair braucht -fp (Fingerabdruck aus `housephone-bridge pair` oder `identity`)")
+		}
+		creds, err := pair(ctx, target)
 		if err != nil {
 			fail("Kopplung fehlgeschlagen: %v", err)
 		}
 		if err := saveCredentials(*credsFile, creds); err != nil {
 			fail("Zugangsdaten speichern: %v", err)
 		}
-		fmt.Printf("✓ Gekoppelt mit „%s“ als %s, gespeichert in %s\n", creds.BridgeName, creds.DeviceID, *credsFile)
+		fmt.Printf("✓ Gekoppelt mit „%s“ (%s) als %s, gespeichert in %s\n", creds.BridgeName, creds.BridgeFingerprint, creds.DeviceID, *credsFile)
 		return
 	}
 
@@ -86,34 +109,30 @@ func fail(format string, args ...any) {
 
 // MARK: - Pairing
 
-func pair(ctx context.Context, url, code string) (credentials, error) {
-	conn, _, err := websocket.Dial(ctx, url, nil)
+// pair creates a fresh key and pairs over HTTPS (POST /v1/pair); the
+// bridge's answer must match the fingerprint.
+func pair(ctx context.Context, link hp2.PairingLink) (credentials, error) {
+	base, err := hp2.HTTPBase(link.URL)
 	if err != nil {
 		return credentials{}, err
 	}
-	defer conn.CloseNow()
-	host, _ := os.Hostname()
-	if err := writeJSON(ctx, conn, protocol.TypePair, protocol.Pair{Code: code, DeviceName: "Probetelefon " + host, Platform: protocol.PlatformIOS, Model: "housephone-probe"}); err != nil {
+	key, err := hp2.NewSoftwareKey()
+	if err != nil {
 		return credentials{}, err
 	}
-	for {
-		env, err := readEnvelope(ctx, conn)
-		if err != nil {
-			return credentials{}, err
-		}
-		switch env.Type {
-		case protocol.TypePairOK:
-			var ok protocol.PairOK
-			if err := env.Decode(&ok); err != nil {
-				return credentials{}, err
-			}
-			return credentials{URL: url, DeviceID: ok.DeviceID, DeviceSecret: ok.DeviceSecret, BridgeName: ok.BridgeName}, nil
-		case protocol.TypeError:
-			var e protocol.Error
-			_ = env.Decode(&e)
-			return credentials{}, fmt.Errorf("%s: %s", e.Code, e.Message)
-		}
+	host, _ := os.Hostname()
+	res, err := hp2.Pair(ctx, nil, base, key, link.Code, link.Fingerprint, "Probetelefon "+host, protocol.PlatformIOS, "housephone-probe")
+	if err != nil {
+		return credentials{}, err
 	}
+	scalar, err := key.Scalar()
+	if err != nil {
+		return credentials{}, err
+	}
+	return credentials{
+		URL: link.URL, DeviceID: res.DeviceID, BridgeID: res.BridgeID, BridgeName: res.BridgeName,
+		BridgeFingerprint: link.Fingerprint, BridgePublicKey: hp2.B64(res.BridgePub), PrivateKey: hp2.B64(scalar),
+	}, nil
 }
 
 func saveCredentials(path string, c credentials) error {
@@ -130,7 +149,35 @@ func loadCredentials(path string) (credentials, error) {
 	if err != nil {
 		return c, err
 	}
-	return c, json.Unmarshal(data, &c)
+	if err := json.Unmarshal(data, &c); err != nil {
+		return c, err
+	}
+	if c.PrivateKey == "" || c.BridgePublicKey == "" {
+		return c, errors.New("Zugangsdaten aus Signalisierung v1 – neu koppeln")
+	}
+	return c, nil
+}
+
+// client builds the HP2 client from the stored credentials and checks the
+// pinned bridge key against the fingerprint.
+func (c credentials) client() (*hp2.Client, error) {
+	scalar, err := hp2.DecodeB64(c.PrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("privateKey: %w", err)
+	}
+	key, err := hp2.SoftwareKeyFromScalar(scalar)
+	if err != nil {
+		return nil, fmt.Errorf("privateKey: %w", err)
+	}
+	pub, err := hp2.DecodeB64(c.BridgePublicKey)
+	if err != nil || len(pub) != ed25519.PublicKeySize || hp2.Fingerprint(pub) != c.BridgeFingerprint {
+		return nil, errors.New("bridgePublicKey passt nicht zum Fingerabdruck – neu koppeln")
+	}
+	base, err := hp2.HTTPBase(c.URL)
+	if err != nil {
+		return nil, err
+	}
+	return &hp2.Client{BaseURL: base, DeviceID: c.DeviceID, BridgeID: c.BridgeID, Key: key, BridgePub: pub}, nil
 }
 
 // MARK: - Calls
@@ -140,8 +187,7 @@ type probe struct {
 	answerAfter time.Duration
 	recordPath  string
 
-	conn   *websocket.Conn
-	writeM sync.Mutex
+	conn *hp2.Conn
 
 	mu       sync.Mutex
 	callID   string
@@ -156,16 +202,20 @@ type probe struct {
 }
 
 func (p *probe) run(ctx context.Context, creds credentials, dial string) error {
-	header := http.Header{"Authorization": {"Bearer " + creds.DeviceID + "." + creds.DeviceSecret}}
-	conn, resp, err := websocket.Dial(ctx, creds.URL, &websocket.DialOptions{HTTPHeader: header})
+	client, err := creds.client()
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusUnauthorized {
-			return errors.New("Bridge lehnt die Zugangsdaten ab (401) – neu koppeln")
+		return err
+	}
+	conn, err := client.Dial(ctx)
+	if err != nil {
+		var se *hp2.StatusError
+		if errors.As(err, &se) && se.Status == http.StatusUnauthorized {
+			return errors.New("Bridge lehnt die Anmeldung ab (401) – Uhrzeit prüfen oder neu koppeln")
 		}
 		return err
 	}
-	defer conn.CloseNow()
-	conn.SetReadLimit(1 << 20)
+	defer conn.WS().CloseNow()
+	conn.WS().SetReadLimit(1 << 20)
 	p.conn = conn
 
 	if err := p.send(ctx, protocol.TypeHello, protocol.Hello{
@@ -180,13 +230,19 @@ func (p *probe) run(ctx context.Context, creds credentials, dial string) error {
 		kind, data, err := conn.Read(ctx)
 		if err != nil {
 			p.hangupOnExit()
+			if errors.Is(err, hp2.ErrIntegrity) {
+				return errors.New("Frame der Bridge nicht authentisch – Verbindung getrennt")
+			}
 			return err
 		}
-		if kind == websocket.MessageBinary {
+		if kind == hp2.FrameAudio {
 			p.receiveAudio(ctx, data)
 			continue
 		}
-		env, err := protocol.ParseEnvelope(data)
+		if kind != hp2.FrameJSON {
+			continue
+		}
+		env, err := protocol.ParseEnvelope(data[1:])
 		if err != nil {
 			continue
 		}
@@ -329,7 +385,7 @@ func (p *probe) sendTone(ctx context.Context) {
 			frame[1+i] = alawEncode(int16(sample * 32767))
 			n++
 		}
-		if err := p.write(ctx, websocket.MessageBinary, frame); err != nil {
+		if err := p.writeAudio(ctx, frame); err != nil {
 			return
 		}
 	}
@@ -352,7 +408,7 @@ func (p *probe) receiveAudio(ctx context.Context, data []byte) {
 	echo := p.audioOn && p.mode == "echo"
 	p.mu.Unlock()
 	if echo {
-		_ = p.write(ctx, websocket.MessageBinary, data)
+		_ = p.writeAudio(ctx, data)
 	}
 }
 
@@ -448,39 +504,16 @@ func (p *probe) send(ctx context.Context, msgType string, payload any) error {
 	if err != nil {
 		return err
 	}
-	return p.write(ctx, websocket.MessageText, data)
-}
-
-func (p *probe) write(ctx context.Context, kind websocket.MessageType, data []byte) error {
-	p.writeM.Lock()
-	defer p.writeM.Unlock()
 	writeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	return p.conn.Write(writeCtx, kind, data)
+	return p.conn.WriteJSON(writeCtx, data)
 }
 
-func writeJSON(ctx context.Context, conn *websocket.Conn, msgType string, payload any) error {
-	env, err := protocol.NewEnvelope(msgType, payload)
-	if err != nil {
-		return err
-	}
-	data, err := json.Marshal(env)
-	if err != nil {
-		return err
-	}
-	return conn.Write(ctx, websocket.MessageText, data)
-}
-
-func readEnvelope(ctx context.Context, conn *websocket.Conn) (protocol.Envelope, error) {
-	for {
-		kind, data, err := conn.Read(ctx)
-		if err != nil {
-			return protocol.Envelope{}, err
-		}
-		if kind == websocket.MessageText {
-			return protocol.ParseEnvelope(data)
-		}
-	}
+// writeAudio sends a sealed audio frame (type byte 0x01 + 160 bytes A-law).
+func (p *probe) writeAudio(ctx context.Context, frame []byte) error {
+	writeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	return p.conn.WriteAudio(writeCtx, frame)
 }
 
 func newUUID() string {
