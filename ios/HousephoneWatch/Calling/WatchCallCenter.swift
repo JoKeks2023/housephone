@@ -172,7 +172,10 @@ final class WatchCallCenter: NSObject {
         clientTasks = [
             Task { [weak self] in
                 for await event in client.events {
-                    self?.handle(event)
+                    // Late events of a closed connection must not touch
+                    // the next call.
+                    guard let self, self.client === client else { continue }
+                    self.handle(event)
                 }
             },
             // Audio stays off the main actor.
