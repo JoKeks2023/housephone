@@ -2,6 +2,7 @@ package sipleg
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync/atomic"
 
@@ -62,17 +63,22 @@ func isAnonymous(s string) bool {
 
 func (c *incomingCall) Codec() codec.Codec { return c.choice.codec }
 
+func (c *incomingCall) Offers(cd codec.Codec) bool { return c.choice.has(cd) }
+
 func (c *incomingCall) Ringing() error { return c.d.Ringing() }
 
-// Answer sends 200 OK with exactly the chosen codec and blocks until ACK.
-func (c *incomingCall) Answer(ctx context.Context) (calls.SIPMedia, error) {
+// Answer sends 200 OK with exactly codec cd and blocks until ACK.
+func (c *incomingCall) Answer(ctx context.Context, cd codec.Codec) (calls.SIPMedia, error) {
+	if !c.choice.has(cd) {
+		return nil, fmt.Errorf("codec %s was not offered", cd)
+	}
 	type result struct {
 		med *diago.DialogMedia
 		err error
 	}
 	done := make(chan result, 1)
 	go func() {
-		med, err := c.d.Answer(diago.AnswerOptions{Codecs: c.choice.diagoCodecs()})
+		med, err := c.d.Answer(diago.AnswerOptions{Codecs: c.choice.diagoCodecs(cd)})
 		done <- result{med, err}
 	}()
 	select {

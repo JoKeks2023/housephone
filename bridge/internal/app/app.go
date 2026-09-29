@@ -133,6 +133,8 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		BridgeID:          identity.ID,
 		BridgeName:        cfg.Bridge.Name,
 		BridgeVersion:     version.Version,
+		PublicURL:         cfg.Bridge.PublicURL,
+		PushTopic:         cfg.APNs.Topic,
 		TrustProxyHeaders: cfg.Bridge.TrustProxyHeaders,
 		Devices:           b.Devices,
 		Pairing:           b.Pairing,

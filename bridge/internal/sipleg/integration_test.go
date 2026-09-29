@@ -153,7 +153,7 @@ func TestIncomingCallMediaDTMFAndRemoteHangup(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	sipMedia, err := call.Answer(ctx)
+	sipMedia, err := call.Answer(ctx, call.Codec())
 	if err != nil {
 		t.Fatal(err)
 	}

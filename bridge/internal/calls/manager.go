@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/JoKeks2023/housephone/bridge/internal/codec"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
@@ -45,7 +46,10 @@ type Options struct {
 	OfferTimeout    time.Duration
 	AnswerTimeout   time.Duration
 	PushTimeout     time.Duration
-	Now             func() time.Time
+	// AudioFrameInterval paces websocket-pcma audio towards the FRITZ!Box
+	// (default 20 ms; tests may shorten it).
+	AudioFrameInterval time.Duration
+	Now                func() time.Time
 }
 
 type tombstone struct {
@@ -141,6 +145,13 @@ func (m *Manager) DeviceDisconnected(conn DeviceConn) {
 	for _, c := range calls {
 		c.do(func() { c.onDisconnect(conn) })
 	}
+}
+
+// usesWebSocketAudio reports whether the device takes calls over the
+// websocket-pcma media path (v1.1). Unknown devices use WebRTC.
+func (m *Manager) usesWebSocketAudio(deviceID string) bool {
+	dev, err := m.opts.Devices.Get(deviceID)
+	return err == nil && dev.UsesWebSocketAudio()
 }
 
 func (m *Manager) conn(deviceID string) DeviceConn {
@@ -320,8 +331,14 @@ func (m *Manager) HandleIncoming(ctx context.Context, sip IncomingSIPCall) {
 	}
 	defer m.removeCall(c)
 
+	pcmaOffered := sip.Offers(codec.PCMA)
 	reachable := 0
 	for _, dev := range devices {
+		if dev.UsesWebSocketAudio() && !pcmaOffered {
+			// The watch only speaks PCMA and the bridge never transcodes.
+			log.Info("not ringing websocket-pcma device: INVITE offers no PCMA", "device", dev.ID)
+			continue
+		}
 		online := m.conn(dev.ID)
 		canPush := m.opts.Pusher != nil && dev.PushToken != ""
 		if online == nil && !canPush {

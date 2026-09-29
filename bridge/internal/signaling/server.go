@@ -1,5 +1,6 @@
-// Package signaling serves the device WebSocket (/v1/ws) and the health
-// endpoint (/v1/health) of signaling protocol v1.
+// Package signaling serves the device WebSocket (/v1/ws), the health
+// endpoint (/v1/health) and the HTTPS device endpoints of v1.1
+// (/v1/pair, /v1/device) of the signaling protocol.
 package signaling
 
 import (
@@ -36,6 +37,11 @@ type Config struct {
 	BridgeID      string
 	BridgeName    string
 	BridgeVersion string
+	// PublicURL is the wss:// URL sent in pair.companion (v1.1).
+	PublicURL string
+	// PushTopic is the configured APNs topic; per-device topics must share
+	// its bundle prefix (v1.1).
+	PushTopic string
 	// TrustProxyHeaders uses CF-Connecting-IP / X-Forwarded-For.
 	TrustProxyHeaders bool
 	Devices           *store.Devices
@@ -96,6 +102,9 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/health", s.health)
 	mux.HandleFunc("GET /v1/ws", s.websocket)
+	mux.HandleFunc("POST /v1/pair", s.httpPair)
+	mux.HandleFunc("PUT /v1/device", s.httpUpdateDevice)
+	mux.HandleFunc("DELETE /v1/device", s.httpDeleteDevice)
 	return mux
 }
 
@@ -194,6 +203,12 @@ func writeEnvelope(ctx context.Context, conn *websocket.Conn, env protocol.Envel
 	return conn.Write(ctx, websocket.MessageText, data)
 }
 
+func writeBinary(ctx context.Context, conn *websocket.Conn, data []byte) error {
+	ctx, cancel := context.WithTimeout(ctx, writeTimeout)
+	defer cancel()
+	return conn.Write(ctx, websocket.MessageBinary, data)
+}
+
 func errorEnvelope(code, message string) protocol.Envelope {
 	return protocol.MustEnvelope(protocol.TypeError, protocol.Error{Code: code, Message: message})
 }
@@ -211,37 +226,60 @@ func (s *Server) runPairing(ctx context.Context, conn *websocket.Conn, ip string
 		_ = conn.Close(websocket.StatusPolicyViolation, "unauthorized")
 		return
 	}
-	if s.limiter.blocked(ip) {
-		s.log.Warn("pairing rate limited", "ip", ip)
-		_ = writeEnvelope(ctx, conn, errorEnvelope(protocol.ErrorPairingRateLimited, "Zu viele Versuche, bitte später erneut probieren"))
-		_ = conn.Close(websocket.StatusPolicyViolation, "rate limited")
+	var p protocol.Pair
+	decodeErr := env.Decode(&p)
+	ok, pairErr := s.pair(p, decodeErr, ip)
+	if pairErr != nil {
+		_ = writeEnvelope(ctx, conn, errorEnvelope(pairErr.code, pairErr.message))
+		_ = conn.Close(websocket.StatusPolicyViolation, pairErr.closeReason())
 		return
 	}
+	_ = writeEnvelope(ctx, conn, protocol.MustEnvelope(protocol.TypePairOK, ok))
+	_ = conn.Close(websocket.StatusNormalClosure, "paired")
+}
 
-	var p protocol.Pair
-	if err := env.Decode(&p); err != nil || (p.Platform != protocol.PlatformIOS && p.Platform != protocol.PlatformWatchOS) {
-		_ = writeEnvelope(ctx, conn, errorEnvelope(protocol.ErrorBadRequest, "code, deviceName and platform (ios|watchos) are required"))
-		_ = conn.Close(websocket.StatusPolicyViolation, "bad request")
-		return
+// pairError is a failed pairing attempt (WebSocket pair or POST /v1/pair).
+type pairError struct {
+	code    string
+	message string
+	status  int
+}
+
+func (e *pairError) closeReason() string {
+	switch e.code {
+	case protocol.ErrorPairingRateLimited:
+		return "rate limited"
+	case protocol.ErrorBadRequest:
+		return "bad request"
+	}
+	return "pairing failed"
+}
+
+// pair validates a pairing request, consumes its code and stores the new
+// device. Rate limiting, code rules and naming are the same for WebSocket
+// and HTTPS pairing.
+func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.PairOK, *pairError) {
+	if s.limiter.blocked(ip) {
+		s.log.Warn("pairing rate limited", "ip", ip)
+		return protocol.PairOK{}, &pairError{protocol.ErrorPairingRateLimited, "Zu viele Versuche, bitte später erneut probieren", http.StatusTooManyRequests}
+	}
+	if decodeErr != nil || strings.TrimSpace(p.Code) == "" || !validPlatform(p.Platform) {
+		return protocol.PairOK{}, &pairError{protocol.ErrorBadRequest, "code, deviceName and platform (ios|watchos) are required", http.StatusBadRequest}
 	}
 	now := s.cfg.Now()
 	pc, err := s.cfg.Pairing.Consume(p.Code, now)
 	if err != nil {
 		s.limiter.fail(ip)
 		s.log.Warn("pairing failed", "ip", ip, "error", err)
-		code := protocol.ErrorInternal
 		if errors.Is(err, store.ErrPairingInvalid) {
-			code = protocol.ErrorPairingInvalid
+			return protocol.PairOK{}, &pairError{protocol.ErrorPairingInvalid, "Der Kopplungscode ist ungültig oder abgelaufen", http.StatusForbidden}
 		}
-		_ = writeEnvelope(ctx, conn, errorEnvelope(code, "Der Kopplungscode ist ungültig oder abgelaufen"))
-		_ = conn.Close(websocket.StatusPolicyViolation, "pairing failed")
-		return
+		return protocol.PairOK{}, &pairError{protocol.ErrorInternal, "internal error", http.StatusInternalServerError}
 	}
 
 	secret, err := auth.NewSecret()
 	if err != nil {
-		_ = writeEnvelope(ctx, conn, errorEnvelope(protocol.ErrorInternal, "internal error"))
-		return
+		return protocol.PairOK{}, &pairError{protocol.ErrorInternal, "internal error", http.StatusInternalServerError}
 	}
 	name := strings.TrimSpace(pc.Name)
 	if name == "" {
@@ -260,17 +298,19 @@ func (s *Server) runPairing(ctx context.Context, conn *websocket.Conn, ip string
 	}
 	if err := s.cfg.Devices.Add(dev); err != nil {
 		s.log.Error("storing device failed", "error", err)
-		_ = writeEnvelope(ctx, conn, errorEnvelope(protocol.ErrorInternal, "internal error"))
-		return
+		return protocol.PairOK{}, &pairError{protocol.ErrorInternal, "internal error", http.StatusInternalServerError}
 	}
 	s.log.Info("device paired", "device", dev.ID, "name", dev.Name, "platform", dev.Platform, "ip", ip)
-	_ = writeEnvelope(ctx, conn, protocol.MustEnvelope(protocol.TypePairOK, protocol.PairOK{
+	return protocol.PairOK{
 		DeviceID:     dev.ID,
 		DeviceSecret: secret,
 		BridgeID:     s.cfg.BridgeID,
 		BridgeName:   s.cfg.BridgeName,
-	}))
-	_ = conn.Close(websocket.StatusNormalClosure, "paired")
+	}, nil
+}
+
+func validPlatform(p string) bool {
+	return p == protocol.PlatformIOS || p == protocol.PlatformWatchOS
 }
 
 func truncateRunes(s string, n int) string {
