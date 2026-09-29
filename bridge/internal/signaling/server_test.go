@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -209,6 +210,18 @@ func TestRequestAttacks(t *testing.T) {
 	}
 	if dev, _ := ts.devices.Get(d.ID); dev.PushToken != "" {
 		t.Fatalf("rejected update applied: %+v", dev)
+	}
+}
+
+// Even an answer the bridge gives before checking the request (body too
+// large) is signed, so the app can tell it from a forged one.
+func TestOversizedBodyAnswerIsSigned(t *testing.T) {
+	ts := newTestServer(t)
+	d := ts.pairDevice(t)
+	body := []byte(`{"deviceName":"` + strings.Repeat("x", maxHTTPBody) + `"}`)
+	res, err := d.tryDo(http.MethodPut, "/v1/device", json.RawMessage(body), nil)
+	if err != nil || res.Status != http.StatusRequestEntityTooLarge {
+		t.Fatalf("oversized body: %d %v", res.Status, err)
 	}
 }
 

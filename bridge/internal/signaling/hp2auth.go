@@ -120,15 +120,36 @@ func (s *Server) checkRequest(r *http.Request, body []byte) authResult {
 // rejectAuth answers 401 {"code":…}; signed when the header parsed.
 func (s *Server) rejectAuth(w http.ResponseWriter, r *http.Request, res authResult) {
 	s.warnClient("rejected request authentication", s.clientIP(r), "path", r.URL.Path, "reason", res.code)
-	body, _ := json.Marshal(protocol.Error{Code: res.code, Message: "unauthorized"})
+	s.writeSignedError(w, res.sess, http.StatusUnauthorized, protocol.Error{Code: res.code, Message: "unauthorized"})
+}
+
+// writeSignedError answers with a plain JSON error (no session keys are
+// trusted yet), signed when sess is set.
+func (s *Server) writeSignedError(w http.ResponseWriter, sess *hp2.ServerSession, status int, e protocol.Error) {
+	body, _ := json.Marshal(e)
 	body = append(body, '\n')
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	if res.sess != nil {
-		w.Header().Set(hp2.BridgeHeader, res.sess.SignAnswer(s.cfg.Identity, http.StatusUnauthorized, body))
+	if sess != nil {
+		w.Header().Set(hp2.BridgeHeader, sess.SignAnswer(s.cfg.Identity, status, body))
 	}
-	w.WriteHeader(http.StatusUnauthorized)
+	w.WriteHeader(status)
 	_, _ = w.Write(body)
+}
+
+// sessionFromHeader returns the session of a well-formed Authorization
+// header without checking the request, so an early error (body too large)
+// can still be signed.
+func (s *Server) sessionFromHeader(r *http.Request) *hp2.ServerSession {
+	h, err := hp2.ParseAuthorization(r.Header.Get("Authorization"))
+	if err != nil {
+		return nil
+	}
+	sess, err := hp2.Accept(s.cfg.BridgeID, h)
+	if err != nil {
+		return nil
+	}
+	return sess
 }
 
 // authedHandler serves an authenticated request; what it writes is sealed.
@@ -139,7 +160,7 @@ func (s *Server) authed(h authedHandler) http.HandlerFunc {
 	return withDeadline(func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxHTTPBody))
 		if err != nil {
-			writeJSON(w, http.StatusRequestEntityTooLarge, protocol.Error{Code: protocol.ErrorBadRequest, Message: "request body too large"})
+			s.writeSignedError(w, s.sessionFromHeader(r), http.StatusRequestEntityTooLarge, protocol.Error{Code: protocol.ErrorBadRequest, Message: "request body too large"})
 			return
 		}
 		res := s.checkRequest(r, body)
