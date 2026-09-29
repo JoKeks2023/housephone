@@ -16,11 +16,12 @@ struct KeypadView: View {
 
     @State private var clearTrigger = 0
 
-    /// The fixed part of the layout below: banner 44, two spacers 2 × 24,
+    /// The fixed part of the layout below: banner with top padding up to
+    /// 64 (two lines on an SE), two spacers 2 × 24,
     /// number display 82, grid row spacing 3 × 16, call row padding
     /// 16 + 32. The rest scales with the key size: four key rows plus the
     /// call row = 5 keys. Per-device numbers are in the T-0007 report.
-    private static let fixedHeight: CGFloat = 270
+    private static let fixedHeight: CGFloat = 290
 
     /// Keys shrink on short screens (iPhone SE) instead of pushing the
     /// call button under the tab bar; 78 pt is the Phone app size.

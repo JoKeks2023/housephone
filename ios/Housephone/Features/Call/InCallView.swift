@@ -33,11 +33,11 @@ struct InCallView: View {
 
     // MARK: - Layout
 
-    /// Fixed parts in keypad mode: compact header ~92, top padding 16,
-    /// two spacers 2 × 24, digits line 42, grid row spacing 3 × 16,
-    /// end button 76, bottom padding 24. Four key rows scale; see the
-    /// T-0007 report for iPhone SE / 16 / 16 Pro.
-    private static let keypadFixedHeight: CGFloat = 346
+    /// Fixed parts in keypad mode: top bar 44 + 8, compact header ~92,
+    /// top padding 16, two spacers 2 × 24, digits line 42, grid row
+    /// spacing 3 × 16, end button 76, bottom padding 24. Four key rows
+    /// scale; see the T-0007 report for iPhone SE / 16 / 16 Pro.
+    private static let keypadFixedHeight: CGFloat = 398
 
     private static func keySize(for height: CGFloat) -> CGFloat {
         min(74, max(52, (height - keypadFixedHeight) / 4))
