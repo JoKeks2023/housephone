@@ -8,13 +8,18 @@ bridge:
   # Name, den die App anzeigt.
   name: "Zuhause"
   # HTTP/WebSocket-Port. Cloudflare Tunnel (oder ein Reverse Proxy) zeigt hierauf.
-  listen: ":8080"
+  # Nur lokal lauschen: cloudflared läuft auf demselben Host (Host-Netzwerk).
+  # ":8080" würde die Bridge im ganzen LAN öffnen.
+  listen: "127.0.0.1:8080"
   # Öffentliche WebSocket-URL für die App (landet im Kopplungs-QR-Code).
   publicUrl: "wss://phone.example.com/v1/ws"
   # Geräte, Kopplungscodes und Bridge-ID.
   dataDir: "/data"
   # CF-Connecting-IP / X-Forwarded-For als Client-IP verwenden (nur hinter Tunnel/Proxy).
+  # Die Header gelten nur für Anfragen von localhost und von trustedProxies.
   trustProxyHeaders: true
+  # Weitere Proxys (IP oder CIDR), z. B. ein Reverse Proxy auf einem anderen Rechner.
+  trustedProxies: []
 
 sip:
   # FRITZ!Box: Telefonie → Telefoniegeräte → Neues Gerät → Telefon → LAN/WLAN (IP-Telefon)

@@ -60,7 +60,11 @@ Welches APNs-Environment ein Gerät braucht, meldet die App selbst:
 
 Der Tunnel trägt nur die Signalisierung (TCP/WebSocket). Der Ton läuft über die UDP-Freigabe aus Schritt 2, weil Cloudflare Tunnel kein UDP für öffentliche Hostnamen weiterleitet.
 
-**Ohne Cloudflare:** Ein Reverse Proxy mit TLS (z. B. Caddy) auf Port 443 → `localhost:8080`, dazu eine TCP-Portfreigabe 443. In `config.yaml` dann `trustProxyHeaders` nur aktivieren, wenn der Proxy `X-Forwarded-For` setzt.
+**Ohne Cloudflare:** Ein Reverse Proxy mit TLS (z. B. Caddy) auf Port 443 → `localhost:8080`, dazu eine TCP-Portfreigabe 443. `trustProxyHeaders` nur aktivieren, wenn der Proxy `X-Forwarded-For` setzt.
+- Die Bridge glaubt diesen Headern nur bei Anfragen von localhost.
+- Läuft der Proxy auf einem anderen Rechner, trag dessen IP unter `bridge.trustedProxies` ein und öffne `bridge.listen` für ihn.
+
+`bridge.listen` steht im Beispiel auf `127.0.0.1:8080`. Die Bridge ist damit nur über den Tunnel erreichbar und nicht im ganzen LAN.
 
 ## 5. Starten (Docker Compose)
 

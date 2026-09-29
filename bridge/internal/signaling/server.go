@@ -57,8 +57,11 @@ type Config struct {
 	// PushTopic is the configured APNs topic; per-device topics must share
 	// its bundle prefix (v1.1).
 	PushTopic string
-	// TrustProxyHeaders uses CF-Connecting-IP / X-Forwarded-For.
+	// TrustProxyHeaders uses CF-Connecting-IP / X-Forwarded-For, but only
+	// from requests that come from loopback (cloudflared, a local proxy) or
+	// from TrustedProxies. Anyone else could set the headers freely.
 	TrustProxyHeaders bool
+	TrustedProxies    []*net.IPNet
 	Devices           *store.Devices
 	Pairing           *store.Pairing
 	Hub               Hub
@@ -93,6 +96,8 @@ type Server struct {
 	limiter *rateLimiter
 	// companions limits pair.companion.request per device ID.
 	companions *rateLimiter
+	// warnings throttles warnings about failed logins per client.
+	warnings *logThrottle
 
 	mu       sync.Mutex
 	sessions map[string]*session
@@ -121,6 +126,7 @@ func New(cfg Config) *Server {
 		log:        cfg.Logger.With("component", "signaling"),
 		limiter:    newRateLimiter(5, time.Minute, cfg.Now),
 		companions: newRateLimiter(companionCodesPerHour, time.Hour, cfg.Now),
+		warnings:   newLogThrottle(time.Minute, cfg.Now),
 		sessions:   map[string]*session{},
 	}
 }
@@ -166,7 +172,7 @@ func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 
 	dev, ok := s.authenticate(header)
 	if !ok {
-		s.log.Warn("rejected WebSocket authentication", "ip", ip)
+		s.warnClient("rejected WebSocket authentication", ip)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -190,21 +196,57 @@ func (s *Server) authenticate(header string) (store.Device, bool) {
 	return dev, auth.VerifySecret(secret, dev.SecretHash)
 }
 
+// clientIP is the address used for rate limits and logs. Proxy headers are
+// only believed from a trusted proxy; from X-Forwarded-For the rightmost
+// entry is used, the one the trusted proxy added itself.
 func (s *Server) clientIP(r *http.Request) string {
-	if s.cfg.TrustProxyHeaders {
-		if ip := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); ip != "" {
-			return ip
-		}
-		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-			first, _, _ := strings.Cut(fwd, ",")
-			return strings.TrimSpace(first)
+	remote := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		remote = host
+	}
+	if !s.cfg.TrustProxyHeaders || !s.trustedProxy(remote) {
+		return remote
+	}
+	if ip := net.ParseIP(strings.TrimSpace(r.Header.Get("CF-Connecting-IP"))); ip != nil {
+		return ip.String()
+	}
+	if fwd := r.Header.Values("X-Forwarded-For"); len(fwd) > 0 {
+		entries := strings.Split(fwd[len(fwd)-1], ",")
+		if ip := net.ParseIP(strings.TrimSpace(entries[len(entries)-1])); ip != nil {
+			return ip.String()
 		}
 	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
+	return remote
+}
+
+func (s *Server) trustedProxy(remote string) bool {
+	ip := net.ParseIP(remote)
+	if ip == nil {
+		return false
 	}
-	return host
+	if ip.IsLoopback() {
+		return true
+	}
+	for _, n := range s.cfg.TrustedProxies {
+		if n.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// warnClient logs a failed login or pairing attempt, at most once per
+// minute and client (/64 for IPv6) with the number of suppressed repeats.
+func (s *Server) warnClient(msg, ip string, attrs ...any) {
+	ok, suppressed := s.warnings.allow(msg + "|" + limiterKey(ip))
+	if !ok {
+		return
+	}
+	attrs = append([]any{"ip", ip}, attrs...)
+	if suppressed > 0 {
+		attrs = append(attrs, "suppressedSinceLast", suppressed)
+	}
+	s.log.Warn(msg, attrs...)
 }
 
 // readEnvelope reads one text message within timeout.
@@ -291,7 +333,7 @@ func (e *pairError) closeReason() string {
 // and HTTPS pairing.
 func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.PairOK, *pairError) {
 	if s.limiter.blocked(ip) {
-		s.log.Warn("pairing rate limited", "ip", ip)
+		s.warnClient("pairing rate limited", ip)
 		return protocol.PairOK{}, &pairError{protocol.ErrorPairingRateLimited, "Zu viele Versuche, bitte später erneut probieren", http.StatusTooManyRequests}
 	}
 	if decodeErr != nil || strings.TrimSpace(p.Code) == "" || !validPlatform(p.Platform) {
@@ -304,7 +346,7 @@ func (s *Server) pair(p protocol.Pair, decodeErr error, ip string) (protocol.Pai
 	}
 	if err != nil {
 		s.limiter.fail(ip)
-		s.log.Warn("pairing failed", "ip", ip, "error", err)
+		s.warnClient("pairing failed", ip, "error", err)
 		if errors.Is(err, store.ErrPairingInvalid) {
 			return protocol.PairOK{}, &pairError{protocol.ErrorPairingInvalid, "Der Kopplungscode ist ungültig oder abgelaufen", http.StatusForbidden}
 		}

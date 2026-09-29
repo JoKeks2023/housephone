@@ -85,6 +85,10 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 	if registrar != cfg.SIP.Registrar {
 		log.Info("FRITZ!Box address fixed", "registrar", cfg.SIP.Registrar, "ip", registrar)
 	}
+	trustedProxies, err := cfg.Bridge.TrustedProxyNets()
+	if err != nil {
+		return nil, err
+	}
 	fritzBoxHost := registrar
 	if cfg.FritzBox.Enabled() && cfg.FritzBox.Host != "" && cfg.FritzBox.Host != cfg.SIP.Registrar {
 		ip, err := lan.Resolve(ctx, cfg.FritzBox.Host)
@@ -191,6 +195,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		PublicURL:         cfg.Bridge.PublicURL,
 		PushTopic:         cfg.APNs.Topic,
 		TrustProxyHeaders: cfg.Bridge.TrustProxyHeaders,
+		TrustedProxies:    trustedProxies,
 		Devices:           b.Devices,
 		Pairing:           b.Pairing,
 		Hub:               b.manager,

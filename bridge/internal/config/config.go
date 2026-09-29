@@ -5,6 +5,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strconv"
@@ -75,8 +76,37 @@ type Bridge struct {
 	// DataDir holds devices.json, pairing.json and bridge.json.
 	DataDir string `yaml:"dataDir"`
 	// TrustProxyHeaders uses CF-Connecting-IP / X-Forwarded-For as client IP.
-	// Enable only behind Cloudflare Tunnel or a reverse proxy.
+	// Enable only behind Cloudflare Tunnel or a reverse proxy. The headers
+	// are only believed from loopback and from TrustedProxies.
 	TrustProxyHeaders bool `yaml:"trustProxyHeaders"`
+	// TrustedProxies are extra proxy addresses or CIDRs (e.g. a reverse
+	// proxy on another host) whose proxy headers are believed.
+	TrustedProxies []string `yaml:"trustedProxies"`
+}
+
+// TrustedProxyNets parses TrustedProxies (IP addresses or CIDRs).
+func (b Bridge) TrustedProxyNets() ([]*net.IPNet, error) {
+	var out []*net.IPNet
+	for _, raw := range b.TrustedProxies {
+		raw = strings.TrimSpace(raw)
+		if !strings.Contains(raw, "/") {
+			ip := net.ParseIP(raw)
+			if ip == nil {
+				return nil, fmt.Errorf("bridge.trustedProxies: %q is no IP address or CIDR", raw)
+			}
+			bits := 32
+			if ip.To4() == nil {
+				bits = 128
+			}
+			raw = fmt.Sprintf("%s/%d", ip, bits)
+		}
+		_, n, err := net.ParseCIDR(raw)
+		if err != nil {
+			return nil, fmt.Errorf("bridge.trustedProxies: %q is no IP address or CIDR", raw)
+		}
+		out = append(out, n)
+	}
+	return out, nil
 }
 
 type SIP struct {
@@ -243,6 +273,9 @@ func (c Config) ValidateServe() error {
 	}
 	if c.SIP.Registrar == "" {
 		errs = append(errs, errors.New("sip.registrar is required"))
+	}
+	if _, err := c.Bridge.TrustedProxyNets(); err != nil {
+		errs = append(errs, err)
 	}
 	if c.SIP.Username == "" {
 		errs = append(errs, errors.New("sip.username is required"))
