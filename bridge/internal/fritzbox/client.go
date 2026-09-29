@@ -172,6 +172,16 @@ func (c *Client) secureBase(ctx context.Context) (string, error) {
 	return base.String(), nil
 }
 
+// withoutURL drops the request URL from a transport error: download URLs
+// carry the FRITZ!Box session ID (sid), which must not end up in logs.
+func withoutURL(err error) error {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		return ue.Err
+	}
+	return err
+}
+
 // forgetSecurityPort makes the next call ask for the port again, e.g. after
 // the FRITZ!Box restarted with another port.
 func (c *Client) forgetSecurityPort() {
@@ -310,7 +320,7 @@ func (c *Client) download(ctx context.Context, raw string, extra url.Values) ([]
 	}
 	src, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || src.Path == "" {
-		return nil, &Error{Kind: KindProtocol, Err: fmt.Errorf("invalid download URL %q", raw)}
+		return nil, &Error{Kind: KindProtocol, Err: errors.New("invalid download URL")}
 	}
 	dst, _ := url.Parse(base)
 	dst.Path = src.Path
@@ -327,7 +337,7 @@ func (c *Client) download(ctx context.Context, raw string, extra url.Values) ([]
 	resp, err := c.secure.Do(req)
 	if err != nil {
 		c.forgetSecurityPort()
-		return nil, &Error{Kind: KindUnreachable, Err: fmt.Errorf("download %s: %w", src.Path, err)}
+		return nil, &Error{Kind: KindUnreachable, Err: fmt.Errorf("download %s: %w", src.Path, withoutURL(err))}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
