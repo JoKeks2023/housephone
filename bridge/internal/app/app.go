@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/JoKeks2023/housephone/bridge/internal/admin"
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
 	"github.com/JoKeks2023/housephone/bridge/internal/fritzbox"
@@ -31,7 +32,20 @@ import (
 type Option func(*options)
 
 type options struct {
-	pusher calls.Pusher
+	pusher  calls.Pusher
+	logRing *admin.LogRing
+	noAdmin bool
+}
+
+// WithLogRing lets the admin API show the recent log lines of ring.
+func WithLogRing(r *admin.LogRing) Option {
+	return func(o *options) { o.logRing = r }
+}
+
+// WithoutAdminSocket skips the admin socket (tests running several
+// bridges on one data directory).
+func WithoutAdminSocket() Option {
+	return func(o *options) { o.noAdmin = true }
 }
 
 // WithPusher replaces the APNs pusher.
@@ -55,6 +69,15 @@ type Bridge struct {
 	listener  net.Listener
 	// directory is nil unless fritzbox.username is configured.
 	directory *fritzbox.Directory
+
+	startedAt   time.Time
+	registrarIP string
+	publicIP    *media.PublicIPSource
+	apnsLoaded  bool
+	recorder    *admin.Recorder
+	logRing     *admin.LogRing
+	admin       *admin.Server
+	noAdmin     bool
 }
 
 // New prepares all components; nothing is served before Run. The context
@@ -84,6 +107,11 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		Key:      key,
 		Devices:  store.NewDevices(cfg.Bridge.DataDir),
 		Pairing:  store.NewPairing(cfg.Bridge.DataDir),
+
+		startedAt: time.Now(),
+		recorder:  admin.NewRecorder(50, nil),
+		logRing:   o.logRing,
+		noAdmin:   o.noAdmin,
 	}
 
 	// Credentials only go to the FRITZ!Box in the home network: resolve its
@@ -94,6 +122,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		return nil, fmt.Errorf("sip.registrar: %w", err)
 	}
 	registrar := registrarIP.String()
+	b.registrarIP = registrar
 	if registrar != cfg.SIP.Registrar {
 		log.Info("FRITZ!Box address fixed", "registrar", cfg.SIP.Registrar, "ip", registrar)
 	}
@@ -121,6 +150,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		STUN:   cfg.Media.STUN,
 		Detect: cfg.Media.DetectPublicIP,
 	}, log)
+	b.publicIP = publicIP
 	b.engine, err = media.NewEngine(media.EngineConfig{
 		UDPPort:         cfg.Media.UDPPort,
 		PublicIP:        publicIP.Get,
@@ -140,6 +170,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 			return nil, err
 		}
 		pusher = apns
+		b.apnsLoaded = true
 	}
 	if pusher == nil {
 		log.Warn("APNs is not configured: devices only ring while the app is open")
@@ -182,6 +213,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		Logger:      log,
 		CallerNames: callerNames,
 		MaxCalls:    cfg.Bridge.MaxCalls,
+		OnEvent:     b.recorder.Handle,
 	})
 	b.sip, err = sipleg.New(sipleg.Config{
 		Registrar:      registrar,
@@ -241,7 +273,22 @@ func (b *Bridge) Run(ctx context.Context) error {
 		IdleTimeout:    60 * time.Second,
 		MaxHeaderBytes: 16 << 10,
 	}
-	errCh := make(chan error, 2)
+	errCh := make(chan error, 3)
+	if !b.noAdmin {
+		// The admin API is a convenience: without it the bridge still
+		// serves calls, so a problem is logged instead of stopping it.
+		adminSrv, err := admin.Listen(b.cfg.Bridge.DataDir, adminService{b: b}, b.log)
+		if err != nil {
+			b.log.Warn("admin socket unavailable: TUI and live device removal do not work", "error", err)
+		} else {
+			b.admin = adminSrv
+			go func() {
+				if err := adminSrv.Serve(); err != nil {
+					b.log.Warn("admin socket stopped", "error", err)
+				}
+			}()
+		}
+	}
 	go func() {
 		if err := srv.Serve(b.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("http: %w", err)
@@ -273,6 +320,9 @@ func (b *Bridge) Run(ctx context.Context) error {
 	defer cancel()
 	b.manager.Shutdown(shutdownCtx)
 	b.signaling.Shutdown(shutdownCtx)
+	if b.admin != nil {
+		b.admin.Close(shutdownCtx)
+	}
 	_ = srv.Shutdown(shutdownCtx)
 	stopSIP()
 	select {
