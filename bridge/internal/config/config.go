@@ -82,6 +82,10 @@ type Bridge struct {
 	// TrustedNetworks are the source CIDRs PrivateListen accepts. Empty:
 	// RFC 1918, unique local (fc00::/7) and link-local addresses.
 	TrustedNetworks []string `yaml:"trustedNetworks"`
+	// ExcludedNetworks are source CIDRs PrivateListen rejects even if they
+	// lie in TrustedNetworks (the add-on excludes the Home Assistant
+	// container network, where the Cloudflared add-on lives).
+	ExcludedNetworks []string `yaml:"excludedNetworks"`
 	// Tailscale adds the Tailscale ranges (100.64.0.0/10,
 	// fd7a:115c:a1e0::/48) to TrustedNetworks.
 	Tailscale bool `yaml:"tailscale"`
@@ -129,6 +133,11 @@ func (b Bridge) TrustedNetworkNets() ([]*net.IPNet, error) {
 		raw = append(append([]string{}, raw...), TailscaleNetworks...)
 	}
 	return parseNets("bridge.trustedNetworks", raw)
+}
+
+// ExcludedNetworkNets parses ExcludedNetworks.
+func (b Bridge) ExcludedNetworkNets() ([]*net.IPNet, error) {
+	return parseNets("bridge.excludedNetworks", b.ExcludedNetworks)
 }
 
 // parseNets parses IP addresses or CIDRs.
@@ -333,6 +342,9 @@ func (c Config) ValidateServe() error {
 		errs = append(errs, err)
 	}
 	if _, err := c.Bridge.TrustedNetworkNets(); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := c.Bridge.ExcludedNetworkNets(); err != nil {
 		errs = append(errs, err)
 	}
 	if c.Bridge.PrivateListen != "" {

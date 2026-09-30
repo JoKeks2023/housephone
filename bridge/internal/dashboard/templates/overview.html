@@ -1,0 +1,43 @@
+{{template "head" .}}
+{{$L := .L}}{{$csrf := .CSRF}}{{with .Data.Status}}
+<section class="card" data-refresh>
+<h2>{{$L.T "status"}}</h2>
+<dl class="grid">
+<div><dt>{{$L.T "sip"}}</dt><dd>{{if .SIPRegistered}}<span class="dot ok"></span>{{$L.T "registered"}}{{else}}<span class="dot bad"></span>{{$L.T "notRegistered"}}{{end}}<small>{{.SIPUser}} @ {{.Registrar}}</small></dd></div>
+<div><dt>{{$L.T "publicIP"}}</dt><dd>{{if .PublicIP}}<span class="dot ok"></span>{{.PublicIP}}<small>{{$L.T "source"}}: {{.PublicIPSource}} · UDP {{.MediaPort}}</small>{{else}}<span class="dot bad"></span>{{$L.T "unknown"}}{{end}}</dd></div>
+<div><dt>{{$L.T "listeners"}}</dt><dd><span class="dot ok"></span>{{$L.T "public"}} <code>{{.Listen}}</code><small>{{if .PrivateListen}}<span class="dot ok"></span>{{$L.T "private"}} <code>{{.PrivateListen}}</code>{{with .LanURL}} · <code>{{.}}</code>{{end}}{{else}}<span class="dot bad"></span>{{$L.T "private"}}: {{$L.T "off"}}{{end}}</small></dd></div>
+<div><dt>{{$L.T "push"}}</dt><dd>{{if .APNsConfigured}}<span class="dot ok"></span>{{$L.T "configured"}}{{else}}<span class="dot warn"></span>{{$L.T "notConfigured"}}{{end}}</dd></div>
+<div><dt>{{$L.T "devicesOnline"}}</dt><dd>{{.DevicesOnline}} {{$L.T "of"}} {{.DevicesTotal}}</dd></div>
+<div><dt>{{$L.T "fingerprint"}}</dt><dd><code>{{.Fingerprint}}</code></dd></div>
+<div><dt>{{$L.T "version"}}</dt><dd>{{.Version}}<small>{{$L.T "running"}}: {{since $L .StartedAt}}</small></dd></div>
+</dl>
+</section>
+{{end}}
+<section class="card">
+<h2>{{.L.T "calls"}}</h2>
+{{if .Data.Calls}}<ul class="list">{{range .Data.Calls}}
+<li><div><strong>{{if eq .Direction "incoming"}}{{$L.T "incoming"}}{{else}}{{$L.T "outgoing"}}{{end}}</strong> {{.Number}}{{if .Name}} · {{.Name}}{{end}}
+<small>{{with .DeviceName}}{{.}} · {{end}}{{if .ConnectedAt.IsZero}}{{$L.T "ringing"}}{{else}}{{$L.T "connected"}} · {{since $L .ConnectedAt}}{{end}}{{with .Codec}} · {{.}}{{end}}</small></div></li>
+{{end}}</ul>{{else}}<p class="muted">{{.L.T "noCalls"}}</p>{{end}}
+</section>
+<section class="card">
+<h2>{{.L.T "devices"}}</h2>
+{{if .Data.Devices}}<ul class="list">{{range .Data.Devices}}
+<li>
+<div><span class="dot {{if .Online}}ok{{else}}off{{end}}"></span><strong>{{.Name}}</strong>
+<small>{{.Platform}}{{with .Model}} · {{.}}{{end}} · {{if .Online}}{{$L.T "online"}}{{else}}{{$L.T "lastSeen"}}: {{if .LastSeen.IsZero}}{{$L.T "never"}}{{else}}{{date .LastSeen}}{{end}}{{end}}{{with .PairedByName}} · {{$L.T "via"}} {{.}}{{end}} · <code>{{.KeyFingerprint}}</code></small></div>
+<div class="actions">
+<details><summary>{{$L.T "rename"}}</summary>
+<form method="post" action="devices/{{.ID}}/rename" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}"><input name="name" value="{{.Name}}" maxlength="64" required aria-label="{{$L.T "rename"}}"><button>{{$L.T "save"}}</button></form>
+</details>
+<a class="button danger" href="devices/{{.ID}}/remove">{{$L.T "remove"}}</a>
+</div>
+</li>
+{{end}}</ul>{{else}}<p class="muted">{{.L.T "noDevices"}}</p>{{end}}
+</section>
+<section class="card">
+<h2>{{.L.T "pairNew"}}</h2>
+<p class="muted">{{.L.T "pairHint"}}</p>
+<form method="post" action="pair" class="inline"><input type="hidden" name="csrf" value="{{.CSRF}}"><input name="name" maxlength="64" placeholder="{{.L.T "deviceName"}}" aria-label="{{.L.T "deviceName"}}"><button class="primary">{{.L.T "createCode"}}</button></form>
+</section>
+{{template "foot" .}}

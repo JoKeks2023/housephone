@@ -1,0 +1,17 @@
+{{template "head" .}}
+{{$L := .L}}{{with .Data.Info}}
+<section class="card pairing" id="pairing" data-code="{{.Code}}">
+<h2>{{$L.T "pairTitle"}}</h2>
+<p>{{$L.T "pairScan"}}</p>
+<img class="qr" src="{{$.Data.QR}}" alt="QR" width="240" height="240">
+<dl class="grid">
+<div><dt>{{$L.T "code"}}</dt><dd><code class="big">{{.Grouped}}</code></dd></div>
+<div><dt>{{$L.T "fingerprint"}}</dt><dd><code>{{.Fingerprint}}</code></dd></div>
+<div><dt>{{$L.T "validUntil"}}</dt><dd>{{clock .ExpiresAt}}</dd></div>
+</dl>
+<p id="pair-state" class="state" data-paired="{{$L.T "paired"}}" data-check="{{$L.T "pairedCheck"}}" data-expired="{{$L.T "expired"}}">{{$L.T "waiting"}}</p>
+<form method="post" action="pair/{{.Code}}/revoke" id="revoke"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button>{{$L.T "cancel"}}</button></form>
+<p><a class="button" href="./">{{$L.T "back"}}</a></p>
+</section>
+{{end}}
+{{template "foot" .}}

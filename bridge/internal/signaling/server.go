@@ -159,8 +159,8 @@ func (s *Server) PublicHandler() http.Handler { return s.routes(false) }
 // PrivateHandler returns the routes of the private listener: everything,
 // including pairing, but only for clients whose address (RemoteAddr, never
 // a proxy header) lies in trusted.
-func (s *Server) PrivateHandler(trusted []*net.IPNet) http.Handler {
-	return s.sourceFilter(trusted, s.routes(true))
+func (s *Server) PrivateHandler(trusted []*net.IPNet, excluded ...*net.IPNet) http.Handler {
+	return s.sourceFilter(trusted, excluded, s.routes(true))
 }
 
 // Handler returns all routes without a source filter (tests).
@@ -185,9 +185,10 @@ func (s *Server) routes(private bool) http.Handler {
 // sourceFilter lets only clients from trusted networks through. It looks at
 // the TCP peer only: a proxy on the same host (cloudflared) connects from
 // loopback, which is why loopback is not trusted unless listed explicitly.
-func (s *Server) sourceFilter(trusted []*net.IPNet, next http.Handler) http.Handler {
+// Sources in excluded are rejected even inside a trusted network.
+func (s *Server) sourceFilter(trusted, excluded []*net.IPNet, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !TrustedSource(trusted, r.RemoteAddr) {
+		if !TrustedSource(trusted, r.RemoteAddr) || (len(excluded) > 0 && TrustedSource(excluded, r.RemoteAddr)) {
 			s.warnClient("private listener: untrusted source", peerHost(r.RemoteAddr))
 			s.writeSignedError(w, s.sessionFromHeader(r), http.StatusForbidden, protocol.Error{Code: protocol.ErrorHomeNetworkRequired, Message: "only reachable from the home network"})
 			return

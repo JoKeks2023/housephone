@@ -1,0 +1,18 @@
+{{define "head"}}<!doctype html>
+<html lang="{{.L}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<base href="{{.Base}}/">
+<title>{{.L.T "title"}}</title>
+<link rel="stylesheet" href="static/app.css">
+<script src="static/app.js" defer></script>
+</head>
+<body>
+<main>
+<header class="top"><img src="static/icon.png" alt="" width="40" height="40"><h1>{{.L.T "title"}}</h1></header>
+{{end}}
+{{define "foot"}}</main>
+</body>
+</html>{{end}}
