@@ -193,6 +193,19 @@ sudo chown -R 1000:1000 data secrets
 </details>
 
 <details>
+<summary><b>🏠 Stattdessen als Home-Assistant-Add-on</b> (Home Assistant OS oder Supervised)</summary>
+
+Die Bridge läuft auch als Add-on in deiner Home-Assistant-Instanz, mit Dashboard in der Seitenleiste (Status, Anrufe, Geräte, Koppeln per QR-Code, nur für HA-Admins).
+
+1. **Einstellungen → Add-ons → Add-on Store → ⋮ → Repositories**: `https://github.com/JoKeks2023/housephone` hinzufügen
+2. **Housephone Bridge** installieren, im Reiter **Konfiguration** FRITZ!Box, IP-Telefon, öffentliche URL und APNs eintragen, starten
+3. Den Tunnel übernimmt das Community-Add-on **Cloudflared** mit `service: http://172.30.32.1:8080`
+4. Portfreigabe UDP 50000 auf den Home-Assistant-Rechner wie oben
+
+Schritt 4 (Compose), 5 (TUI) und 7 (Koppeln per Shell) entfallen: Status und Koppeln stehen im Dashboard. Alles Weitere steht in der [Add-on-Dokumentation](ha-addon/housephone-bridge/DOCS.md). Mit Home Assistant Container nimmst du Docker Compose wie oben.
+</details>
+
+<details>
 <summary><b>Image selbst bauen statt aus der Registry ziehen</b></summary>
 
 In `docker-compose.yml` `image:` auskommentieren und `build: .` aktivieren. Das fertige Image `ghcr.io/jokeks2023/housephone-bridge` gibt es für amd64 und arm64:
