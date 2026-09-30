@@ -118,6 +118,8 @@ jobs:
            "sip_password": "ci-secret-value", "apns_team_id": "T9CA6D7T8N",
            "apns_topic": "com.jorisconrad.housephone.voip", "log_level": "info"}
           EOF
+          # The Supervisor creates /data owned by root.
+          sudo chown -R 0:0 "$RUNNER_TEMP/addon-data"
           docker run -d --name addon --network host --security-opt no-new-privileges:true --cap-drop ALL \
             -v "$RUNNER_TEMP/addon-data:/data" housephone-bridge-addon:ci
           for i in $(seq 1 30); do
