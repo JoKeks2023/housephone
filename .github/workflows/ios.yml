@@ -48,18 +48,11 @@ jobs:
           sudo xcode-select -s "$xcode"
           xcodebuild -version
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
-
-      - name: Generate project
-        working-directory: ios
-        run: xcodegen generate
-
       - name: Cache Swift packages
         uses: actions/cache@v4
         with:
           path: ios/.spm
-          key: spm-${{ runner.os }}-${{ hashFiles('ios/project.yml') }}
+          key: spm-${{ runner.os }}-${{ hashFiles('ios/Housephone.xcodeproj/project.pbxproj') }}
 
       - name: Build
         working-directory: ios

@@ -5,17 +5,15 @@ SwiftUI-App (iOS 26+) mit CallKit und PushKit, dazu eine eigenständige Apple-Wa
 ## Bauen
 
 ```sh
-brew install xcodegen      # einmalig
-cd ios
-xcodegen generate          # erzeugt Housephone.xcodeproj (nicht eingecheckt)
-open Housephone.xcodeproj
+open ios/Housephone.xcodeproj
 ```
 
 - Auf ein **echtes iPhone** bauen. CallKit, PushKit und Audio lassen sich im Simulator nicht sinnvoll testen.
 - Signing ist automatisch mit Team `T9CA6D7T8N`.
 - Bundle-IDs: `com.jorisconrad.housephone` (iPhone) und `com.jorisconrad.housephone.watchkitapp` (Watch).
-- Die Capability „Push Notifications“ muss im Developer-Account für beide App-IDs aktiv sein. XcodeGen setzt `aps-environment` in den Entitlements.
-- Die Watch-App wird mit dem Scheme **Housephone** gebaut und in die iPhone-App eingebettet (`PlugIns/`). `scripts/fix-watch-embed.sh` läuft dafür automatisch nach `xcodegen generate` (XcodeGen 2.46 bettet sonst in das veraltete `Watch/` ein).
+- Die Capability „Push Notifications“ muss im Developer-Account für beide App-IDs aktiv sein. `aps-environment` steht in den Entitlements.
+- Die Watch-App wird mit dem Scheme **Housephone** gebaut und in die iPhone-App eingebettet (`PlugIns/`).
+- Das Xcode-Projekt ist eingecheckt und nutzt synchronisierte Ordner: Neue Dateien in `Housephone/`, `HousephoneWatch/` und `HousephoneLocalPush/` erscheinen automatisch in Xcode, ohne Generator. Einstellungen, Info.plist und Entitlements änderst du direkt in Xcode.
 
 ## Aufbau
 

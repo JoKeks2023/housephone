@@ -1,0 +1,682 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		29C451A567C35CBB61F5D642 /* HousephoneKit in Frameworks */ = {isa = PBXBuildFile; productRef = 94B68EDBD4C77DB295D2950A /* HousephoneKit */; };
+		2B81E720AD504F74549E6DCD /* NetworkExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F3C6170C651792E2D90CAE28 /* NetworkExtension.framework */; };
+		7B39C94DBE190E651E56E0FA /* HousephoneWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 6C582354C0418D5F2614E520 /* HousephoneWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		821E57838315754F73B4C221 /* HousephoneKit in Frameworks */ = {isa = PBXBuildFile; productRef = 40FABC2F3E22EF1FA370C696 /* HousephoneKit */; };
+		C86C794DC63B73847202FA9F /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = 29571C34F1498C777A5F5C78 /* WebRTC */; };
+		D506BFC71ABD6A570271C3BE /* HousephoneKit in Frameworks */ = {isa = PBXBuildFile; productRef = 49051CF863D1469B11100BA4 /* HousephoneKit */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		72C80C21A29B1E9F96D0EC87 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 02FEEC63117DC40AD1FA1CC1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 89D4FF449F8E4FC9E729D785;
+			remoteInfo = HousephoneWatch;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5917E0E9EFBA369D326A6D2C /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				7B39C94DBE190E651E56E0FA /* HousephoneWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		2F39AC5F6E8B537142EE1694 /* HousephoneLocalPush.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = HousephoneLocalPush.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		60EB083C463E76C08EB7324A /* Housephone.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Housephone.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		61E65336FDD80B6C9F6AA7D8 /* HousephoneKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HousephoneKit; path = Packages/HousephoneKit; sourceTree = SOURCE_ROOT; };
+		6C582354C0418D5F2614E520 /* HousephoneWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HousephoneWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3C6170C651792E2D90CAE28 /* NetworkExtension.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NetworkExtension.framework; path = System/Library/Frameworks/NetworkExtension.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6E98E722D95FB4A8343D4F05 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 89D4FF449F8E4FC9E729D785 /* HousephoneWatch */;
+		};
+		9FECDBA4CF24C9ED64FABA61 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 444E74BA3EEEEDABA0BC490D /* Housephone */;
+		};
+		A3CF809F7CAC157EABB4211E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CAF2740010D70242964BB81C /* HousephoneLocalPush */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		6E752E8BADA8367D6057CE0A /* HousephoneWatch */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6E98E722D95FB4A8343D4F05 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = HousephoneWatch;
+			sourceTree = "<group>";
+		};
+		7A444F88E5710BD5F302B069 /* Housephone */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9FECDBA4CF24C9ED64FABA61 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Housephone;
+			sourceTree = "<group>";
+		};
+		A96752AAF23593F8E0A1A57B /* HousephoneLocalPush */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A3CF809F7CAC157EABB4211E /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = HousephoneLocalPush;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		392FB7E97B4A24F094B692E6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C86C794DC63B73847202FA9F /* WebRTC in Frameworks */,
+				D506BFC71ABD6A570271C3BE /* HousephoneKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		87AED775F0BBFE35912AEA09 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				821E57838315754F73B4C221 /* HousephoneKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA7C1201B8E3783D78AACBDD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				29C451A567C35CBB61F5D642 /* HousephoneKit in Frameworks */,
+				2B81E720AD504F74549E6DCD /* NetworkExtension.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		044AD2BA500BC96C67C4368B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F3C6170C651792E2D90CAE28 /* NetworkExtension.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		45B65FF2B85BBE826E193FD8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				60EB083C463E76C08EB7324A /* Housephone.app */,
+				2F39AC5F6E8B537142EE1694 /* HousephoneLocalPush.appex */,
+				6C582354C0418D5F2614E520 /* HousephoneWatch.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		96728F8A1A18C2A26A11CCF9 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				61E65336FDD80B6C9F6AA7D8 /* HousephoneKit */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		DB0482FE742096768AB76DBF = {
+			isa = PBXGroup;
+			children = (
+				7A444F88E5710BD5F302B069 /* Housephone */,
+				A96752AAF23593F8E0A1A57B /* HousephoneLocalPush */,
+				6E752E8BADA8367D6057CE0A /* HousephoneWatch */,
+				96728F8A1A18C2A26A11CCF9 /* Packages */,
+				044AD2BA500BC96C67C4368B /* Frameworks */,
+				45B65FF2B85BBE826E193FD8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		444E74BA3EEEEDABA0BC490D /* Housephone */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 788B628A4FAC181E0A40CB9E /* Build configuration list for PBXNativeTarget "Housephone" */;
+			buildPhases = (
+				E7DC978F3677BB76A06EAFD4 /* Sources */,
+				36324CE8523C7085D135C5EA /* Resources */,
+				392FB7E97B4A24F094B692E6 /* Frameworks */,
+				5917E0E9EFBA369D326A6D2C /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6E7623623D37AF5B0E609CCE /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7A444F88E5710BD5F302B069 /* Housephone */,
+			);
+			name = Housephone;
+			packageProductDependencies = (
+				29571C34F1498C777A5F5C78 /* WebRTC */,
+				49051CF863D1469B11100BA4 /* HousephoneKit */,
+			);
+			productName = Housephone;
+			productReference = 60EB083C463E76C08EB7324A /* Housephone.app */;
+			productType = "com.apple.product-type.application";
+		};
+		89D4FF449F8E4FC9E729D785 /* HousephoneWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C636BF316D851E3DBC8BE569 /* Build configuration list for PBXNativeTarget "HousephoneWatch" */;
+			buildPhases = (
+				C7FE7A3A46F601108893A4C9 /* Sources */,
+				E0BD0348597FF60F934ECA68 /* Resources */,
+				87AED775F0BBFE35912AEA09 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6E752E8BADA8367D6057CE0A /* HousephoneWatch */,
+			);
+			name = HousephoneWatch;
+			packageProductDependencies = (
+				40FABC2F3E22EF1FA370C696 /* HousephoneKit */,
+			);
+			productName = HousephoneWatch;
+			productReference = 6C582354C0418D5F2614E520 /* HousephoneWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		CAF2740010D70242964BB81C /* HousephoneLocalPush */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1ABEB3F6F0FBDE9CDCBC740F /* Build configuration list for PBXNativeTarget "HousephoneLocalPush" */;
+			buildPhases = (
+				B45CD310CD04C930D3C9AC4B /* Sources */,
+				DE19B7320108C32AA38A50EE /* Resources */,
+				FA7C1201B8E3783D78AACBDD /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A96752AAF23593F8E0A1A57B /* HousephoneLocalPush */,
+			);
+			name = HousephoneLocalPush;
+			packageProductDependencies = (
+				94B68EDBD4C77DB295D2950A /* HousephoneKit */,
+			);
+			productName = HousephoneLocalPush;
+			productReference = 2F39AC5F6E8B537142EE1694 /* HousephoneLocalPush.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		02FEEC63117DC40AD1FA1CC1 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					444E74BA3EEEEDABA0BC490D = {
+						DevelopmentTeam = T9CA6D7T8N;
+						ProvisioningStyle = Automatic;
+					};
+					89D4FF449F8E4FC9E729D785 = {
+						DevelopmentTeam = T9CA6D7T8N;
+						ProvisioningStyle = Automatic;
+					};
+					CAF2740010D70242964BB81C = {
+						DevelopmentTeam = T9CA6D7T8N;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 9BDBB4D69B3492036EE6ECD9 /* Build configuration list for PBXProject "Housephone" */;
+			developmentRegion = de;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				de,
+			);
+			mainGroup = DB0482FE742096768AB76DBF;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2F938B227CE3F94E96F19974 /* XCRemoteSwiftPackageReference "WebRTC" */,
+				0B04B49E61E4167C656EC6B8 /* XCLocalSwiftPackageReference "Packages/HousephoneKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 45B65FF2B85BBE826E193FD8 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				444E74BA3EEEEDABA0BC490D /* Housephone */,
+				CAF2740010D70242964BB81C /* HousephoneLocalPush */,
+				89D4FF449F8E4FC9E729D785 /* HousephoneWatch */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		36324CE8523C7085D135C5EA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE19B7320108C32AA38A50EE /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E0BD0348597FF60F934ECA68 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B45CD310CD04C930D3C9AC4B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C7FE7A3A46F601108893A4C9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E7DC978F3677BB76A06EAFD4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6E7623623D37AF5B0E609CCE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 89D4FF449F8E4FC9E729D785 /* HousephoneWatch */;
+			targetProxy = 72C80C21A29B1E9F96D0EC87 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		3054293F62210B6129F2D865 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = T9CA6D7T8N;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		305EDE2F9C4850998926807F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = T9CA6D7T8N;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		55C9E17C840751518BCA01E9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = HousephoneLocalPush/HousephoneLocalPush.entitlements;
+				INFOPLIST_FILE = HousephoneLocalPush/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone.localpush;
+				PRODUCT_NAME = HousephoneLocalPush;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		5926AB5D40B0E7D3780A806F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HousephoneWatch/HousephoneWatch.entitlements;
+				INFOPLIST_FILE = HousephoneWatch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone.watchkitapp;
+				PRODUCT_NAME = HousephoneWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Release;
+		};
+		5A1930BF6AB051AB426497AB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Housephone/Housephone.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Housephone/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone;
+				PRODUCT_NAME = Housephone;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7BDE4F97B3BC6F9392E42ACB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HousephoneWatch/HousephoneWatch.entitlements;
+				INFOPLIST_FILE = HousephoneWatch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone.watchkitapp;
+				PRODUCT_NAME = HousephoneWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Debug;
+		};
+		8C444F49D5E47F67835D4EC6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = HousephoneLocalPush/HousephoneLocalPush.entitlements;
+				INFOPLIST_FILE = HousephoneLocalPush/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone.localpush;
+				PRODUCT_NAME = HousephoneLocalPush;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F2D622F475390659B93BCD9A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Housephone/Housephone.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Housephone/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone;
+				PRODUCT_NAME = Housephone;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1ABEB3F6F0FBDE9CDCBC740F /* Build configuration list for PBXNativeTarget "HousephoneLocalPush" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8C444F49D5E47F67835D4EC6 /* Debug */,
+				55C9E17C840751518BCA01E9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		788B628A4FAC181E0A40CB9E /* Build configuration list for PBXNativeTarget "Housephone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A1930BF6AB051AB426497AB /* Debug */,
+				F2D622F475390659B93BCD9A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9BDBB4D69B3492036EE6ECD9 /* Build configuration list for PBXProject "Housephone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3054293F62210B6129F2D865 /* Debug */,
+				305EDE2F9C4850998926807F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C636BF316D851E3DBC8BE569 /* Build configuration list for PBXNativeTarget "HousephoneWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7BDE4F97B3BC6F9392E42ACB /* Debug */,
+				5926AB5D40B0E7D3780A806F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		0B04B49E61E4167C656EC6B8 /* XCLocalSwiftPackageReference "Packages/HousephoneKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/HousephoneKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2F938B227CE3F94E96F19974 /* XCRemoteSwiftPackageReference "WebRTC" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stasel/WebRTC.git";
+			requirement = {
+				kind = exactVersion;
+				version = 153.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		29571C34F1498C777A5F5C78 /* WebRTC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2F938B227CE3F94E96F19974 /* XCRemoteSwiftPackageReference "WebRTC" */;
+			productName = WebRTC;
+		};
+		40FABC2F3E22EF1FA370C696 /* HousephoneKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HousephoneKit;
+		};
+		49051CF863D1469B11100BA4 /* HousephoneKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HousephoneKit;
+		};
+		94B68EDBD4C77DB295D2950A /* HousephoneKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HousephoneKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 02FEEC63117DC40AD1FA1CC1 /* Project object */;
+}
