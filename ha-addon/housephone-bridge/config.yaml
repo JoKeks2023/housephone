@@ -8,22 +8,19 @@ arch:
   - aarch64
   - amd64
 startup: services
-boot: auto
 # SIP and RTP to the FRITZ!Box, UDP 50000 for the media, the home network
 # listener 8081 and the FRITZ!Box UPnP lookup need the host network.
 host_network: true
 ingress: true
-# Must match config.HAIngressPort in the bridge.
-ingress_port: 8099
+# Ingress on the default port 8099 (config.HAIngressPort in the bridge).
+# panel_admin defaults to true: only Home Assistant admins see the panel.
 panel_icon: mdi:phone
 panel_title: Housephone
-panel_admin: true
 # The APNs key (.p8) goes into the add-on's config folder
 # (/addon_configs/<slug>/ on the host, /config in the container).
 map:
   - type: addon_config
     read_only: true
-backup: hot
 options:
   bridge_name: Zuhause
   public_url: ""

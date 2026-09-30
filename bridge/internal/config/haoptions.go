@@ -19,7 +19,7 @@ const (
 	// HAIngressProxy is the Supervisor's ingress proxy; the dashboard only
 	// accepts connections from it.
 	HAIngressProxy = "172.30.32.2"
-	// HAIngressPort must match ingress_port in the add-on's config.yaml.
+	// HAIngressPort is the add-on's ingress_port (8099, the default).
 	HAIngressPort = 8099
 	// HANetwork is the Supervisor network. Other add-ons live there.
 	HANetwork = "172.30.32.0/23"

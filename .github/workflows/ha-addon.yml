@@ -29,4 +29,6 @@ jobs:
       - name: ingress port matches the bridge
         run: |
           port=$(grep -E '^ingress_port:' ha-addon/housephone-bridge/config.yaml | awk '{print $2}')
-          grep -q "HAIngressPort = ${port}$" bridge/internal/config/haoptions.go
+          grep -q "HAIngressPort = ${port:-8099}$" bridge/internal/config/haoptions.go
+          # panel_admin must stay at its default (true): admins only.
+          ! grep -qE '^panel_admin: *false' ha-addon/housephone-bridge/config.yaml
