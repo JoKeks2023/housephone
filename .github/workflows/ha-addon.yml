@@ -1,0 +1,32 @@
+name: Home Assistant add-on
+
+on:
+  push:
+    paths:
+      - "ha-addon/**"
+      - "repository.yaml"
+      - ".github/workflows/ha-addon.yml"
+  pull_request:
+    paths:
+      - "ha-addon/**"
+      - "repository.yaml"
+      - ".github/workflows/ha-addon.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: add-on linter
+        uses: frenck/action-addon-linter@v2
+        with:
+          path: "./ha-addon/housephone-bridge"
+      # The dashboard's ingress port is compiled into the bridge.
+      - name: ingress port matches the bridge
+        run: |
+          port=$(grep -E '^ingress_port:' ha-addon/housephone-bridge/config.yaml | awk '{print $2}')
+          grep -q "HAIngressPort = ${port}$" bridge/internal/config/haoptions.go
