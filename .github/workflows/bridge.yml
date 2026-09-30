@@ -4,11 +4,13 @@ on:
   push:
     paths:
       - "bridge/**"
+      - "ha-addon/**"
       - "docs/protocol/**"
       - ".github/workflows/bridge.yml"
   pull_request:
     paths:
       - "bridge/**"
+      - "ha-addon/**"
       - "docs/protocol/**"
       - ".github/workflows/bridge.yml"
 
@@ -101,3 +103,43 @@ jobs:
           grep -q "FRITZ!Box-Anmeldung" tui.txt
           docker exec hardened housephone-bridge devices list
           test "$(docker inspect -f '{{.State.Running}}' hardened)" = true
+      - name: docker build (Home Assistant add-on)
+        run: docker build --target addon --build-arg VERSION=${{ github.sha }} -t housephone-bridge-addon:ci bridge
+      # Imitates the Supervisor: the hassio network (gateway 172.30.32.1),
+      # a host-network add-on, /data/options.json, and the ingress proxy at
+      # 172.30.32.2.
+      - name: start add-on image like the Supervisor
+        run: |
+          docker network create --subnet 172.30.32.0/23 --gateway 172.30.32.1 hassio
+          mkdir -p "$RUNNER_TEMP/addon-data"
+          cat > "$RUNNER_TEMP/addon-data/options.json" <<'EOF'
+          {"bridge_name": "CI", "public_url": "wss://phone.example.com/v1/ws", "tunnel_port": 8080,
+           "tailscale": false, "fritzbox_host": "192.168.178.1", "sip_username": "ci",
+           "sip_password": "ci-secret-value", "apns_team_id": "T9CA6D7T8N",
+           "apns_topic": "com.jorisconrad.housephone.voip", "log_level": "info"}
+          EOF
+          # The Supervisor creates /data owned by root.
+          sudo chown -R 0:0 "$RUNNER_TEMP/addon-data"
+          docker run -d --name addon --network host --security-opt no-new-privileges:true --cap-drop ALL \
+            -v "$RUNNER_TEMP/addon-data:/data" housephone-bridge-addon:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://172.30.32.1:8080/v1/health > addon-health.json; then break; fi
+            sleep 1
+          done
+          docker logs addon 2>&1 | tee addon.log
+          test "$(cat addon-health.json)" = '{"status":"ok"}'
+          # The SIP password never reaches the log.
+          ! grep -q "ci-secret-value" addon.log
+          # Dashboard: the ingress proxy gets it, everyone else gets 403.
+          docker run --rm --network hassio --ip 172.30.32.2 curlimages/curl:8.16.0 \
+            -fsS -H "X-Ingress-Path: /api/hassio_ingress/ci" http://172.30.32.1:8099/ | tee dashboard.html
+          grep -q 'base href="/api/hassio_ingress/ci/"' dashboard.html
+          grep -q "Housephone Bridge" dashboard.html
+          code=$(docker run --rm --network hassio --ip 172.30.32.9 curlimages/curl:8.16.0 -s -o /dev/null -w '%{http_code}' http://172.30.32.1:8099/)
+          test "$code" = 403
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://172.30.32.1:8099/)
+          test "$code" = 403
+          # The home network listener refuses the add-on network.
+          code=$(docker run --rm --network hassio --ip 172.30.32.9 curlimages/curl:8.16.0 -s -o /dev/null -w '%{http_code}' http://172.30.32.1:8081/v1/health)
+          test "$code" = 403
+          test "$(docker inspect -f '{{.State.Running}}' addon)" = true

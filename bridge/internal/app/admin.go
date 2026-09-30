@@ -31,6 +31,8 @@ func (s adminService) Status() admin.Status {
 		StartedAt:          b.startedAt,
 		PublicURL:          b.cfg.Bridge.PublicURL,
 		Listen:             b.Addr(),
+		PrivateListen:      b.PrivateAddr(),
+		LanURL:             b.lanURL,
 		SIPRegistered:      b.sip.Registered(),
 		Registrar:          b.registrarIP,
 		SIPUser:            b.cfg.SIP.Username,

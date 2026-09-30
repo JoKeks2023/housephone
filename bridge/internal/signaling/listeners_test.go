@@ -184,3 +184,23 @@ func TestPrivateHandlerFiltersSources(t *testing.T) {
 		t.Fatalf("pair.companion %+v", pc)
 	}
 }
+
+// Excluded networks win over trusted ones (the add-on excludes the Home
+// Assistant container network, where the Cloudflared add-on runs).
+func TestPrivateHandlerExcludedNetworks(t *testing.T) {
+	ts := newTestServer(t, func(c *Config) { c.LanURL = testLanURL })
+	trusted := mustNets(t, config.Bridge{TrustedNetworks: []string{"127.0.0.0/8", "::1"}})
+	excluded, err := config.Bridge{ExcludedNetworks: []string{"127.0.0.0/8", "::1"}}.ExcludedNetworkNets()
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := startListener(t, ts.srv.PrivateHandler(trusted, excluded...))
+	res, err := http.Get(srv.URL + "/v1/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusForbidden {
+		t.Fatalf("excluded source: %d, want 403", res.StatusCode)
+	}
+}

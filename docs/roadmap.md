@@ -22,7 +22,8 @@
 | 4 | **Koppeln im Heimnetz ohne QR** | Bonjour, Bestätigungscode, Freigabe durch ein Admin-Gerät |
 | 5 | **Profile** | Mehrere Nutzer mit eigener Festnetznummer, je ein IP-Telefon an der FRITZ!Box |
 | 6 | **Home Assistant** | MQTT-Discovery (nur ausgehend), Sensoren, Ereignis „Anruf eingehend“ |
-| 7 | *Optional:* Web-UI | Über Tailscale-HTTPS mit Passkey, Zitadel optional |
+| 7 | **Home-Assistant-Add-on** | Bridge als Add-on mit Dashboard per Ingress (HPHN-51, ADR-0006) |
+| 8 | *Optional:* Web-UI ohne Home Assistant | Dasselbe Dashboard über den Heimnetz-Zugang mit Passkey-Gate (HPHN-39), Zitadel optional |
 
 ## Später
 

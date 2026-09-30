@@ -3,6 +3,7 @@
 // Usage:
 //
 //	housephone-bridge [-config config.yaml] serve
+//	housephone-bridge serve -ha-options /data/options.json   (Home Assistant add-on)
 //	housephone-bridge [-config config.yaml] pair [-name "iPhone Joris"]
 //	housephone-bridge [-config config.yaml] identity
 //	housephone-bridge [-config config.yaml] devices list
@@ -17,6 +18,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
+	"net/netip"
 	"os"
 	"os/signal"
 	"strconv"
@@ -31,6 +34,7 @@ import (
 	"github.com/JoKeks2023/housephone/bridge/internal/admin"
 	"github.com/JoKeks2023/housephone/bridge/internal/app"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
+	"github.com/JoKeks2023/housephone/bridge/internal/dashboard"
 	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/signaling"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
@@ -50,6 +54,7 @@ func usage(w io.Writer) {
 
 Befehle:
   serve                     Bridge starten
+  serve -ha-options PFAD    Bridge als Home-Assistant-Add-on starten (mit Dashboard)
   pair [-name NAME]         Kopplungscode + QR-Code für ein neues Gerät erzeugen
                             und warten, bis es gekoppelt ist (Strg-C: Code ungültig)
   tui                       Admin-Oberfläche (Status, Geräte, Kopplung, Anrufe, Logs, Selbsttest)
@@ -87,6 +92,26 @@ func run(args []string, stdout, stderr io.Writer) error {
 		fmt.Fprintln(stdout, version.Version)
 		return nil
 	case "serve":
+		fs := flag.NewFlagSet("serve", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		haOptions := fs.String("ha-options", "", "Home-Assistant-Add-on: Optionen aus dieser Datei statt -config (/data/options.json)")
+		if err := fs.Parse(rest[1:]); err != nil {
+			return err
+		}
+		if *haOptions != "" {
+			cfg, err := config.LoadHAOptions(*haOptions)
+			if err != nil {
+				return err
+			}
+			if err := cfg.ValidateServe(); err != nil {
+				return err
+			}
+			// Only the add-on serves the dashboard: behind ingress, where Home
+			// Assistant has authenticated the user.
+			gate := dashboard.SupervisorGate{Proxy: netip.MustParseAddr(config.HAIngressProxy)}
+			listen := net.JoinHostPort(config.HAGateway, strconv.Itoa(config.HAIngressPort))
+			return serve(cfg, stderr, app.WithDashboard(listen, gate))
+		}
 		cfg, err := config.Load(*configPath, false)
 		if err != nil {
 			return err
@@ -160,13 +185,13 @@ func newLogger(level string, w io.Writer) *slog.Logger {
 	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: l}))
 }
 
-func serve(cfg config.Config, logOut io.Writer) error {
+func serve(cfg config.Config, logOut io.Writer, opts ...app.Option) error {
 	ring := admin.NewLogRing(1000)
 	log := slog.New(ring.Handler(newLogger(cfg.Log.Level, logOut).Handler()))
 	slog.SetDefault(log)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	bridge, err := app.New(ctx, cfg, log, app.WithLogRing(ring))
+	bridge, err := app.New(ctx, cfg, log, append([]app.Option{app.WithLogRing(ring)}, opts...)...)
 	if err != nil {
 		return err
 	}

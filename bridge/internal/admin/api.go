@@ -25,6 +25,10 @@ type Status struct {
 	StartedAt   time.Time `json:"startedAt"`
 	PublicURL   string    `json:"publicUrl"`
 	Listen      string    `json:"listen"`
+	// PrivateListen and LanURL are the home network listener; empty if
+	// it is disabled.
+	PrivateListen string `json:"privateListen,omitempty"`
+	LanURL        string `json:"lanUrl,omitempty"`
 
 	SIPRegistered bool   `json:"sipRegistered"`
 	Registrar     string `json:"registrar"`

@@ -12,6 +12,17 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath \
       -o /out/housephone-bridge ./cmd/housephone-bridge \
  && mkdir -p /out/data /out/config
 
+# Home Assistant add-on (ghcr.io/jokeks2023/housephone-bridge-addon,
+# `--target addon`). Runs as root: the Supervisor mounts /data owned by root.
+# The add-on runs unprivileged in the Supervisor's AppArmor profile.
+FROM gcr.io/distroless/static-debian12 AS addon
+ARG VERSION=dev
+LABEL io.hass.type="addon" io.hass.version="${VERSION}"
+COPY --from=build /out/housephone-bridge /usr/local/bin/housephone-bridge
+ENTRYPOINT ["/usr/local/bin/housephone-bridge"]
+CMD ["serve", "-ha-options", "/data/options.json"]
+
+# Docker Compose (default target).
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/housephone-bridge /usr/local/bin/housephone-bridge
 COPY --from=build --chown=65532:65532 /out/data /data

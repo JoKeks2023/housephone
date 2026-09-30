@@ -1,0 +1,46 @@
+configuration:
+  bridge_name:
+    name: Name der Bridge
+    description: So heißt die Bridge in der App, z. B. „Zuhause“.
+  public_url:
+    name: Öffentliche URL
+    description: WebSocket-URL über den Cloudflare Tunnel, z. B. wss://phone.example.com/v1/ws.
+  lan_url:
+    name: Heimnetz-URL (optional)
+    description: Leer lassen, dann wird sie aus der LAN-IP abgeleitet. Mit Tailscale die Tailscale-IP, z. B. ws://100.101.102.103:8081/v1/ws.
+  tunnel_port:
+    name: Tunnel-Port
+    description: Port für den Cloudflare Tunnel auf 172.30.32.1. Im Cloudflared-Add-on als http://172.30.32.1:8080 eintragen.
+  tailscale:
+    name: Tailscale erlauben
+    description: Koppeln und Direktverbindung auch über Tailscale (100.64.0.0/10).
+  fritzbox_host:
+    name: FRITZ!Box-Adresse
+    description: LAN-IP der FRITZ!Box, z. B. 192.168.178.1.
+  sip_username:
+    name: Benutzername des IP-Telefons
+    description: FRITZ!Box → Telefonie → Telefoniegeräte → IP-Telefon.
+  sip_password:
+    name: Kennwort des IP-Telefons
+    description: Wird nicht geloggt.
+  fritzbox_username:
+    name: FRITZ!Box-Benutzer (optional)
+    description: Für Telefonbuch und Anrufliste. Braucht nur das Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“.
+  fritzbox_password:
+    name: Kennwort des FRITZ!Box-Benutzers
+    description: Nur mit FRITZ!Box-Benutzer nötig.
+  apns_key_file:
+    name: APNs-Schlüssel
+    description: Pfad zur .p8-Datei im Konfigurationsordner des Add-ons, z. B. /config/AuthKey.p8.
+  apns_key_id:
+    name: APNs Key ID
+    description: Die ID des Schlüssels aus dem Apple-Developer-Konto.
+  apns_team_id:
+    name: Apple Team ID
+    description: Team-ID des Apple-Developer-Kontos.
+  apns_topic:
+    name: APNs Topic
+    description: Bundle-ID der App plus „.voip“.
+  log_level:
+    name: Log-Level
+    description: Telefonnummern stehen immer gekürzt im Log.

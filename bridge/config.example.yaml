@@ -20,6 +20,9 @@ bridge:
   # Absender, die privateListen annimmt (IP oder CIDR). Leer: 10.0.0.0/8,
   # 172.16.0.0/12, 192.168.0.0/16, fc00::/7 und Link-local.
   trustedNetworks: []
+  # Absender, die privateListen trotzdem abweist (IP oder CIDR), z. B. ein
+  # Container-Netz innerhalb von trustedNetworks. Leer: keine.
+  excludedNetworks: []
   # Tailscale-Adressen (100.64.0.0/10, fd7a:115c:a1e0::/48) zusätzlich
   # erlauben: Koppeln und direkte Verbindung auch unterwegs per Tailscale.
   tailscale: false

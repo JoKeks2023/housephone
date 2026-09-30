@@ -71,6 +71,12 @@ type world struct {
 // config before it starts.
 func startWorld(t *testing.T, opts ...func(*config.Config)) *world {
 	t.Helper()
+	return startWorldWith(t, nil, opts...)
+}
+
+// startWorldWith is startWorld with extra bridge options.
+func startWorldWith(t *testing.T, appOpts []app.Option, opts ...func(*config.Config)) *world {
+	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	box, err := fakefritz.Start(ctx, "620", "geheim", nil, logger())
 	if err != nil {
@@ -97,7 +103,7 @@ func startWorld(t *testing.T, opts ...func(*config.Config)) *world {
 		opt(&cfg)
 	}
 	pusher := &recordingPusher{pushes: make(chan protocol.PushIncomingCall, 10)}
-	bridge, err := app.New(ctx, cfg, logger(), app.WithPusher(pusher))
+	bridge, err := app.New(ctx, cfg, logger(), append([]app.Option{app.WithPusher(pusher)}, appOpts...)...)
 	if err != nil {
 		t.Fatal(err)
 	}

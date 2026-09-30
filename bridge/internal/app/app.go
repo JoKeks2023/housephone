@@ -15,6 +15,7 @@ import (
 	"github.com/JoKeks2023/housephone/bridge/internal/admin"
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
+	"github.com/JoKeks2023/housephone/bridge/internal/dashboard"
 	"github.com/JoKeks2023/housephone/bridge/internal/fritzbox"
 	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/lan"
@@ -32,9 +33,22 @@ import (
 type Option func(*options)
 
 type options struct {
-	pusher  calls.Pusher
-	logRing *admin.LogRing
-	noAdmin bool
+	pusher    calls.Pusher
+	logRing   *admin.LogRing
+	noAdmin   bool
+	dashboard *dashboardOptions
+}
+
+type dashboardOptions struct {
+	listen string
+	gate   dashboard.Gate
+}
+
+// WithDashboard serves the web dashboard on its own listener behind gate.
+// Only the Home Assistant add-on uses it (ingress); plain Docker stays with
+// the shell and the TUI until HPHN-39 adds a passkey gate.
+func WithDashboard(listen string, gate dashboard.Gate) Option {
+	return func(o *options) { o.dashboard = &dashboardOptions{listen: listen, gate: gate} }
 }
 
 // WithLogRing lets the admin API show the recent log lines of ring.
@@ -70,6 +84,7 @@ type Bridge struct {
 	// privateListener serves the home network (nil if disabled).
 	privateListener net.Listener
 	trustedNetworks []*net.IPNet
+	excludedNets    []*net.IPNet
 	lanURL          string
 	// directory is nil unless fritzbox.username is configured.
 	directory *fritzbox.Directory
@@ -82,6 +97,9 @@ type Bridge struct {
 	logRing     *admin.LogRing
 	admin       *admin.Server
 	noAdmin     bool
+	dashboard   *dashboardOptions
+	// dashboardListener is nil without a dashboard.
+	dashboardListener net.Listener
 }
 
 // New prepares all components; nothing is served before Run. The context
@@ -116,6 +134,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		recorder:  admin.NewRecorder(50, nil),
 		logRing:   o.logRing,
 		noAdmin:   o.noAdmin,
+		dashboard: o.dashboard,
 	}
 
 	// Credentials only go to the FRITZ!Box in the home network: resolve its
@@ -135,6 +154,10 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		return nil, err
 	}
 	b.trustedNetworks, err = cfg.Bridge.TrustedNetworkNets()
+	if err != nil {
+		return nil, err
+	}
+	b.excludedNets, err = cfg.Bridge.ExcludedNetworkNets()
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +304,23 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		b.engine.Close()
 		return nil, fmt.Errorf("listen %s: %w", cfg.Bridge.Listen, err)
 	}
+	if o.dashboard != nil {
+		// Like the admin socket a convenience: calls keep working without it.
+		if l, err := net.Listen("tcp", o.dashboard.listen); err != nil {
+			log.Error("dashboard unavailable", "listen", o.dashboard.listen, "error", err)
+		} else {
+			b.dashboardListener = l
+		}
+	}
 	return b, nil
+}
+
+// DashboardAddr is the dashboard's listen address, empty if off.
+func (b *Bridge) DashboardAddr() string {
+	if b.dashboardListener == nil {
+		return ""
+	}
+	return b.dashboardListener.Addr().String()
 }
 
 // Addr is the public HTTP listen address.
@@ -332,13 +371,23 @@ func (b *Bridge) Run(ctx context.Context) error {
 			}()
 		}
 	}
+	var dashSrv *http.Server
+	if b.dashboardListener != nil {
+		dashSrv = newServer(dashboard.New(adminService{b: b}, b.dashboard.gate, b.log).Handler())
+		go func() {
+			if err := dashSrv.Serve(b.dashboardListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				b.log.Warn("dashboard stopped", "error", err)
+			}
+		}()
+		b.log.Info("dashboard running", "listen", b.DashboardAddr())
+	}
 	go func() {
 		if err := srv.Serve(b.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("http: %w", err)
 		}
 	}()
 	if b.privateListener != nil {
-		privateSrv = newServer(b.signaling.PrivateHandler(b.trustedNetworks))
+		privateSrv = newServer(b.signaling.PrivateHandler(b.trustedNetworks, b.excludedNets...))
 		go func() {
 			if err := privateSrv.Serve(b.privateListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				errCh <- fmt.Errorf("http (private): %w", err)
@@ -376,6 +425,9 @@ func (b *Bridge) Run(ctx context.Context) error {
 		b.admin.Close(shutdownCtx)
 	}
 	_ = srv.Shutdown(shutdownCtx)
+	if dashSrv != nil {
+		_ = dashSrv.Shutdown(shutdownCtx)
+	}
 	if privateSrv != nil {
 		_ = privateSrv.Shutdown(shutdownCtx)
 	}

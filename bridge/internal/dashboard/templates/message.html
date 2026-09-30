@@ -1,0 +1,7 @@
+{{template "head" .}}
+<section class="card">
+<h2>{{.Data.Title}}</h2>
+{{with .Data.Detail}}<p>{{.}}</p>{{end}}
+<p><a class="button" href="./">{{.L.T "back"}}</a></p>
+</section>
+{{template "foot" .}}

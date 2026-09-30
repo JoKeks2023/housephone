@@ -1,0 +1,15 @@
+{{template "head" .}}
+{{$L := .L}}{{with .Data}}
+<section class="card">
+<h2>{{$L.T "removeTitle"}}</h2>
+<p><strong>{{.Device.Name}}</strong> <small>{{.Device.Platform}} · <code>{{.Device.KeyFingerprint}}</code></small></p>
+<p class="muted">{{$L.T "removeHint"}}</p>
+<form method="post" action="devices/{{.Device.ID}}/remove">
+<input type="hidden" name="csrf" value="{{$.CSRF}}">
+{{if .Companions}}<p>{{$L.T "companions"}}</p><ul>{{range .Companions}}<li>{{.Name}}</li>{{end}}</ul>
+<label><input type="checkbox" name="keepCompanions" value="1"> {{$L.T "keepCompanions"}}</label>{{end}}
+<p><button class="danger">{{$L.T "remove"}}</button> <a class="button" href="./">{{$L.T "cancel"}}</a></p>
+</form>
+</section>
+{{end}}
+{{template "foot" .}}
