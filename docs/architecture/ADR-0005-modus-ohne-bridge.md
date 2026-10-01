@@ -22,8 +22,8 @@
    - Kein SRTP: Das Gespräch bleibt im eigenen WLAN, wie bei jedem DECT- oder IP-Telefon an der FRITZ!Box.
 3. **Eingehende Anrufe:** Die App registriert sich, solange sie läuft.
    - Im Hintergrund übernimmt das die Extension `HousephoneLocalPush` (Local Push Connectivity).
-   - **Die Extension steht hinter einem Feature-Flag.** Das Target ist in `project.yml` definiert, wird aber standardmäßig **nicht eingebettet**. Sonst bräche jeder signierte Build, solange Apple das Entitlement nicht freigegeben hat. CI baut sie separat.
-   - Freischalten: Entitlement beantragen → Profile anlegen → in `project.yml` die Abhängigkeit `HousephoneLocalPush` am App-Target aktivieren und `HOUSEPHONE_LOCAL_PUSH` setzen.
+   - **Die Extension steht hinter einem Feature-Flag.** Das Target ist im Xcode-Projekt angelegt, wird aber standardmäßig **nicht eingebettet**. Sonst bräche jeder signierte Build, solange Apple das Entitlement nicht freigegeben hat. CI baut sie separat.
+   - Freischalten: Entitlement beantragen → Profile anlegen → in Xcode die Extension `HousephoneLocalPush` am App-Target einbetten (*General → Frameworks, Libraries, and Embedded Content*) und `HOUSEPHONE_LOCAL_PUSH` setzen.
 4. **Heim-WLAN per SSID-Eingabe.** Die SSID automatisch auszulesen verlangte das Entitlement „Access WiFi Information“ und die Standortfreigabe. Das ist für eine Telefon-App unverhältnismäßig.
 5. **TR-064 direkt:** Telefonbuch und Anrufliste lädt die App im Direktmodus selbst von der FRITZ!Box (`TR064Client`: TLS auf dem Security-Port, Digest-Auth). Die Abbildung ist die der Bridge, in Swift nachgebaut. Die Funktion ist optional; ohne TR-064-Zugang telefoniert die App trotzdem.
 6. **Apple Watch ist im Direktmodus aus.** Die Watch spricht nur mit der Bridge (ADR-0002). Die Einstellungen sagen das offen.

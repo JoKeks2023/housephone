@@ -235,8 +235,7 @@ Weitere Tabs: **1** Übersicht · **2** Geräte · **3** Kopplung · **4** Anruf
 Auf dem Mac, einmalig:
 
 ```sh
-brew install xcodegen
-cd housephone/ios && xcodegen generate && open Housephone.xcodeproj
+open housephone/ios/Housephone.xcodeproj
 ```
 
 1. Oben dein **iPhone** als Ziel, Scheme **Housephone** → ▶︎
@@ -372,7 +371,7 @@ cd ios/Packages/HousephoneKit && swift test       # Protokoll, Krypto, Zustände
 <summary><b>Legacy: Telephone für macOS</b></summary>
 
 
-Dieses Repository ist aus [64characters/Telephone](https://github.com/64characters/Telephone) entstanden. Der macOS-Code (`Telephone/`, `Domain/`, `UseCases/` …) liegt weiterhin hier und dient als Referenz. Die ursprüngliche Anleitung folgt unverändert.
+Dieses Repository ist aus [64characters/Telephone](https://github.com/64characters/Telephone) entstanden. Der macOS-Code liegt unverändert in [`legacy/`](legacy/) und dient nur als Referenz; Housephone nutzt nichts davon. Die ursprüngliche Anleitung folgt, alle Pfade beziehen sich auf `legacy/`.
 
 Telephone is a VoIP SIP softphone for Mac. It allows you to make phone
 calls over the Internet or your company network. If your phone line
@@ -393,7 +392,7 @@ Download:
 
 Build and install:
 
-    $ ./configure --prefix=/path/to/Telephone/ThirdParty/Opus --disable-shared CFLAGS='-arch arm64 -arch x86_64 -Os -mmacosx-version-min=15.6'
+    $ ./configure --prefix=/path/to/housephone/legacy/ThirdParty/Opus --disable-shared CFLAGS='-arch arm64 -arch x86_64 -Os -mmacosx-version-min=15.6'
     $ make
     $ make install
 
@@ -409,7 +408,7 @@ Download:
 
 Build and install:
 
-    $ ./configure --prefix=/path/to/Telephone/ThirdParty/LibreSSL --disable-shared CFLAGS='-arch arm64 -arch x86_64 -Os -mmacosx-version-min=15.6'
+    $ ./configure --prefix=/path/to/housephone/legacy/ThirdParty/LibreSSL --disable-shared CFLAGS='-arch arm64 -arch x86_64 -Os -mmacosx-version-min=15.6'
     $ make
     $ make install
 
@@ -433,13 +432,13 @@ Create `pjlib/include/pj/config_site.h`:
 
 Patch:
 
-    $ patch -p0 -i /path/to/Telephone/ThirdParty/PJSIP/patches/sock_qos_darwin.patch
-    $ patch -p0 -i /path/to/Telephone/ThirdParty/PJSIP/patches/os_core_unix.patch
-    $ patch -p0 -i /path/to/Telephone/ThirdParty/PJSIP/patches/coreaudio_dev.patch
+    $ patch -p0 -i /path/to/housephone/legacy/ThirdParty/PJSIP/patches/sock_qos_darwin.patch
+    $ patch -p0 -i /path/to/housephone/legacy/ThirdParty/PJSIP/patches/os_core_unix.patch
+    $ patch -p0 -i /path/to/housephone/legacy/ThirdParty/PJSIP/patches/coreaudio_dev.patch
 
 Build and install (remove `--with-opus` option if you don’t need Opus):
 
-    $ ./configure --prefix=/path/to/Telephone/ThirdParty/PJSIP --with-opus=/path/to/Telephone/ThirdParty/Opus --with-ssl=/path/to/Telephone/ThirdParty/LibreSSL --disable-video --disable-libyuv --disable-libwebrtc --host=arm-apple-darwin CFLAGS='-arch arm64 -arch x86_64 -Os -DNDEBUG -mmacosx-version-min=15.6' CXXFLAGS='-arch arm64 -arch x86_64 -Os -DNDEBUG -mmacosx-version-min=15.6'
+    $ ./configure --prefix=/path/to/housephone/legacy/ThirdParty/PJSIP --with-opus=/path/to/housephone/legacy/ThirdParty/Opus --with-ssl=/path/to/housephone/legacy/ThirdParty/LibreSSL --disable-video --disable-libyuv --disable-libwebrtc --host=arm-apple-darwin CFLAGS='-arch arm64 -arch x86_64 -Os -DNDEBUG -mmacosx-version-min=15.6' CXXFLAGS='-arch arm64 -arch x86_64 -Os -DNDEBUG -mmacosx-version-min=15.6'
     $ make lib
     $ make install
 

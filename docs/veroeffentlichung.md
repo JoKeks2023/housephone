@@ -48,7 +48,7 @@
 - **Verschlüsselung/Export:**
   - Die App nutzt Standardverschlüsselung (TLS, DTLS-SRTP).
   - In App Store Connect muss die Exportfrage beantwortet werden; rechtlich prüfen, ob die Ausnahme für Standardverschlüsselung greift.
-  - **Achtung:** In `ios/project.yml` steht bereits `ITSAppUsesNonExemptEncryption: false`, für iPhone und Watch. Das ist eine Erklärung gegenüber Apple und sollte vor einem Release bewusst bestätigt oder geändert werden.
+  - **Achtung:** In den `Info.plist`-Dateien von iPhone und Watch steht bereits `ITSAppUsesNonExemptEncryption: false`, für iPhone und Watch. Das ist eine Erklärung gegenüber Apple und sollte vor einem Release bewusst bestätigt oder geändert werden.
 
 ## 5. Einrichtung für normale Nutzer
 
