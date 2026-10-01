@@ -327,6 +327,22 @@ Jede Person bekommt ein eigenes **Profil**: ein eigenes IP-Telefon an der FRITZ!
 
 </details>
 
+<details>
+<summary><b>🛡 Optional: Verwaltung vom iPhone aus (Face ID)</b></summary>
+
+Im Heim-WLAN (oder über Tailscale) verwaltest du die Bridge auch direkt in der App: **Einstellungen → Verwaltung**. Status, Geräte umbenennen, entfernen, in ein Profil verschieben, Kopplungsanfragen freigeben und neue Geräte per QR-Code einladen. Jede Änderung bestätigst du mit Face ID; unterwegs ist die Verwaltung ausgeblendet.
+
+- **Neue Bridge:** Das erste gekoppelte iPhone ist automatisch Admin. Öffne direkt danach *Einstellungen → Verwaltung → Face ID für die Verwaltung einrichten* (innerhalb einer Stunde).
+- **Bestehende Bridge oder weiteres Admin-iPhone:** einmal auf dem Server freischalten, dann in der App Face ID einrichten:
+  ```sh
+  ./housephone devices list              # Spalte ADMIN
+  ./housephone devices promote <ID>      # oder TUI: Geräte → a, oder im Dashboard
+  ```
+- **Face ID neu eingerichtet?** Dann funktioniert der alte Schlüssel nicht mehr; `devices promote <ID>` erneut, dann in der App neu einrichten.
+- Alle Geräte sehen, was ein Admin ändert. Eine Apple Watch kann nie Admin sein.
+
+</details>
+
 ### 9 · Ausprobieren
 
 - [ ] **Ausgehend:** im Tastenfeld wählen → Freiton → Gespräch
@@ -348,6 +364,7 @@ Alle Befehle im Ordner `housephone/bridge`:
 | 📋 Geräte anzeigen | `./housephone devices list` |
 | 👨‍👩‍👧 Profile anzeigen | `./housephone profiles` |
 | ↔️ Gerät in ein anderes Profil | `./housephone devices move <ID> <PROFIL>` |
+| 🛡 iPhone zum Admin machen / Rechte entziehen | `./housephone devices promote <ID>` / `devices demote <ID>` |
 | 🗑 Gerät entfernen (wirkt sofort) | `./housephone devices remove <ID>` |
 | 🔑 Fingerabdruck der Bridge | `./housephone identity` |
 | 📜 Logs | `docker compose logs -f housephone-bridge` |

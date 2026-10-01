@@ -116,6 +116,8 @@ Die TUI spricht nur über den Unix-Socket `/data/admin.sock` (Rechte 0600) mit d
 
 `?` zeigt die Tastenhilfe, `q` beendet. Ohne Terminal (`./housephone tui | cat`) gibt der Befehl Übersicht und Selbsttest als Text aus. `devices remove` und `devices rename` gehen bei laufender Bridge ebenfalls über den Socket und wirken sofort.
 
+**Admins für die App (ADR-0009):** `devices promote <id>` (TUI: Geräte → `a`) macht ein iPhone zum Admin; es verwaltet die Bridge dann in der App, nur im Heimnetz und mit Face ID, und richtet Face ID innerhalb einer Stunde ein. `devices demote <id>` (TUI: `A`) entzieht die Rechte sofort. Bei einer neuen Bridge ist das erste gekoppelte iPhone automatisch Admin. Jede Admin-Aktion wird allen Geräten gemeldet.
+
 ## 6. iPhone koppeln
 
 ```sh

@@ -18,7 +18,7 @@
 |:-:|---|---|
 | 1 | **Live-Test auf dem Server** | Einrichtung nach README, Selbsttest in der TUI |
 | 2 | **Zwei Zugänge** | Öffentlich nur Telefonie; Kopplung und Verwaltung nur im Heimnetz oder über Tailscale; zu Hause Direktverbindung zur Bridge ohne Tunnel |
-| 3 | **Verwaltung in der App** | Nur im Heimnetz, Admin-Rolle, Face ID |
+| 3 | **Verwaltung in der App** | Nur im Heimnetz, Admin-Rolle, Face ID (HPHN-37, ADR-0009); Freigabe von Heimnetz-Kopplungen mit Profilwahl am Admin-iPhone |
 | 4 | **Koppeln im Heimnetz ohne QR** | Bonjour, Bestätigungscode, Freigabe in TUI, CLI und HA-Dashboard (HPHN-41, ADR-0007); Freigabe am Admin-iPhone folgt mit Nr. 3 |
 | 5 | **Profile** | Mehrere Nutzer mit eigener Festnetznummer, je ein IP-Telefon an der FRITZ!Box (HPHN-42, ADR-0008); Profilwahl am Admin-iPhone folgt mit Nr. 3 |
 | 6 | **Home Assistant** | MQTT-Discovery (nur ausgehend), Sensoren, Ereignis „Anruf eingehend“ |

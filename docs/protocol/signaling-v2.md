@@ -66,6 +66,18 @@ Mehrere Personen im Haushalt mit eigener Festnetznummer (ADR-0008). Ein Profil i
 - **Kopplung:** Der Code bzw. die Freigabe legt das Profil fest. Eine Watch gehört immer zum Profil des iPhones, das ihren Companion-Code angefordert hat. `device.paired` geht nur an die anderen Geräte desselben Profils.
 - **Gerät eines entfernten Profils:** Steht das Profil eines Geräts nicht mehr in der Konfiguration, bekommt es keine Anrufe, `403` auf `/v1/phonebook` und `/v1/history`, und `call.dial` scheitert mit `sip_unavailable`, bis der Admin es verschiebt.
 
+## Verwaltung aus der App (v2.3)
+
+Nur für Admin-iPhones, nur auf dem privaten Listener (ADR-0009). Auf dem öffentlichen Listener antwortet jeder Pfad unter `/v1/admin/` mit `403 home_network_required`.
+
+- **Signatur:** Jede Anfrage ist eine normale HP2-Anfrage (`Authorization`, versiegelte Antwort) und trägt zusätzlich `HP2-Admin: <b64(r‖s)>`, die ECDSA-P-256-Signatur des Admin-Schlüssels (Secure Enclave, nur mit Face ID) über `"HP2-ADMIN", METHOD, pathAndQuery, bridgeId, deviceId, ts, nonce, epk, sha256hex(body)`. Ohne Admin-Rolle, ohne eingerichteten Schlüssel oder mit falscher Signatur: `403 admin_required`. Eine Apple Watch ist nie Admin.
+- **Einrichten:** `POST /v1/admin/enroll` `{adminKey, proof}` (nur `HP2`-signiert, ohne `HP2-Admin`). `proof` = Signatur des Admin-Schlüssels über `"HP2-ADMIN-ENROLL", bridgeId, deviceId, adminKey`. Nur innerhalb von 1 h nach einer Beförderung, danach oder für Nicht-Admins `403 admin_enroll_closed`. Antwort: `admin.role`-Payload.
+- **Endpunkte:** `GET status|stats|profiles|devices|pairings/lan`, `PUT devices/{id}` `{name}`, `DELETE devices/{id}[?keepCompanions=1]`, `POST devices/{id}/move` `{profile}`, `POST devices/{id}/promote|demote`, `POST pairings/lan/{id}/approve` `{profile}`, `POST pairings/lan/{id}/deny`, `POST pairings` `{name, profile}`, `GET|DELETE pairings/{code}`. Antworten wie die Admin-API der TUI. Fehler: `404 not_found`, `400 not_allowed` (z. B. Watch befördern), `400 bad_request`.
+- **`welcome.admin`:** nur bei Admins, `{"admin":true,"enrolled":bool,"enrollUntil"?:ts}`.
+- **`admin.role`:** an das betroffene Gerät nach Beförderung, Entzug oder Einrichtung; gleicher Inhalt (`admin:false` nach Entzug).
+- **`admin.action`:** an alle Geräte nach jeder Admin-Aktion (App, CLI, TUI, Dashboard): `{actor, action, target?, at}`. `actor` leer = Server. `target` nur für Geräte desselben Profils und Admins. `action`: `device.rename|remove|move|promote|demote`, `admin.enroll`, `pairing.create|revoke|approve|deny`.
+- Testvektoren: `fixtures/crypto/admin-vectors.json`.
+
 ## Kopplungscode
 
 - 16 Zeichen aus `A-Z2-9` ohne `0 O 1 I`, also 80 Bit.
