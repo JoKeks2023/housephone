@@ -41,7 +41,7 @@ func TestRecorderCountsAndMasks(t *testing.T) {
 	now := time.Date(2026, 9, 29, 10, 0, 0, 0, time.Local)
 	r := NewRecorder(2, func() time.Time { return now })
 	ev := func(kind calls.EventKind, id, dir string) calls.Event {
-		return calls.Event{Kind: kind, At: now, CallID: id, Direction: dir, Number: "0301234563", Name: "Oma", Codec: "PCMA"}
+		return calls.Event{Kind: kind, At: now, CallID: id, Direction: dir, Number: "0301234567", Name: "Oma", Codec: "PCMA"}
 	}
 	// Answered incoming.
 	r.Handle(ev(calls.EventStarted, "a", "incoming"))
@@ -69,7 +69,7 @@ func TestRecorderCountsAndMasks(t *testing.T) {
 		t.Fatalf("active %+v recent %+v", active, recent)
 	}
 	for _, ci := range append(active, recent...) {
-		if ci.Number != "…563" || ci.Name != "" {
+		if ci.Number != "…567" || ci.Name != "" {
 			t.Fatalf("not masked: %+v", ci)
 		}
 	}

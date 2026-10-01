@@ -190,7 +190,7 @@ Technik:
 | Gerät entfernen | `housephone-bridge devices remove <id>` – entfernt auch die Watches, die über dieses iPhone gekoppelt wurden (`-keep-companions` behält sie). Verbundene Geräte trennt die laufende Bridge innerhalb von 10 s. |
 | Version | `housephone-bridge version` |
 | Mehr Logs | `log.level: debug` bzw. `HOUSEPHONE_LOG_LEVEL=debug`. Auf Debug-Stufe kann die SIP-Bibliothek Details der SIP-Nachrichten mitschreiben, also auch Nummern. |
-| Nummern im Log | Standardmäßig maskiert: nur die letzten 3 Ziffern (`…563`); von Anrufernamen nur, ob einer da ist (`hasCallerName`). `log.showNumbers: true` schreibt beides im Klartext, nur kurz zur Fehlersuche. |
+| Nummern im Log | Standardmäßig maskiert: nur die letzten 3 Ziffern (`…567`); von Anrufernamen nur, ob einer da ist (`hasCallerName`). `log.showNumbers: true` schreibt beides im Klartext, nur kurz zur Fehlersuche. |
 | HD-Fehlersuche | Jeder eingehende Anruf loggt `incoming INVITE … offered=[…] chosen=…`. Fehlt `G722` in `offered`, bietet die FRITZ!Box für diesen Anruf kein HD an (z. B. oft bei Anrufen aus dem Mobilfunk). |
 
 Daten liegen in `data/`:

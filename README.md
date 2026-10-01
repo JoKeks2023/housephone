@@ -376,7 +376,7 @@ Alle Befehle im Ordner `housephone/bridge`:
 | „Uhrzeit prüfen“ | Die Uhr von iPhone oder Server geht falsch |
 | Telefonbuch fehlt | Schritt 8; der FRITZ!Box-Benutzer braucht das Recht „…Anrufliste“ |
 
-**Mehr Details:** `./housephone tui` → **5 Logs** · iPhone: Konsole.app, Subsystem `com.jorisconrad.housephone`. Nummern stehen im Log nur gekürzt (`…563`).
+**Mehr Details:** `./housephone tui` → **5 Logs** · iPhone: Konsole.app, Subsystem `com.jorisconrad.housephone`. Nummern stehen im Log nur gekürzt (`…567`).
 </details>
 
 ---

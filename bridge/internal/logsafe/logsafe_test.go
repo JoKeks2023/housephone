@@ -6,7 +6,7 @@ func TestNumber(t *testing.T) {
 	SetShowNumbers(false)
 	for in, want := range map[string]string{
 		"":           "",
-		"0301234563": "…563",
+		"0301234567": "…567",
 		"+491701234": "…234",
 		"**9":        "…",
 		"12":         "…",
@@ -17,7 +17,7 @@ func TestNumber(t *testing.T) {
 	}
 	SetShowNumbers(true)
 	defer SetShowNumbers(false)
-	if got := Number("0301234563"); got != "0301234563" {
+	if got := Number("0301234567"); got != "0301234567" {
 		t.Fatalf("showNumbers: %q", got)
 	}
 }
