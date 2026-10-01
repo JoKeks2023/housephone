@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/admin"
+	"github.com/JoKeks2023/housephone/bridge/internal/bonjour"
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
 	"github.com/JoKeks2023/housephone/bridge/internal/dashboard"
@@ -386,6 +387,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 			errCh <- fmt.Errorf("http: %w", err)
 		}
 	}()
+	var announcer *bonjour.Announcer
 	if b.privateListener != nil {
 		privateSrv = newServer(b.signaling.PrivateHandler(b.trustedNetworks, b.excludedNets...))
 		go func() {
@@ -393,6 +395,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 				errCh <- fmt.Errorf("http (private): %w", err)
 			}
 		}()
+		announcer = b.announce()
 	}
 	sipCtx, stopSIP := context.WithCancel(context.Background())
 	sipDone := make(chan struct{})
@@ -417,6 +420,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 	}
 
 	b.log.Info("shutting down")
+	_ = announcer.Close()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	b.manager.Shutdown(shutdownCtx)
@@ -438,6 +442,30 @@ func (b *Bridge) Run(ctx context.Context) error {
 	}
 	_ = b.engine.Close()
 	return runErr
+}
+
+// announce starts the Bonjour announcement of the private listener
+// (ADR-0007). Like the admin socket a convenience: a failure is logged,
+// pairing with a QR code keeps working.
+func (b *Bridge) announce() *bonjour.Announcer {
+	if !b.cfg.Bridge.BonjourEnabled() {
+		return nil
+	}
+	host, _, _ := net.SplitHostPort(b.cfg.Bridge.PrivateListen)
+	_, portText, _ := net.SplitHostPort(b.privateListener.Addr().String())
+	port, _ := strconv.Atoi(portText)
+	ip := bonjour.AdvertisedIP(host, b.sip.BindHost())
+	if ip == nil {
+		b.log.Info("Bonjour off: the private listener is not reachable from the home network", "privateListen", b.cfg.Bridge.PrivateListen)
+		return nil
+	}
+	a, err := bonjour.Start(bonjour.Config{Name: b.cfg.Bridge.Name, IP: ip, Port: port, Fingerprint: b.Key.Fingerprint(), Logger: b.log})
+	if err != nil {
+		b.log.Warn("Bonjour unavailable: pairing works with a QR code only", "error", err)
+		return nil
+	}
+	b.log.Info("Bonjour announcement running", "service", bonjour.Service, "ip", ip.String(), "port", port)
+	return a
 }
 
 // PairingLink builds the housephone://pair link (v2) for a code; the

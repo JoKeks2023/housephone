@@ -24,6 +24,9 @@ type fakeAPI struct {
 	renamed   string
 	revoked   []string
 	pairState admin.PairingState
+	lan       []admin.LanPairingRequest
+	approved  []string
+	denied    []string
 }
 
 func (f *fakeAPI) Status(context.Context) (admin.Status, error) {
@@ -53,6 +56,15 @@ func (f *fakeAPI) WaitPairing(context.Context, string) (admin.PairingState, erro
 }
 func (f *fakeAPI) RevokePairing(_ context.Context, code string) error {
 	f.revoked = append(f.revoked, code)
+	return nil
+}
+func (f *fakeAPI) LanPairings(context.Context) ([]admin.LanPairingRequest, error) { return f.lan, nil }
+func (f *fakeAPI) ApproveLanPairing(_ context.Context, id string) (admin.DeviceInfo, error) {
+	f.approved = append(f.approved, id)
+	return admin.DeviceInfo{ID: "i3", Name: "iPhone Test"}, nil
+}
+func (f *fakeAPI) DenyLanPairing(_ context.Context, id string) error {
+	f.denied = append(f.denied, id)
 	return nil
 }
 func (f *fakeAPI) Calls(context.Context) (admin.CallsView, error) {
@@ -196,6 +208,41 @@ func TestPairingShowsQRAndResult(t *testing.T) {
 	m = press(t, m, "esc")
 	if len(api.revoked) != 1 {
 		t.Fatalf("revoked %v", api.revoked)
+	}
+}
+
+func TestLanPairingRequests(t *testing.T) {
+	api := &fakeAPI{lan: []admin.LanPairingRequest{
+		{ID: "r1", DeviceName: "iPhone Test", Model: "iPhone17,1", IP: "192.168.0.30", SAS: "123456", KeyFingerprint: "ABCDEF", ExpiresAt: t0.Add(2 * time.Minute)},
+		{ID: "r2", DeviceName: "iPad", IP: "192.168.0.31", SAS: "654321", ExpiresAt: t0.Add(2 * time.Minute)},
+	}}
+	m := newTest(t, api)
+	if v := plain(m.View()); !strings.Contains(v, "2 Kopplungsanfrage(n) aus dem Heimnetz") {
+		t.Fatalf("hint on overview:\n%s", v)
+	}
+	m = press(t, m, "3")
+	v := plain(m.View())
+	for _, want := range []string{"123 456", "iPhone Test", "192.168.0.30", "654 321"} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("pairing tab misses %q:\n%s", want, v)
+		}
+	}
+	// Approval needs a second key press after the code is shown.
+	m = press(t, m, "a")
+	if v := plain(m.View()); !strings.Contains(v, "Zeigt „iPhone Test“ genau den Code 123 456?") {
+		t.Fatalf("confirm:\n%s", v)
+	}
+	m = press(t, m, "n")
+	if len(api.approved) != 0 {
+		t.Fatal("approved without confirmation")
+	}
+	m = press(t, m, "a", "j")
+	if len(api.approved) != 1 || api.approved[0] != "r1" {
+		t.Fatalf("approved %v", api.approved)
+	}
+	m = press(t, m, "down", "d")
+	if len(api.denied) != 1 || api.denied[0] != "r2" {
+		t.Fatalf("denied %v", api.denied)
 	}
 }
 

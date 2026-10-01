@@ -23,6 +23,9 @@ type fakeService struct {
 	pairings []string
 	revoked  []string
 	state    admin.PairingState
+	lan      []admin.LanPairingRequest
+	approved []string
+	denied   []string
 }
 
 func (f *fakeService) Status() admin.Status {
@@ -54,6 +57,20 @@ func (f *fakeService) CreatePairing(name string) (admin.PairingInfo, error) {
 func (f *fakeService) PairingState(code string) (admin.PairingState, error) { return f.state, nil }
 func (f *fakeService) RevokePairing(code string) error {
 	f.revoked = append(f.revoked, code)
+	return nil
+}
+func (f *fakeService) LanPairings() []admin.LanPairingRequest { return f.lan }
+func (f *fakeService) ApproveLanPairing(id string) (admin.DeviceInfo, error) {
+	for _, r := range f.lan {
+		if r.ID == id {
+			f.approved = append(f.approved, id)
+			return admin.DeviceInfo{ID: "new", Name: r.DeviceName}, nil
+		}
+	}
+	return admin.DeviceInfo{}, admin.ErrNotFound
+}
+func (f *fakeService) DenyLanPairing(id string) error {
+	f.denied = append(f.denied, id)
 	return nil
 }
 func (f *fakeService) Calls() admin.CallsView {
@@ -212,6 +229,36 @@ func TestRenameAndRemove(t *testing.T) {
 	}
 	if w := do(h, "POST", "/devices/iphone/remove", proxy, url.Values{"csrf": {token}, "keepCompanions": {"1"}}, nil); w.Code != http.StatusSeeOther || len(svc.removed) != 1 || !svc.keep {
 		t.Errorf("remove: %d %v keep=%v", w.Code, svc.removed, svc.keep)
+	}
+}
+
+func TestLanPairingRequests(t *testing.T) {
+	svc, h, _ := setup(t)
+	if body := do(h, "GET", "/", proxy, nil, nil).Body.String(); strings.Contains(body, "lan/") {
+		t.Fatal("request section without requests")
+	}
+	svc.lan = []admin.LanPairingRequest{{ID: "r1", DeviceName: "iPhone Test", Platform: "ios", IP: "192.168.0.30", SAS: "123456", KeyFingerprint: "ABCDEF", ExpiresAt: time.Now().Add(time.Minute)}}
+	body := do(h, "GET", "/", proxy, nil, map[string]string{"Accept-Language": "de"}).Body.String()
+	for _, want := range []string{"123 456", "iPhone Test", "192.168.0.30", `action="lan/r1/approve"`, "Code stimmt – freigeben"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("overview misses %q", want)
+		}
+	}
+	token := csrfOf(t, h)
+	if w := do(h, "POST", "/lan/r1/approve", proxy, url.Values{"csrf": {"00"}}, nil); w.Code != http.StatusForbidden || len(svc.approved) != 0 {
+		t.Fatalf("approve without csrf: %d", w.Code)
+	}
+	if w := do(h, "POST", "/lan/r1/approve", proxy, url.Values{"csrf": {token}}, nil); w.Code != http.StatusSeeOther || len(svc.approved) != 1 {
+		t.Fatalf("approve: %d %v", w.Code, svc.approved)
+	}
+	if w := do(h, "POST", "/lan/gone/approve", proxy, url.Values{"csrf": {token}}, nil); w.Code != http.StatusNotFound {
+		t.Fatalf("approve unknown: %d", w.Code)
+	}
+	if w := do(h, "POST", "/lan/r1/deny", proxy, url.Values{"csrf": {token}}, nil); w.Code != http.StatusSeeOther || len(svc.denied) != 1 {
+		t.Fatalf("deny: %d %v", w.Code, svc.denied)
+	}
+	if w := do(h, "POST", "/lan/r1/approve", "192.168.0.30", url.Values{"csrf": {token}}, nil); w.Code != http.StatusForbidden {
+		t.Fatalf("approve from outside the ingress proxy: %d", w.Code)
 	}
 }
 

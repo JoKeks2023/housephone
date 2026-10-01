@@ -26,6 +26,9 @@ type API interface {
 	CreatePairing(ctx context.Context, name string) (admin.PairingInfo, error)
 	WaitPairing(ctx context.Context, code string) (admin.PairingState, error)
 	RevokePairing(ctx context.Context, code string) error
+	LanPairings(ctx context.Context) ([]admin.LanPairingRequest, error)
+	ApproveLanPairing(ctx context.Context, id string) (admin.DeviceInfo, error)
+	DenyLanPairing(ctx context.Context, id string) error
 	Calls(ctx context.Context) (admin.CallsView, error)
 	Stats(ctx context.Context) (admin.Stats, error)
 	Logs(ctx context.Context, after uint64) (admin.LogsView, error)
@@ -91,6 +94,12 @@ type Model struct {
 	pairingQR   string
 	pairingDone *admin.PairingState
 
+	// lan are pairing requests from the home network (ADR-0007);
+	// lanConfirm is the one whose SAS the admin is asked to confirm.
+	lan        []admin.LanPairingRequest
+	lanCursor  int
+	lanConfirm string
+
 	input     textinput.Model
 	inputMode inputMode
 }
@@ -116,6 +125,7 @@ type (
 	configMsg  map[string]any
 	pairingMsg admin.PairingInfo
 	pairedMsg  admin.PairingState
+	lanMsg     []admin.LanPairingRequest
 	flashMsg   string
 	errMsg     error
 )
@@ -142,7 +152,11 @@ func call[T any](f func(ctx context.Context) (T, error), wrap func(T) tea.Msg) t
 
 // refresh loads the status and the data of the current tab.
 func (m Model) refresh() tea.Cmd {
-	cmds := []tea.Cmd{call(m.api.Status, func(s admin.Status) tea.Msg { return statusMsg(s) })}
+	cmds := []tea.Cmd{
+		call(m.api.Status, func(s admin.Status) tea.Msg { return statusMsg(s) }),
+		// Requests are announced on every tab, so they are loaded always.
+		call(m.api.LanPairings, func(l []admin.LanPairingRequest) tea.Msg { return lanMsg(l) }),
+	}
 	switch m.tab {
 	case tabOverview:
 		if m.showConfig {
@@ -230,6 +244,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		p := admin.PairingInfo(msg)
 		m.pairing, m.pairingDone, m.pairingQR = &p, nil, renderQR(p.Link)
 		return m, m.waitPairing(p.Code)
+	case lanMsg:
+		m.lan = msg
+		if m.lanCursor >= len(m.lan) {
+			m.lanCursor = max(0, len(m.lan)-1)
+		}
+		if m.lanConfirm != "" && !m.hasLan(m.lanConfirm) {
+			m.lanConfirm = ""
+			m.flash = "Die Anfrage ist abgelaufen."
+		}
 	case pairedMsg:
 		st := admin.PairingState(msg)
 		if m.pairing == nil {
@@ -253,6 +276,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.inputMode != inputNone {
 		return m.inputKey(k)
+	}
+	if m.lanConfirm != "" {
+		id := m.lanConfirm
+		m.lanConfirm = ""
+		if k.String() == "j" || k.String() == "y" {
+			return m, call(func(ctx context.Context) (admin.DeviceInfo, error) { return m.api.ApproveLanPairing(ctx, id) },
+				func(d admin.DeviceInfo) tea.Msg { return flashMsg("Gekoppelt: „" + d.Name + "“.") })
+		}
+		m.flash = "Nicht freigegeben – die Anfrage wartet weiter (d lehnt sie ab)."
+		return m, nil
 	}
 	if m.confirm != "" {
 		id := m.confirm
@@ -315,6 +348,20 @@ func (m Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case tabPairing:
 		switch k.String() {
+		case "up", "k":
+			m.lanCursor = max(0, m.lanCursor-1)
+		case "down", "j":
+			m.lanCursor = min(len(m.lan)-1, m.lanCursor+1)
+		case "a":
+			if len(m.lan) > 0 {
+				m.lanConfirm = m.lan[m.lanCursor].ID
+			}
+		case "d":
+			if len(m.lan) > 0 {
+				id := m.lan[m.lanCursor].ID
+				return m, call(func(ctx context.Context) (struct{}, error) { return struct{}{}, m.api.DenyLanPairing(ctx, id) },
+					func(struct{}) tea.Msg { return flashMsg("Anfrage abgelehnt.") })
+			}
 		case "n", "enter":
 			m.inputMode = inputPairName
 			m.input.SetValue("")
@@ -444,6 +491,9 @@ func (m Model) View() string {
 		}
 	}
 	b.WriteString("\n\n")
+	if len(m.lan) > 0 && m.tab != tabPairing {
+		b.WriteString(warnS.Render(fmt.Sprintf("  %d Kopplungsanfrage(n) aus dem Heimnetz – Taste 3", len(m.lan))) + "\n\n")
+	}
 	if m.help {
 		b.WriteString(helpText)
 	} else {
@@ -481,6 +531,7 @@ const helpText = `Tasten
   Übersicht     k  Konfiguration ein/aus
   Geräte        ↑↓ auswählen · r umbenennen · x entfernen (sofort getrennt)
   Kopplung      n  neuer Code mit QR · Esc Code widerrufen
+                a  Anfrage aus dem Heimnetz freigeben · d ablehnen
   Logs          l  Level (alle/info/warn/error) · /  suchen · Esc Suche löschen
   Selbsttest    ↑↓ Hinweis zur Prüfung · r  erneut prüfen
 
@@ -588,13 +639,52 @@ func (m Model) viewDevices() string {
 	return b.String()
 }
 
+func (m Model) hasLan(id string) bool {
+	for _, r := range m.lan {
+		if r.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// viewLan lists the pairing requests from the home network.
+func (m Model) viewLan() string {
+	if len(m.lan) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString(boldS.Render("Anfragen aus dem Heimnetz") + "\n")
+	for i, r := range m.lan {
+		marker := "  "
+		if i == m.lanCursor {
+			marker = selS.Render("› ")
+		}
+		fmt.Fprintf(&b, "%s%s  %s  %s %s · %s · bis %s\n", marker, selS.Render(admin.GroupSAS(r.SAS)), boldS.Render(r.DeviceName),
+			mutedS.Render(orDash(r.Model)), r.IP, mutedS.Render("Schlüssel "+r.KeyFingerprint), r.ExpiresAt.Local().Format("15:04:05"))
+	}
+	if m.lanConfirm != "" {
+		for _, r := range m.lan {
+			if r.ID == m.lanConfirm {
+				b.WriteString(warnS.Render(fmt.Sprintf("  Zeigt „%s“ genau den Code %s? j = freigeben, andere Taste = abbrechen", r.DeviceName, admin.GroupSAS(r.SAS))) + "\n")
+			}
+		}
+	} else {
+		b.WriteString(mutedS.Render("  Nur freigeben, wenn das iPhone denselben Code zeigt. a freigeben · d ablehnen · ↑↓ auswählen") + "\n")
+	}
+	return b.String() + "\n"
+}
+
 func (m Model) viewPairing() string {
+	lan := m.viewLan()
 	if m.pairing == nil {
-		return "  n  neuen Kopplungscode erzeugen (einmalig, 10 Minuten gültig).\n" +
+		return lan + "  n  neuen Kopplungscode erzeugen (einmalig, 10 Minuten gültig).\n" +
+			mutedS.Render("  Im Heimnetz geht es auch ohne Code: Housephone auf dem iPhone öffnen, die Bridge antippen und hier freigeben.") + "\n" +
 			mutedS.Render("  Das iPhone scannt den QR-Code; die Apple Watch koppelt sich danach automatisch.") + "\n"
 	}
 	p := m.pairing
 	var b strings.Builder
+	b.WriteString(lan)
 	if m.pairingDone != nil {
 		switch {
 		case m.pairingDone.Used && m.pairingDone.Device != nil:

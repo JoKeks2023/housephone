@@ -62,6 +62,10 @@ Befehle:
   devices list              Gekoppelte Geräte anzeigen
   devices remove <id>       Gerät entfernen (bei laufender Bridge sofort getrennt)
   devices rename <id> NAME  Gerät umbenennen
+  devices pending           Kopplungsanfragen aus dem Heimnetz anzeigen (ohne QR-Code)
+  devices approve <id>      Anfrage freigeben, wenn das iPhone denselben Code zeigt
+                            (-code 123456 ohne Rückfrage)
+  devices deny <id>         Anfrage ablehnen
   version                   Version anzeigen
 
 Globale Optionen:
@@ -361,6 +365,11 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 	}
 	client, _ := admin.Dial(cfg.Bridge.DataDir)
 	switch args[0] {
+	case "pending", "approve", "deny":
+		if client == nil {
+			return errors.New("die Bridge läuft nicht – Kopplungsanfragen gibt es nur bei laufender Bridge")
+		}
+		return lanPairing(client, args, stdin, out)
 	case "remove":
 		if client != nil {
 			return removeDeviceLive(client, args[1:], out)
@@ -385,7 +394,7 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 		fmt.Fprintf(out, "Umbenannt: %s (%s)\n", d.ID, displayName(d.Name))
 		return nil
 	}
-	return fmt.Errorf("unbekannter devices-Befehl %q (list|remove|rename)", args[0])
+	return fmt.Errorf("unbekannter devices-Befehl %q (list|remove|rename|pending|approve|deny)", args[0])
 }
 
 // removeDeviceLive removes a device through the running bridge, which

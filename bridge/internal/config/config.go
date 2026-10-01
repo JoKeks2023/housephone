@@ -92,6 +92,10 @@ type Bridge struct {
 	// LanURL is the ws:// URL of PrivateListen that devices use at home and
 	// for pairing. Empty: derived from the bridge's LAN IP.
 	LanURL string `yaml:"lanUrl"`
+	// Bonjour announces PrivateListen in the home network
+	// (_housephone._tcp), so the app finds the bridge without a QR code.
+	// Default on; only active when PrivateListen is reachable from the LAN.
+	Bonjour *bool `yaml:"bonjour"`
 	// PublicURL is the wss:// URL devices use, embedded in pairing links.
 	PublicURL string `yaml:"publicUrl"`
 	// DataDir holds devices.json, pairing.json and bridge.json.
@@ -106,6 +110,9 @@ type Bridge struct {
 	// MaxCalls bounds concurrent calls; devices cannot dial beyond it.
 	MaxCalls int `yaml:"maxCalls"`
 }
+
+// BonjourEnabled reports bridge.bonjour (default true).
+func (b Bridge) BonjourEnabled() bool { return b.Bonjour == nil || *b.Bonjour }
 
 // DefaultTrustedNetworks are the home network ranges: RFC 1918, unique
 // local and link-local. Loopback is deliberately missing.

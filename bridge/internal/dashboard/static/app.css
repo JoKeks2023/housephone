@@ -55,6 +55,8 @@ dd { margin: 2px 0 0; overflow-wrap: anywhere; }
 small { display: block; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 code { font: 13px ui-monospace, "SF Mono", Menlo, monospace; }
 code.big { font-size: 20px; letter-spacing: 0.06em; }
+.card.attention { border-color: var(--warn); }
+code.sas { font-size: 26px; font-weight: 600; margin-right: 10px; }
 .muted { color: var(--muted); }
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--off); }
 .dot.ok { background: var(--ok); }

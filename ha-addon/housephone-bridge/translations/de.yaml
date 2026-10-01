@@ -14,6 +14,9 @@ configuration:
   tailscale:
     name: Tailscale erlauben
     description: Koppeln und Direktverbindung auch über Tailscale (100.64.0.0/10).
+  bonjour:
+    name: Im Heimnetz ankündigen (Bonjour)
+    description: Die App findet die Bridge im WLAN ohne QR-Code. Koppeln gibst du im Dashboard frei, wenn der Code auf dem iPhone übereinstimmt.
   fritzbox_host:
     name: FRITZ!Box-Adresse
     description: LAN-IP der FRITZ!Box, z. B. 192.168.178.1.

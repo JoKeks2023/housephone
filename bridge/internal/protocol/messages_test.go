@@ -198,6 +198,12 @@ func TestHTTPFixturesRoundTrip(t *testing.T) {
 		"history.json":       &History{},
 		"pair.request.json":  &PairRequest{},
 		"pair.response.json": &PairResponse{},
+		// v2.1: pairing in the home network (ADR-0007).
+		"pair-lan.start.json":    &LanPairStart{},
+		"pair-lan.offer.json":    &LanPairOffer{},
+		"pair-lan.reveal.json":   &LanPairReveal{},
+		"pair-lan.pending.json":  &LanPairState{},
+		"pair-lan.approved.json": &LanPairState{},
 	} {
 		t.Run(file, func(t *testing.T) {
 			data, err := os.ReadFile(filepath.Join(fixturesDir, "http", file))
