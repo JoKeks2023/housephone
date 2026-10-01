@@ -4,10 +4,19 @@ import Foundation
 /// bridge, ADR-0005). The mapping follows the bridge's Go client.
 public enum TR064Error: Error, Equatable, Sendable {
     case unreachable
-    /// Wrong user/password, or the user lacks the right (UPnP 401/606).
+    /// Wrong user or password (HTTP/UPnP 401).
     case authentication
+    /// Logged in, but the user lacks the right for the action (UPnP 606).
+    case notAllowed
     /// Feature switched off, e.g. the call list (UPnP 820, no URL).
     case unsupported
+    /// The change needs a confirmation at the FRITZ!Box (UPnP 866, see
+    /// `X_AVM-DE_Auth`).
+    case secondFactorRequired
+    /// Too many confirmations; FRITZ!OS blocks them for up to an hour (867).
+    case secondFactorBlocked
+    /// Another confirmation is running; retry within two minutes (868).
+    case secondFactorBusy
     case invalidResponse(String)
 }
 
@@ -32,6 +41,10 @@ public final class TR064Client: NSObject, Sendable, URLSessionTaskDelegate {
     static let onTelService = "urn:dslforum-org:service:X_AVM-DE_OnTel:1"
     static let deviceInfoControl = "/upnp/control/deviceinfo"
     static let deviceInfoService = "urn:dslforum-org:service:DeviceInfo:1"
+    static let voipControl = "/upnp/control/x_voip"
+    static let voipService = "urn:dslforum-org:service:X_VoIP:1"
+    static let authControl = "/upnp/control/x_auth"
+    static let authService = "urn:dslforum-org:service:X_AVM-DE_Auth:1"
 
     public init(host: String, username: String, password: String, plainPort: Int = 49000, timeout: TimeInterval = 15) {
         self.host = host
@@ -77,7 +90,7 @@ public final class TR064Client: NSObject, Sendable, URLSessionTaskDelegate {
         if let known = securityPort.value {
             port = known
         } else {
-            let values = try await soap(base: components(scheme: "http", port: plainPort), Self.deviceInfoControl, Self.deviceInfoService, "GetSecurityPort", [])
+            let values = try await soap(base: components(scheme: "http", port: plainPort), Self.deviceInfoControl, Self.deviceInfoService, "GetSecurityPort", [], token: nil)
             // Unauthenticated answer: accept a plain number only, so a
             // forged value cannot point the host elsewhere.
             guard let value = values["NewSecurityPort"].flatMap({ Int($0.trimmingCharacters(in: .whitespaces)) }), (1...65535).contains(value) else {
@@ -97,17 +110,19 @@ public final class TR064Client: NSObject, Sendable, URLSessionTaskDelegate {
         return components
     }
 
-    private func call(_ control: String, _ service: String, _ action: String, _ arguments: [(String, String)] = []) async throws(TR064Error) -> [String: String] {
+    /// `token`: the second-factor token of `X_AVM-DE_Auth`, sent in the
+    /// SOAP header once the user has confirmed at the FRITZ!Box.
+    func call(_ control: String, _ service: String, _ action: String, _ arguments: [(String, String)] = [], token: String? = nil) async throws(TR064Error) -> [String: String] {
         let base = try await secureBase()
         do {
-            return try await soap(base: base, control, service, action, arguments)
+            return try await soap(base: base, control, service, action, arguments, token: token)
         } catch .unreachable {
             securityPort.value = nil
             throw .unreachable
         }
     }
 
-    private func soap(base: URLComponents, _ control: String, _ service: String, _ action: String, _ arguments: [(String, String)]) async throws(TR064Error) -> [String: String] {
+    private func soap(base: URLComponents, _ control: String, _ service: String, _ action: String, _ arguments: [(String, String)], token: String?) async throws(TR064Error) -> [String: String] {
         var components = base
         components.path = control
         guard let url = components.url else { throw .invalidResponse("URL") }
@@ -115,7 +130,7 @@ public final class TR064Client: NSObject, Sendable, URLSessionTaskDelegate {
         request.httpMethod = "POST"
         request.setValue(#"text/xml; charset="utf-8""#, forHTTPHeaderField: "Content-Type")
         request.setValue("\"\(service)#\(action)\"", forHTTPHeaderField: "SOAPAction")
-        request.httpBody = Data(TR064XML.envelope(action: action, service: service, arguments: arguments).utf8)
+        request.httpBody = Data(TR064XML.envelope(action: action, service: service, arguments: arguments, token: token).utf8)
 
         let (data, response) = try await load(request)
         switch response.statusCode {
@@ -125,11 +140,7 @@ public final class TR064Client: NSObject, Sendable, URLSessionTaskDelegate {
         case 401:
             throw .authentication
         default:
-            switch TR064XML.faultCode(data) {
-            case "401", "606": throw .authentication
-            case "820": throw .unsupported
-            default: throw .invalidResponse("\(action): HTTP \(response.statusCode)")
-            }
+            throw TR064XML.error(faultCode: TR064XML.faultCode(data), action: action, status: response.statusCode)
         }
     }
 
@@ -208,8 +219,13 @@ final class LockedValue<Value: Sendable>: @unchecked Sendable {
 /// The TR-064 documents: SOAP envelopes, phonebook export (x_contactSCPD
 /// 5.1), call list (5.2). Same rules as the bridge (`bridge/internal/fritzbox`).
 public enum TR064XML {
-    static func envelope(action: String, service: String, arguments: [(String, String)]) -> String {
-        var body = #"<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>"#
+    static func envelope(action: String, service: String, arguments: [(String, String)], token: String? = nil) -> String {
+        var body = #"<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">"#
+        if let token {
+            // X_AVM-DE_Auth 6.4: the token goes into the SOAP header.
+            body += #"<s:Header><avm:token xmlns:avm="avm.de" s:mustUnderstand="1">"# + escape(token) + "</avm:token></s:Header>"
+        }
+        body += "<s:Body>"
         body += "<u:\(action) xmlns:u=\"\(service)\">"
         for (name, value) in arguments { body += "<\(name)>\(escape(value))</\(name)>" }
         body += "</u:\(action)></s:Body></s:Envelope>"
@@ -226,6 +242,20 @@ public enum TR064XML {
         let tree = XMLTree.parse(data)
         guard let response = tree?.first(named: element) else { return nil }
         return Dictionary(response.children.map { ($0.name, $0.text.trimmingCharacters(in: .whitespacesAndNewlines)) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// UPnP error codes of a SOAP fault (TR-064 First Steps 6.1, X_VoIP,
+    /// X_AVM-DE_Auth 6.3).
+    static func error(faultCode: String?, action: String, status: Int) -> TR064Error {
+        switch faultCode {
+        case "401": .authentication
+        case "606": .notAllowed
+        case "820": .unsupported
+        case "866": .secondFactorRequired
+        case "867": .secondFactorBlocked
+        case "868": .secondFactorBusy
+        default: .invalidResponse("\(action): HTTP \(status)" + (faultCode.map { ", UPnP \($0)" } ?? ""))
+        }
     }
 
     static func faultCode(_ data: Data) -> String? {
