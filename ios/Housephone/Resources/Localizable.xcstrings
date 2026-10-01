@@ -1,2826 +1,2826 @@
 {
-  "sourceLanguage": "de",
-  "version": "1.0",
-  "strings": {
-    "%lld Nummern": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld numbers"
+  "sourceLanguage" : "de",
+  "strings" : {
+    "„%@“ wurde %@ mit deiner Bridge gekoppelt. Warst du das nicht? Entferne das Gerät auf dem Server." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@” was paired with your bridge %2$@. Not you? Remove the device on the server."
           }
         }
       }
     },
-    "Abbrechen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel"
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@"
           }
         }
       }
     },
-    "Abgebrochen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancelled"
+    "%@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@"
           }
         }
       }
     },
-    "Abgelehnt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Declined"
+    "%lld Nummern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld numbers"
           }
         }
       }
     },
-    "Ablehnen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Decline"
+    "Abbrechen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
           }
         }
       }
     },
-    "Adresse": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Address"
+    "Abgebrochen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelled"
           }
         }
       }
     },
-    "Alle": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "All"
+    "Abgelehnt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Declined"
           }
         }
       }
     },
-    "Alle Anrufe löschen?": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete all calls?"
+    "Abgewiesen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rejected"
           }
         }
       }
     },
-    "Alle Einträge löschen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clear all"
+    "Ablehnen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decline"
           }
         }
       }
     },
-    "Alle löschen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete all"
+    "Adresse" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Address"
           }
         }
       }
     },
-    "Alles erledigt.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You're all caught up."
+    "Alle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All"
           }
         }
       }
     },
-    "Anderswo angenommen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Answered elsewhere"
+    "Alle Anrufe löschen?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete all calls?"
           }
         }
       }
     },
-    "Angenommen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Answered"
+    "Alle Einträge löschen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear all"
           }
         }
       }
     },
-    "Anleitung öffnen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open guide"
+    "Alle löschen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete all"
           }
         }
       }
     },
-    "Annehmen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accept"
+    "Alles erledigt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're all caught up."
           }
         }
       }
     },
-    "Anruf nicht möglich": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Can't place call"
+    "am %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "on %@"
           }
         }
       }
     },
-    "Anrufe": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calls"
+    "Andere …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Other …"
           }
         }
       }
     },
-    "Anrufe im Hintergrund": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Background calls"
+    "Anderswo angenommen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answered elsewhere"
           }
         }
       }
     },
-    "Anrufe über Housephone erscheinen hier – und in der Telefon-App.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calls through Housephone show up here – and in the Phone app."
+    "Angemeldet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registered"
           }
         }
       }
     },
-    "Anrufen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Call"
+    "Angenommen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answered"
           }
         }
       }
     },
-    "Audio": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Audio"
+    "Anleitung öffnen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open guide"
           }
         }
       }
     },
-    "Audioausgabe": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Audio output"
+    "Anmeldung abgelehnt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Login rejected"
           }
         }
       }
     },
-    "Auflegen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "End"
+    "Annehmen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accept"
           }
         }
       }
     },
-    "Ausblenden": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hide"
+    "Anruf nicht möglich" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't place call"
           }
         }
       }
     },
-    "Auto": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Car"
+    "Anrufbeantworter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answering machine"
           }
         }
       }
     },
-    "Beendet": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ended"
+    "Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls"
           }
         }
       }
     },
-    "Bereit": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ready"
+    "Anrufe im Hintergrund" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Background calls"
           }
         }
       }
     },
-    "Besetzt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Busy"
+    "Anrufe über Housephone erscheinen hier – und in der Telefon-App." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls through Housephone show up here – and in the Phone app."
           }
         }
       }
     },
-    "Bluetooth": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth"
+    "Anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call"
           }
         }
       }
     },
-    "Bridge": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bridge"
+    "Anrufliste wird geladen …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading call list …"
           }
         }
       }
     },
-    "Bridge erreichbar, aber nicht an der FRITZ!Box angemeldet": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bridge reachable, but not registered with the FRITZ!Box"
+    "Apple Watch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch"
           }
         }
       }
     },
-    "Bridge nicht erreichbar": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bridge unreachable"
+    "Apple Watch koppeln" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pair Apple Watch"
           }
         }
       }
     },
-    "Danach klingelt dieses iPhone nicht mehr. Du kannst es jederzeit neu koppeln.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This iPhone will stop ringing. You can pair it again at any time."
+    "Audio" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio"
           }
         }
       }
     },
-    "Das ist kein Housephone-Code.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That's not a Housephone code."
+    "Audio-Codec" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio codec"
           }
         }
       }
     },
-    "Das ist kein Housephone-Kopplungslink.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That's not a Housephone pairing link."
+    "Audioausgabe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio output"
           }
         }
       }
     },
-    "Dein Festnetz auf dem iPhone – über deine FRITZ!Box, zu Hause und unterwegs.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your landline on your iPhone – through your FRITZ!Box, at home and on the go."
+    "Auflegen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End"
           }
         }
       }
     },
-    "Deine Kontakte": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your contacts"
+    "Aus" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
           }
         }
       }
     },
-    "Den QR-Code zeigt dein Server mit `housephone-bridge pair` an.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your server shows the QR code with `housephone-bridge pair`."
+    "Ausblenden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide"
           }
         }
       }
     },
-    "Der Anruf konnte nicht gestartet werden: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The call couldn't start: %@"
+    "Ausgehend" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outgoing"
           }
         }
       }
     },
-    "Der Code ist abgelaufen oder wurde schon benutzt. Erzeuge auf dem Server mit „housephone-bridge pair“ einen neuen.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The code has expired or was already used. Create a new one on the server with “housephone-bridge pair”."
+    "Außerhalb deines Heim-WLANs wartet Housephone nicht auf Anrufe." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outside your home Wi-Fi, Housephone doesn’t wait for calls."
           }
         }
       }
     },
-    "Der Kopplungscode im Link ist ungültig.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The pairing code in the link is invalid."
+    "Auto" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Car"
           }
         }
       }
     },
-    "Der Link enthält keine gültige Bridge-Adresse.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The link doesn't contain a valid bridge address."
+    "AV1-Decoder (Teil von WebRTC)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AV1 decoder (part of WebRTC)"
           }
         }
       }
     },
-    "Die Anrufliste in Housephone wird geleert. Die Anrufliste der Telefon-App bleibt, wie sie ist.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clears the call list in Housephone. The call history in the Phone app stays as it is."
+    "Bearbeiten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
           }
         }
       }
     },
-    "Die Bridge hat noch keinen Zugang zu Telefonbuch und Anrufliste der FRITZ!Box. Richte ihn in der Bridge ein.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge doesn't have access to the FRITZ!Box phonebook and call list yet. Set it up in the bridge."
+    "Beendet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ended"
           }
         }
       }
     },
-    "Die Bridge kennt dieses iPhone nicht mehr. Hebe in den Einstellungen die Kopplung auf und kopple es neu.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge no longer knows this iPhone. Unpair it in Settings and pair it again."
+    "Bei Anrufen klingelt auch deine Watch. Du kannst direkt am Handgelenk annehmen und sprechen – auch ohne iPhone in der Nähe." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your watch rings too. Answer and talk right on your wrist – even without your iPhone nearby."
           }
         }
       }
     },
-    "Die Bridge kennt dieses iPhone nicht mehr. Zum Neu-Koppeln tippen.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge no longer knows this iPhone. Tap to pair again."
+    "Benutzername" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User name"
           }
         }
       }
     },
-    "Die bisherige Kopplung wird ersetzt.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This replaces the current pairing."
+    "Bereit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready"
           }
         }
       }
     },
-    "Die Bridge ist gerade nicht erreichbar. Prüfe die Internetverbindung und versuche es erneut.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge can't be reached right now. Check your internet connection and try again."
+    "Besetzt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Busy"
           }
         }
       }
     },
-    "Die Bridge ist nicht erreichbar. Prüfe die Adresse und deine Internetverbindung.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge can't be reached. Check the address and your internet connection."
+    "Bildformate (Teil von WebRTC)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image formats (part of WebRTC)"
           }
         }
       }
     },
-    "Die Bridge läuft auf deinem Server und ist für die FRITZ!Box ein IP-Telefon.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge runs on your server and acts as an IP phone for the FRITZ!Box."
+    "Bluetooth" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bluetooth"
           }
         }
       }
     },
-    "Die Bridge meldet: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge says: %@"
+    "Bridge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bridge"
           }
         }
       }
     },
-    "Die Zugangsdaten konnten nicht sicher gespeichert werden.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The credentials couldn't be stored securely."
+    "Bridge erreichbar, aber nicht an der FRITZ!Box angemeldet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bridge reachable, but not registered with the FRITZ!Box"
           }
         }
       }
     },
-    "Die Zugangsdaten werden von diesem iPhone gelöscht.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The credentials will be removed from this iPhone."
+    "Bridge nicht erreichbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bridge unreachable"
           }
         }
       }
     },
-    "Diese Nummer kann nicht gewählt werden.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This number can't be dialed."
+    "Bridge nicht vertrauenswürdig" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bridge not trusted"
           }
         }
       }
     },
-    "Dieses iPhone": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This iPhone"
+    "Bridge nicht vertrauenswürdig. Die Kopplung wurde abgebrochen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bridge not trusted. Pairing was cancelled."
           }
         }
       }
     },
-    "Du kannst den Zugriff in den Einstellungen erlauben. Wählen geht auch ohne – über das Tastenfeld.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You can allow access in Settings. Dialing works without it, too – using the keypad."
+    "C++-Grundbibliothek" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C++ base library"
           }
         }
       }
     },
-    "Eingehender Anruf": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Incoming call"
+    "C++-Laufzeit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C++ runtime"
           }
         }
       }
     },
-    "Einstellungen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Settings"
+    "Code %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code %@"
           }
         }
       }
     },
-    "Einstellungen öffnen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Settings"
+    "Code wird angefordert …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requesting code …"
           }
         }
       }
     },
-    "Erlaube den Kamerazugriff in den Einstellungen – oder kopiere den Kopplungslink und füge ihn ein.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allow camera access in Settings – or copy the pairing link and paste it."
+    "Danach kannst du Housephone mit einer Bridge koppeln oder neu einrichten." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afterwards you can pair Housephone with a bridge or set it up again."
           }
         }
       }
     },
-    "Erlaube den Zugriff, um Kontakte direkt anzurufen und Anrufer am Namen zu erkennen.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allow access to call contacts directly and see callers by name."
+    "Danach klingeln dieses iPhone und deine Apple Watch nicht mehr. Du kannst beide jederzeit neu koppeln." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This iPhone and your Apple Watch will no longer ring. You can pair both again at any time."
           }
         }
       }
     },
-    "Erlaube noch das Mikrofon, damit man dich beim Telefonieren hört.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Now allow the microphone so people can hear you on calls."
+    "Danach klingelt dieses iPhone nicht mehr. Du kannst es jederzeit neu koppeln." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This iPhone will stop ringing. You can pair it again at any time."
           }
         }
       }
     },
-    "Erlaubt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allowed"
+    "Danksagungen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acknowledgements"
           }
         }
       }
     },
-    "Erneut versuchen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Try again"
+    "Das geht ohne Bridge nicht" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not available without a bridge"
           }
         }
       }
     },
-    "Es läuft bereits ein Anruf.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A call is already in progress."
+    "Das ist kein Housephone-Code." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That's not a Housephone code."
           }
         }
       }
     },
-    "Fehlgeschlagen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed"
+    "Das ist kein Housephone-Kopplungslink." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That's not a Housephone pairing link."
           }
         }
       }
     },
-    "Filter": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filter"
+    "Datenformat" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data format"
           }
         }
       }
     },
-    "FRITZ!Box nicht angemeldet": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not registered with FRITZ!Box"
+    "Dein Festnetz auf dem iPhone – über deine FRITZ!Box, zu Hause und unterwegs." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your landline on your iPhone – through your FRITZ!Box, at home and on the go."
           }
         }
       }
     },
-    "G.722 von der FRITZ!Box bis ins Ohr.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "G.722 from the FRITZ!Box all the way to your ear."
+    "Deine Kontakte" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your contacts"
           }
         }
       }
     },
-    "Gedrückt halten für +": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hold for +"
+    "Dem Link fehlt die Kennung der Bridge. Erzeuge einen neuen Code." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The link is missing the bridge’s fingerprint. Create a new code."
           }
         }
       }
     },
-    "Gedrückt halten löscht die ganze Nummer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hold to clear the whole number"
+    "Den Lizenztext findest du online:" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can find the license text online:"
           }
         }
       }
     },
-    "Gekoppelt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paired"
+    "Den QR-Code zeigt dein Server mit `housephone-bridge pair` an – oder kopiere den Kopplungslink und tippe auf „Einsetzen“." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your server shows the QR code with `housephone-bridge pair` – or copy the pairing link and tap “Paste”."
           }
         }
       }
     },
-    "Gestern": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Yesterday"
+    "Den QR-Code zeigt dein Server mit `housephone-bridge pair` an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your server shows the QR code with `housephone-bridge pair`."
           }
         }
       }
     },
-    "HD-Sprachqualität": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HD voice"
+    "Der Anruf konnte nicht gestartet werden: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The call couldn't start: %@"
           }
         }
       }
     },
-    "Housephone": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Housephone"
+    "Der Code gilt bis %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The code is valid until %@."
           }
         }
       }
     },
-    "Im Tastenfeld öffnen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open in Keypad"
+    "Der Code ist abgelaufen oder wurde schon benutzt. Erzeuge auf dem Server mit „housephone-bridge pair“ einen neuen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The code has expired or was already used. Create a new one on the server with “housephone-bridge pair”."
           }
         }
       }
     },
-    "In Einstellungen erlauben": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allow in Settings"
+    "Der Kopplungscode im Link ist ungültig." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The pairing code in the link is invalid."
           }
         }
       }
     },
-    "Kamera nicht verfügbar": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Camera unavailable"
+    "Der Link enthält keine gültige Bridge-Adresse." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The link doesn't contain a valid bridge address."
           }
         }
       }
     },
-    "Kein Zugriff auf Kontakte": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No access to contacts"
+    "Die Anrufliste der FRITZ!Box ist leer." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The FRITZ!Box call list is empty."
           }
         }
       }
     },
-    "Keine Kontakte mit Nummer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No contacts with a number"
+    "Die Anrufliste in Housephone wird geleert. Die Anrufliste der Telefon-App bleibt, wie sie ist." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clears the call list in Housephone. The call history in the Phone app stays as it is."
           }
         }
       }
     },
-    "Keine Nummer eingegeben": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No number entered"
+    "Die Apple Watch telefoniert nur über eine Bridge. Im Direktmodus klingelt sie nicht mit." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch makes calls only through a bridge. In direct mode it doesn’t ring."
           }
         }
       }
     },
-    "Keine verpassten Anrufe": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No missed calls"
+    "Die bisherige Kopplung wird ersetzt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This replaces the current pairing."
           }
         }
       }
     },
-    "Klingelt wie ein echter Anruf": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rings like a real call"
+    "Die Bridge hat keinen Kopplungscode geliefert. Prüfe, ob sie erreichbar ist." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge didn’t provide a pairing code. Check that it’s reachable."
           }
         }
       }
     },
-    "Klingelt …": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ringing…"
+    "Die Bridge hat noch keinen Zugang zu Telefonbuch und Anrufliste der FRITZ!Box. Richte ihn in der Bridge ein." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge doesn't have access to the FRITZ!Box phonebook and call list yet. Set it up in the bridge."
           }
         }
       }
     },
-    "Kontakte": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Contacts"
+    "Die Bridge ist gerade nicht erreichbar. Prüfe die Internetverbindung und versuche es erneut." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge can't be reached right now. Check your internet connection and try again."
           }
         }
       }
     },
-    "Kontakte mit Telefonnummer erscheinen hier.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Contacts with a phone number appear here."
+    "Die Bridge ist nicht erreichbar. Prüfe die Adresse und deine Internetverbindung." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge can't be reached. Check the address and your internet connection."
           }
         }
       }
     },
-    "Kopfhörer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Headphones"
+    "Die Bridge kennt dieses iPhone nicht mehr. Hebe in den Einstellungen die Kopplung auf und kopple es neu." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge no longer knows this iPhone. Unpair it in Settings and pair it again."
           }
         }
       }
     },
-    "Kopple zuerst deine Bridge, dann kannst du telefonieren.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pair your bridge first, then you can make calls."
+    "Die Bridge kennt dieses iPhone nicht mehr. Zum Neu-Koppeln tippen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge no longer knows this iPhone. Tap to pair again."
           }
         }
       }
     },
-    "Koppeln": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pair"
+    "Die Bridge läuft auf deinem Server und ist für die FRITZ!Box ein IP-Telefon." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge runs on your server and acts as an IP phone for the FRITZ!Box."
           }
         }
       }
     },
-    "Kopplung aufheben": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unpair"
+    "Die Bridge meldet: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge says: %@"
           }
         }
       }
     },
-    "Kopplung aufheben?": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unpair?"
+    "Die FRITZ!Box antwortet nicht. Bist du im Heim-WLAN?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The FRITZ!Box isn’t responding. Are you on your home Wi-Fi?"
           }
         }
       }
     },
-    "Kopplung fehlgeschlagen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pairing failed"
+    "Die FRITZ!Box bietet diese Funktion nicht an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The FRITZ!Box doesn’t offer this feature."
           }
         }
       }
     },
-    "Kopplung läuft": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pairing"
+    "Die FRITZ!Box hat die Anmeldung abgelehnt. Prüfe Benutzer und Kennwort für TR-064." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The FRITZ!Box rejected the login. Check the TR-064 user and password."
           }
         }
       }
     },
-    "Kopplung ungültig": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pairing invalid"
+    "Die FRITZ!Box hat unerwartet geantwortet." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The FRITZ!Box sent an unexpected response."
           }
         }
       }
     },
-    "Lautsprecher": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speaker"
+    "Die FRITZ!Box lehnt die Anmeldung ab. Zum Prüfen tippen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The FRITZ!Box rejects the login. Tap to check."
           }
         }
       }
     },
-    "Link nicht erkannt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Link not recognized"
+    "Die Watch hat unerwartet geantwortet. Aktualisiere Housephone auf beiden Geräten." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The watch sent an unexpected reply. Update Housephone on both devices."
           }
         }
       }
     },
-    "Löschen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete"
+    "Die Watch konnte sich nicht koppeln." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The watch couldn’t pair."
           }
         }
       }
     },
-    "Mehr": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "More"
+    "Die Watch koppelt sich automatisch. Danach klingelt sie mit, und du kannst direkt am Handgelenk telefonieren." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your watch pairs automatically. It then rings too, and you can take calls right on your wrist."
           }
         }
       }
     },
-    "Mikrofon": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Microphone"
+    "Die Watch telefoniert nur über eine Bridge." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The watch makes calls only through a bridge."
           }
         }
       }
     },
-    "Mikrofon erlauben": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allow microphone"
+    "Die Zugangsdaten konnten nicht im Schlüsselbund gespeichert werden." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The credentials couldn’t be saved to the keychain."
           }
         }
       }
     },
-    "Minimieren": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minimize"
+    "Die Zugangsdaten konnten nicht sicher gespeichert werden." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The credentials couldn't be stored securely."
           }
         }
       }
     },
-    "Mit CallKit – auch im Sperrbildschirm und in der Anrufliste.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "With CallKit – on the Lock Screen and in your call history."
+    "Die Zugangsdaten werden von diesem iPhone gelöscht." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The credentials will be removed from this iPhone."
           }
         }
       }
     },
-    "Mit „%@“ koppeln?": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pair with “%@”?"
+    "Die Zugangsdaten werden von diesem iPhone gelöscht. Deine Apple Watch wird ebenfalls entkoppelt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The credentials will be removed from this iPhone. Your Apple Watch will be unpaired as well."
           }
         }
       }
     },
-    "Name": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Name"
+    "Diese Bridge ist nicht die aus dem QR-Code. Die Kopplung wurde abgebrochen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This bridge is not the one from the QR code. Pairing was cancelled."
           }
         }
       }
     },
-    "Name oder Nummer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Name or number"
+    "Diese Nummer kann nicht gewählt werden." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This number can't be dialed."
           }
         }
       }
     },
-    "Nicht erlaubt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not allowed"
+    "Dieser Link stammt von einer älteren Bridge. Aktualisiere die Bridge und erzeuge einen neuen Code." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This link is from an older bridge. Update the bridge and create a new code."
           }
         }
       }
     },
-    "Nicht erreichbar": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unreachable"
+    "Dieses iPhone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This iPhone"
           }
         }
       }
     },
-    "Nicht gekoppelt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not paired"
+    "Direkt mit FRITZ!Box" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Directly with FRITZ!Box"
           }
         }
       }
     },
-    "Noch keine Anrufe": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No calls yet"
+    "Direkt mit FRITZ!Box (nur zu Hause)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Directly with FRITZ!Box (home only)"
           }
         }
       }
     },
-    "Noch keine Tastentöne": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tones yet"
+    "Direkt per TR-064" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Directly via TR-064"
           }
         }
       }
     },
-    "Noch nicht bereit": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not ready yet"
+    "Direktmodus beenden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn Off Direct Mode"
           }
         }
       }
     },
-    "Noch nicht gefragt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not asked yet"
+    "Direktmodus beenden?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off direct mode?"
           }
         }
       }
     },
-    "Nummer kopieren": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy Number"
+    "Du kannst den Zugriff in den Einstellungen erlauben. Wählen geht auch ohne – über das Tastenfeld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can allow access in Settings. Dialing works without it, too – using the keypad."
           }
         }
       }
     },
-    "Nummer kopieren: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy Number: %@"
+    "Eingehender Anruf" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incoming call"
           }
         }
       }
     },
-    "Nummer löschen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clear Number"
+    "Einstellungen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
           }
         }
       }
     },
-    "Ohne VPN, über deine eigene Bridge.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No VPN – through your own bridge."
+    "Einstellungen öffnen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
           }
         }
       }
     },
-    "OK": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OK"
+    "Erlaube den Kamerazugriff in den Einstellungen – oder kopiere den Kopplungslink und füge ihn ein." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow camera access in Settings – or copy the pairing link and paste it."
           }
         }
       }
     },
-    "Plus": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus"
+    "Erlaube den Zugriff, um Kontakte direkt anzurufen und Anrufer am Namen zu erkennen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow access to call contacts directly and see callers by name."
           }
         }
       }
     },
-    "QR-Code der Bridge scannen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scan the bridge's QR code"
+    "Erlaube noch das Mikrofon, damit man dich beim Telefonieren hört." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now allow the microphone so people can hear you on calls."
           }
         }
       }
     },
-    "QR-Code scannen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scan QR code"
+    "Erlaubt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allowed"
           }
         }
       }
     },
-    "Raute": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pound"
+    "Erneut koppeln" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pair again"
           }
         }
       }
     },
-    "Richte die Kamera auf den QR-Code deiner Bridge.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Point the camera at your bridge's QR code."
+    "Erneut versuchen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
           }
         }
       }
     },
-    "Status": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Status"
+    "Es läuft bereits ein Anruf." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A call is already in progress."
           }
         }
       }
     },
-    "Stern": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Star"
+    "Favorit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favorite"
           }
         }
       }
     },
-    "Stumm": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mute"
+    "Favoriten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favorites"
           }
         }
       }
     },
-    "Tastenfeld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keypad"
+    "Fax" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fax"
           }
         }
       }
     },
-    "Unbekannt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unknown"
+    "Fehlgeschlagen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed"
           }
         }
       }
     },
-    "Unverschlüsselte Verbindung – nur fürs Heimnetz gedacht": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unencrypted connection – meant for your home network only"
+    "Filter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter"
           }
         }
       }
     },
-    "Verbinde mit der Bridge …": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connecting to the bridge…"
+    "Fingerabdruck" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fingerprint"
           }
         }
       }
     },
-    "Verbinde …": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connecting…"
+    "FRITZ!Box" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FRITZ!Box"
           }
         }
       }
     },
-    "Verbindung wird wiederhergestellt …": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reconnecting…"
+    "FRITZ!Box antwortet nicht" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FRITZ!Box not responding"
           }
         }
       }
     },
-    "Verbunden": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connected"
+    "FRITZ!Box nicht angemeldet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not registered with FRITZ!Box"
           }
         }
       }
     },
-    "Verpasst": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Missed"
+    "FRITZ!Box nicht verbunden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FRITZ!Box not connected"
           }
         }
       }
     },
-    "Version": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version"
+    "FRITZ!Box-Benutzer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FRITZ!Box user"
           }
         }
       }
     },
-    "Zeigt die App; der Anruf läuft weiter": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shows the app; the call continues"
+    "FRITZ!Box-Fehler %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FRITZ!Box error %lld"
           }
         }
       }
     },
-    "Zu den Einstellungen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Go to Settings"
+    "G.711 statt HD-Telefonie (G.722)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "G.711 instead of HD voice (G.722)."
           }
         }
       }
     },
-    "Zu viele Versuche. Warte eine Minute und versuche es dann erneut.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Too many attempts. Wait a minute, then try again."
+    "G.722 von der FRITZ!Box bis ins Ohr." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "G.722 from the FRITZ!Box all the way to your ear."
           }
         }
       }
     },
-    "Zugriff erlauben": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allow access"
+    "Gedrückt halten für +" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold for +"
           }
         }
       }
     },
-    "Zum Koppeln ins Heim-WLAN oder Tailscale": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connect to your home Wi-Fi or Tailscale to pair"
+    "Gedrückt halten löscht die ganze Nummer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold to clear the whole number"
           }
         }
       }
     },
-    "Zurück zum Anruf": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Back to Call"
+    "Gekoppelt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paired"
           }
         }
       }
     },
-    "Zurückrufen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Call back"
+    "Gekoppelt, klingelt noch nicht" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paired, can’t ring yet"
           }
         }
       }
     },
-    "iOS hat Housephone noch nicht für Anrufe im Hintergrund freigegeben. Das passiert automatisch, sobald die App mit Internet geöffnet ist. Bleibt es dabei, prüfe den Push-Schlüssel (APNs) der Bridge.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iOS hasn't enabled Housephone for background calls yet. This happens automatically once the app is opened with an internet connection. If it stays this way, check the bridge's push key (APNs)."
+    "Geschäftlich" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work"
           }
         }
       }
     },
-    "Öffnet die Einstellungen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opens Settings"
+    "Gesprächsverbindung und Audio" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call connection and audio"
           }
         }
       }
     },
-    "Über": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "About"
+    "Gestern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yesterday"
           }
         }
       }
     },
-    "Überall erreichbar": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reachable everywhere"
+    "Grenzen ohne Bridge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limits without a bridge"
           }
         }
       }
     },
-    "Apple Watch": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Watch"
+    "HD-Sprachqualität" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HD voice"
           }
         }
       }
     },
-    "Housephone nicht installiert": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Housephone not installed"
+    "Heim-WLAN" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home Wi-Fi"
           }
         }
       }
     },
-    "Gekoppelt, klingelt noch nicht": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paired, can’t ring yet"
+    "Hinweis schließen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dismiss"
           }
         }
       }
     },
-    "Code wird angefordert …": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Requesting code …"
+    "Host-Name oder IP-Adresse" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Host name or IP address"
           }
         }
       }
     },
-    "Watch koppelt sich …": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Watch is pairing …"
+    "Housephone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Housephone"
           }
         }
       }
     },
-    "Öffne Housephone auf deiner Apple Watch": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Housephone on your Apple Watch"
+    "Housephone ist nicht an der FRITZ!Box angemeldet. Prüfe die Zugangsdaten in den Einstellungen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Housephone isn’t registered with your FRITZ!Box. Check the credentials in Settings."
           }
         }
       }
     },
-    "Der Code gilt bis %@.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The code is valid until %@."
+    "Housephone meldet sich von der FRITZ!Box ab und löscht die Zugangsdaten von diesem iPhone." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Housephone signs out of the FRITZ!Box and deletes the credentials from this iPhone."
           }
         }
       }
     },
-    "Erneut koppeln": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pair again"
+    "Housephone nicht installiert" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Housephone not installed"
           }
         }
       }
     },
-    "Apple Watch koppeln": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pair Apple Watch"
+    "Housephone telefoniert mit WebRTC von Google, und darin stecken diese Open-Source-Projekte. Danke an alle, die daran mitarbeiten. Die App für die Apple Watch nutzt keine fremden Bibliotheken." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Housephone makes calls with Google's WebRTC, which contains these open-source projects. Thanks to everyone who works on them. The Apple Watch app uses no third-party libraries."
           }
         }
       }
     },
-    "Installiere Housephone in der Watch-App auf dem iPhone unter „Verfügbare Apps“. Danach koppelt sich die Watch automatisch.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Install Housephone from “Available Apps” in the Watch app on your iPhone. Your watch then pairs automatically."
+    "Im Hintergrund klingelt es erst, wenn Apple Housephone die Local-Push-Freigabe erteilt hat." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ringing in the background needs Apple to approve Local Push for Housephone."
           }
         }
       }
     },
-    "Zum Koppeln muss die Bridge erreichbar sein.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge must be reachable to pair."
+    "Im Tastenfeld öffnen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open in Keypad"
           }
         }
       }
     },
-    "Bei Anrufen klingelt auch deine Watch. Du kannst direkt am Handgelenk annehmen und sprechen – auch ohne iPhone in der Nähe.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your watch rings too. Answer and talk right on your wrist – even without your iPhone nearby."
+    "In Einstellungen erlauben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow in Settings"
           }
         }
       }
     },
-    "Die Watch koppelt sich automatisch. Danach klingelt sie mit, und du kannst direkt am Handgelenk telefonieren.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your watch pairs automatically. It then rings too, and you can take calls right on your wrist."
+    "Installiere Housephone in der Watch-App auf dem iPhone unter „Verfügbare Apps“. Danach koppelt sich die Watch automatisch." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install Housephone from “Available Apps” in the Watch app on your iPhone. Your watch then pairs automatically."
           }
         }
       }
     },
-    "Die Bridge hat keinen Kopplungscode geliefert. Prüfe, ob sie erreichbar ist.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bridge didn’t provide a pairing code. Check that it’s reachable."
+    "Intern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Internal"
           }
         }
       }
     },
-    "Die Watch hat unerwartet geantwortet. Aktualisiere Housephone auf beiden Geräten.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The watch sent an unexpected reply. Update Housephone on both devices."
+    "iOS hat Housephone noch nicht für Anrufe im Hintergrund freigegeben. Das passiert automatisch, sobald die App mit Internet geöffnet ist. Bleibt es dabei, prüfe den Push-Schlüssel (APNs) der Bridge." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS hasn't enabled Housephone for background calls yet. This happens automatically once the app is opened with an internet connection. If it stays this way, check the bridge's push key (APNs)."
           }
         }
       }
     },
-    "Die Watch konnte sich nicht koppeln.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The watch couldn’t pair."
+    "IP-Telefon" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IP phone"
           }
         }
       }
     },
-    "Danach klingeln dieses iPhone und deine Apple Watch nicht mehr. Du kannst beide jederzeit neu koppeln.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This iPhone and your Apple Watch will no longer ring. You can pair both again at any time."
+    "iPhone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone"
           }
         }
       }
     },
-    "Die Zugangsdaten werden von diesem iPhone gelöscht. Deine Apple Watch wird ebenfalls entkoppelt.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The credentials will be removed from this iPhone. Your Apple Watch will be unpaired as well."
+    "Kamera nicht verfügbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera unavailable"
           }
         }
       }
     },
-    "Privat": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Home"
+    "Kein Zugriff auf Kontakte" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No access to contacts"
           }
         }
       }
     },
-    "Mobil": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mobile"
+    "Keine Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No calls"
           }
         }
       }
     },
-    "Geschäftlich": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Work"
+    "Keine Apple Watch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Apple Watch"
           }
         }
       }
     },
-    "Fax": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fax"
+    "Keine Kontakte mit Nummer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No contacts with a number"
           }
         }
       }
     },
-    "Intern": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Internal"
+    "Keine Nummer eingegeben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No number entered"
           }
         }
       }
     },
-    "Notiz": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Memo"
+    "Keine verpassten Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No missed calls"
           }
         }
       }
     },
-    "Sonstige": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Other"
+    "Kennwort" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password"
           }
         }
       }
     },
-    "Läuft gerade": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In progress"
+    "Klingeln im Hintergrund nur zu Hause" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rings in the background only at home"
           }
         }
       }
     },
-    "Abgewiesen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rejected"
+    "Klingelt …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ringing…"
           }
         }
       }
     },
-    "Anrufbeantworter": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Answering machine"
+    "Klingelt nur bei geöffneter App" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rings only while the app is open"
           }
         }
       }
     },
-    "am %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "on %@"
+    "Klingelt wie ein echter Anruf" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rings like a real call"
           }
         }
       }
     },
-    "von %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "from %@"
+    "Kontakte" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contacts"
           }
         }
       }
     },
-    "Ausgehend": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Outgoing"
+    "Kontakte mit Nummer aus dem FRITZ!Box-Telefonbuch erscheinen hier." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contacts with a number from the FRITZ!Box phonebook appear here."
           }
         }
       }
     },
-    "FRITZ!Box antwortet nicht": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FRITZ!Box not responding"
+    "Kontakte mit Telefonnummer erscheinen hier." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contacts with a phone number appear here."
           }
         }
       }
     },
-    "Stand: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Updated %@"
+    "Kopfhörer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Headphones"
           }
         }
       }
     },
-    "FRITZ!Box nicht verbunden": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FRITZ!Box not connected"
+    "Koppeln" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pair"
           }
         }
       }
     },
-    "Prüfe die Internetverbindung. Telefonbuch und Anrufliste kommen über deine Bridge.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check the internet connection. The phonebook and call list come through your bridge."
+    "Kopple zuerst deine Bridge, dann kannst du telefonieren." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pair your bridge first, then you can make calls."
           }
         }
       }
     },
-    "Telefonbuch wird geladen …": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loading phonebook …"
+    "Kopplung aufheben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unpair"
           }
         }
       }
     },
-    "%@: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@: %2$@"
+    "Kopplung aufheben?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unpair?"
           }
         }
       }
     },
-    "Telefonbuch ist leer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Phonebook is empty"
+    "Kopplung fehlgeschlagen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing failed"
           }
         }
       }
     },
-    "Kontakte mit Nummer aus dem FRITZ!Box-Telefonbuch erscheinen hier.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Contacts with a number from the FRITZ!Box phonebook appear here."
+    "Kopplung läuft" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing"
           }
         }
       }
     },
-    "Favoriten": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favorites"
+    "Kopplung ungültig" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing invalid"
           }
         }
       }
     },
-    "Favorit": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favorite"
+    "Läuft gerade" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In progress"
           }
         }
       }
     },
-    "%@ · %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@"
+    "Lautsprecher" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speaker"
           }
         }
       }
     },
-    "Quelle": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Source"
+    "Lege in der FRITZ!Box unter Telefonie → Telefoniegeräte → Neues Gerät einrichten ein „Telefon (mit und ohne Anrufbeantworter)“ als „LAN/WLAN (IP-Telefon)“ an und trage hier dessen Benutzernamen und Kennwort ein." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In your FRITZ!Box, go to Telephony → Telephony Devices → Configure New Device, add a “Telephone (with and without answering machine)” as “LAN/WLAN (IP telephone)”, and enter its user name and password here."
           }
         }
       }
     },
-    "FRITZ!Box": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FRITZ!Box"
+    "Link nicht erkannt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link not recognized"
           }
         }
       }
     },
-    "iPhone": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iPhone"
+    "Lizenztext" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "License text"
           }
         }
       }
     },
-    "Anrufliste wird geladen …": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loading call list …"
+    "Löschen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
           }
         }
       }
     },
-    "Keine Anrufe": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No calls"
+    "Mehr" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More"
           }
         }
       }
     },
-    "Die Anrufliste der FRITZ!Box ist leer.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The FRITZ!Box call list is empty."
+    "Melde an der FRITZ!Box an …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registering with the FRITZ!Box …"
           }
         }
       }
     },
-    "Telefonbuch & Anrufliste": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Phonebook & call list"
+    "Mikrofon" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microphone"
           }
         }
       }
     },
-    "Nicht eingerichtet": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not set up"
+    "Mikrofon erlauben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow microphone"
           }
         }
       }
     },
-    "Danksagungen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Acknowledgements"
+    "Minimieren" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimize"
           }
         }
       }
     },
-    "Open Source": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Source"
+    "Mit „%@“ koppeln?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pair with “%@”?"
           }
         }
       }
     },
-    "Housephone telefoniert mit WebRTC von Google, und darin stecken diese Open-Source-Projekte. Danke an alle, die daran mitarbeiten. Die App für die Apple Watch nutzt keine fremden Bibliotheken.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Housephone makes calls with Google's WebRTC, which contains these open-source projects. Thanks to everyone who works on them. The Apple Watch app uses no third-party libraries."
+    "Mit Bridge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With a bridge"
           }
         }
       }
     },
-    "Den Lizenztext findest du online:": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You can find the license text online:"
+    "Mit CallKit – auch im Sperrbildschirm und in der Anrufliste." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With CallKit – on the Lock Screen and in your call history."
           }
         }
       }
     },
-    "Patentzusage": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Patent grant"
+    "Mobil" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mobile"
           }
         }
       }
     },
-    "Lizenztext": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "License text"
+    "Name" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
           }
         }
       }
     },
-    "Gesprächsverbindung und Audio": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Call connection and audio"
+    "Name oder Nummer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name or number"
           }
         }
       }
     },
-    "Verschlüsselung": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Encryption"
+    "Neues Gerät gekoppelt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New device paired"
           }
         }
       }
     },
-    "Verschlüsselte Sprachübertragung": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Encrypted voice transport"
+    "Neues Gerät gekoppelt: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New device paired: %@"
           }
         }
       }
     },
-    "Audio-Codec": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Audio codec"
+    "Nicht angegeben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not set"
           }
         }
       }
     },
-    "C++-Grundbibliothek": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "C++ base library"
+    "Nicht eingerichtet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not set up"
           }
         }
       }
     },
-    "Datenformat": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Data format"
+    "Nicht erlaubt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not allowed"
           }
         }
       }
     },
-    "C++-Laufzeit": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "C++ runtime"
+    "Nicht erreichbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unreachable"
           }
         }
       }
     },
-    "Video-Codecs VP8/VP9 (Teil von WebRTC)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VP8/VP9 video codecs (part of WebRTC)"
+    "Nicht gekoppelt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not paired"
           }
         }
       }
     },
-    "Video-Codec AV1 (Teil von WebRTC)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AV1 video codec (part of WebRTC)"
+    "Nicht gespeichert" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not saved"
           }
         }
       }
     },
-    "AV1-Decoder (Teil von WebRTC)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AV1 decoder (part of WebRTC)"
+    "Noch keine Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No calls yet"
           }
         }
       }
     },
-    "Bildformate (Teil von WebRTC)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Image formats (part of WebRTC)"
+    "Noch keine Tastentöne" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No tones yet"
           }
         }
       }
     },
-    "Dieser Link stammt von einer älteren Bridge. Aktualisiere die Bridge und erzeuge einen neuen Code.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This link is from an older bridge. Update the bridge and create a new code."
+    "Noch nicht bereit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not ready yet"
           }
         }
       }
     },
-    "Dem Link fehlt die Kennung der Bridge. Erzeuge einen neuen Code.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The link is missing the bridge’s fingerprint. Create a new code."
+    "Noch nicht gefragt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not asked yet"
           }
         }
       }
     },
-    "Später": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Later"
+    "Notiz" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memo"
           }
         }
       }
     },
-    "Code %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Code %@"
+    "Nummer kopieren" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Number"
           }
         }
       }
     },
-    "Diese Bridge ist nicht die aus dem QR-Code. Die Kopplung wurde abgebrochen.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This bridge is not the one from the QR code. Pairing was cancelled."
+    "Nummer kopieren: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Number: %@"
           }
         }
       }
     },
-    "Bridge nicht vertrauenswürdig. Die Kopplung wurde abgebrochen.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bridge not trusted. Pairing was cancelled."
+    "Nummer löschen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Number"
           }
         }
       }
     },
-    "Uhrzeit des iPhones prüfen: Sie weicht zu stark von der Bridge ab.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check the iPhone’s time: it differs too much from the bridge."
+    "Nur im Heim-WLAN" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home Wi-Fi only"
           }
         }
       }
     },
-    "Den QR-Code zeigt dein Server mit `housephone-bridge pair` an – oder kopiere den Kopplungslink und tippe auf „Einsetzen“.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your server shows the QR code with `housephone-bridge pair` – or copy the pairing link and tap “Paste”."
+    "Nur im Heim-WLAN verfügbar – unterwegs nicht erreichbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home Wi-Fi only – not reachable away from home"
           }
         }
       }
     },
-    "Fingerabdruck": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fingerprint"
+    "Nur im Heim-WLAN verfügbar. Housephone ist dann ein IP-Telefon deiner FRITZ!Box, ohne Bridge dazwischen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only available on your home Wi-Fi. Housephone is then an IP phone of your FRITZ!Box, with no bridge in between."
           }
         }
       }
     },
-    "Bridge nicht vertrauenswürdig": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bridge not trusted"
+    "Nur in diesem WLAN darf Housephone im Hintergrund auf Anrufe warten. Den Namen liest die App nicht selbst aus, dafür bräuchte sie deinen Standort." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Housephone waits for calls in the background only on this Wi-Fi. The app doesn’t read the name itself; that would require your location."
           }
         }
       }
     },
-    "Uhrzeit des iPhones prüfen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check the iPhone’s time"
+    "Öffne Housephone auf deiner Apple Watch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Housephone on your Apple Watch"
           }
         }
       }
     },
-    "Neues Gerät gekoppelt: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New device paired: %@"
+    "Öffnet die Einstellungen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens Settings"
           }
         }
       }
     },
-    "Neues Gerät gekoppelt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New device paired"
+    "Ohne Bridge nicht verfügbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not available without a bridge"
           }
         }
       }
     },
-    "„%@“ wurde %@ mit deiner Bridge gekoppelt. Warst du das nicht? Entferne das Gerät auf dem Server.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“%1$@” was paired with your bridge %2$@. Not you? Remove the device on the server."
+    "Ohne Bridge telefoniert Housephone nur im Heim-WLAN. Verbinde dich mit dem WLAN deiner FRITZ!Box." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without a bridge, Housephone only works on your home Wi-Fi. Connect to your FRITZ!Box’s Wi-Fi."
           }
         }
       }
     },
-    "Hinweis schließen": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dismiss"
+    "Ohne Bridge, nur im Heim-WLAN, ohne Apple Watch." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No bridge, home Wi-Fi only, no Apple Watch."
           }
         }
       }
     },
-    "Ohne Bridge telefoniert Housephone nur im Heim-WLAN. Verbinde dich mit dem WLAN deiner FRITZ!Box.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Without a bridge, Housephone only works on your home Wi-Fi. Connect to your FRITZ!Box’s Wi-Fi."
+    "Ohne VPN, über deine eigene Bridge." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No VPN – through your own bridge."
           }
         }
       }
     },
-    "Housephone ist nicht an der FRITZ!Box angemeldet. Prüfe die Zugangsdaten in den Einstellungen.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Housephone isn’t registered with your FRITZ!Box. Check the credentials in Settings."
+    "OK" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
           }
         }
       }
     },
-    "Die FRITZ!Box antwortet nicht. Bist du im Heim-WLAN?": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The FRITZ!Box isn’t responding. Are you on your home Wi-Fi?"
+    "Open Source" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Source"
           }
         }
       }
     },
-    "Die FRITZ!Box hat die Anmeldung abgelehnt. Prüfe Benutzer und Kennwort für TR-064.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The FRITZ!Box rejected the login. Check the TR-064 user and password."
+    "Optional. Nutze einen eigenen FRITZ!Box-Benutzer mit dem Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional. Use a separate FRITZ!Box user with the permission “Voice messages, fax messages, FRITZ!App Fon and call list”."
           }
         }
       }
     },
-    "Die FRITZ!Box bietet diese Funktion nicht an.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The FRITZ!Box doesn’t offer this feature."
+    "Patentzusage" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Patent grant"
           }
         }
       }
     },
-    "Die FRITZ!Box hat unerwartet geantwortet.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The FRITZ!Box sent an unexpected response."
+    "Plus" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus"
           }
         }
       }
     },
-    "Andere …": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Other …"
+    "Privat" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home"
           }
         }
       }
     },
-    "Host-Name oder IP-Adresse": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Host name or IP address"
+    "Prüfe die Internetverbindung. Telefonbuch und Anrufliste kommen über deine Bridge." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the internet connection. The phonebook and call list come through your bridge."
           }
         }
       }
     },
-    "Benutzername": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "User name"
+    "QR-Code der Bridge scannen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan the bridge's QR code"
           }
         }
       }
     },
-    "Kennwort": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Password"
+    "QR-Code scannen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan QR code"
           }
         }
       }
     },
-    "IP-Telefon": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IP phone"
+    "Quelle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Source"
           }
         }
       }
     },
-    "Lege in der FRITZ!Box unter Telefonie → Telefoniegeräte → Neues Gerät einrichten ein „Telefon (mit und ohne Anrufbeantworter)“ als „LAN/WLAN (IP-Telefon)“ an und trage hier dessen Benutzernamen und Kennwort ein.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In your FRITZ!Box, go to Telephony → Telephony Devices → Configure New Device, add a “Telephone (with and without answering machine)” as “LAN/WLAN (IP telephone)”, and enter its user name and password here."
+    "Raute" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pound"
           }
         }
       }
     },
-    "WLAN-Name (SSID)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wi-Fi name (SSID)"
+    "Richte die Kamera auf den QR-Code deiner Bridge." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Point the camera at your bridge's QR code."
           }
         }
       }
     },
-    "Heim-WLAN": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Home Wi-Fi"
+    "Sichern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
           }
         }
       }
     },
-    "Nur in diesem WLAN darf Housephone im Hintergrund auf Anrufe warten. Den Namen liest die App nicht selbst aus, dafür bräuchte sie deinen Standort.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Housephone waits for calls in the background only on this Wi-Fi. The app doesn’t read the name itself; that would require your location."
+    "Sonstige" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Other"
           }
         }
       }
     },
-    "Von der FRITZ!Box laden": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Load from the FRITZ!Box"
+    "Später" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Later"
           }
         }
       }
     },
-    "FRITZ!Box-Benutzer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FRITZ!Box user"
+    "Stand: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updated %@"
           }
         }
       }
     },
-    "Optional. Nutze einen eigenen FRITZ!Box-Benutzer mit dem Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Optional. Use a separate FRITZ!Box user with the permission “Voice messages, fax messages, FRITZ!App Fon and call list”."
+    "Standardqualität" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard quality"
           }
         }
       }
     },
-    "Das geht ohne Bridge nicht": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not available without a bridge"
+    "Status" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status"
           }
         }
       }
     },
-    "Direkt mit FRITZ!Box": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Directly with FRITZ!Box"
+    "Stern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Star"
           }
         }
       }
     },
-    "Sichern": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save"
+    "Stumm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mute"
           }
         }
       }
     },
-    "Nicht gespeichert": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not saved"
+    "Tastenfeld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keypad"
           }
         }
       }
     },
-    "Die Zugangsdaten konnten nicht im Schlüsselbund gespeichert werden.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The credentials couldn’t be saved to the keychain."
+    "Telefonbuch & Anrufliste" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phonebook & call list"
           }
         }
       }
     },
-    "Nur im Heim-WLAN": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Home Wi-Fi only"
+    "Telefonbuch ist leer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phonebook is empty"
           }
         }
       }
     },
-    "Unterwegs bist du nicht erreichbar und kannst nicht anrufen.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Away from home, you can’t be reached and can’t make calls."
+    "Telefonbuch wird geladen …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading phonebook …"
           }
         }
       }
     },
-    "Klingeln im Hintergrund nur zu Hause": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rings in the background only at home"
+    "Über" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About"
           }
         }
       }
     },
-    "Außerhalb deines Heim-WLANs wartet Housephone nicht auf Anrufe.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Outside your home Wi-Fi, Housephone doesn’t wait for calls."
+    "Überall erreichbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reachable everywhere"
           }
         }
       }
     },
-    "Klingelt nur bei geöffneter App": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rings only while the app is open"
+    "Uhrzeit des iPhones prüfen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the iPhone’s time"
           }
         }
       }
     },
-    "Im Hintergrund klingelt es erst, wenn Apple Housephone die Local-Push-Freigabe erteilt hat.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ringing in the background needs Apple to approve Local Push for Housephone."
+    "Uhrzeit des iPhones prüfen: Sie weicht zu stark von der Bridge ab." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the iPhone’s time: it differs too much from the bridge."
           }
         }
       }
     },
-    "Keine Apple Watch": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No Apple Watch"
+    "Unbekannt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
           }
         }
       }
     },
-    "Die Watch telefoniert nur über eine Bridge.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The watch makes calls only through a bridge."
+    "Unterwegs bist du nicht erreichbar und kannst nicht anrufen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Away from home, you can’t be reached and can’t make calls."
           }
         }
       }
     },
-    "Standardqualität": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Standard quality"
+    "Unterwegs nicht erreichbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not reachable away from home"
           }
         }
       }
     },
-    "G.711 statt HD-Telefonie (G.722).": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "G.711 instead of HD voice (G.722)."
+    "Unverschlüsselte Verbindung – nur fürs Heimnetz gedacht" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unencrypted connection – meant for your home network only"
           }
         }
       }
     },
-    "Nicht angegeben": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not set"
+    "Verbinde …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecting…"
           }
         }
       }
     },
-    "Direkt per TR-064": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Directly via TR-064"
+    "Verbinde mit der Bridge …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecting to the bridge…"
           }
         }
       }
     },
-    "Bearbeiten": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit"
+    "Verbindung wird wiederhergestellt …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnecting…"
           }
         }
       }
     },
-    "Nur im Heim-WLAN verfügbar. Housephone ist dann ein IP-Telefon deiner FRITZ!Box, ohne Bridge dazwischen.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Only available on your home Wi-Fi. Housephone is then an IP phone of your FRITZ!Box, with no bridge in between."
+    "Verbunden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected"
           }
         }
       }
     },
-    "Grenzen ohne Bridge": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Limits without a bridge"
+    "Verpasst" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missed"
           }
         }
       }
     },
-    "Direktmodus beenden": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turn Off Direct Mode"
+    "Verschlüsselte Sprachübertragung" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encrypted voice transport"
           }
         }
       }
     },
-    "Danach kannst du Housephone mit einer Bridge koppeln oder neu einrichten.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Afterwards you can pair Housephone with a bridge or set it up again."
+    "Verschlüsselung" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encryption"
           }
         }
       }
     },
-    "Direktmodus beenden?": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turn off direct mode?"
+    "Version" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
           }
         }
       }
     },
-    "Housephone meldet sich von der FRITZ!Box ab und löscht die Zugangsdaten von diesem iPhone.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Housephone signs out of the FRITZ!Box and deletes the credentials from this iPhone."
+    "Video-Codec AV1 (Teil von WebRTC)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AV1 video codec (part of WebRTC)"
           }
         }
       }
     },
-    "Angemeldet": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registered"
+    "Video-Codecs VP8/VP9 (Teil von WebRTC)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VP8/VP9 video codecs (part of WebRTC)"
           }
         }
       }
     },
-    "Unterwegs nicht erreichbar": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not reachable away from home"
+    "von %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "from %@"
           }
         }
       }
     },
-    "Anmeldung abgelehnt": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Login rejected"
+    "Von der FRITZ!Box laden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Load from the FRITZ!Box"
           }
         }
       }
     },
-    "FRITZ!Box-Fehler %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FRITZ!Box error %lld"
+    "Watch koppelt sich …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch is pairing …"
           }
         }
       }
     },
-    "Aus": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Off"
+    "WLAN-Name (SSID)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wi-Fi name (SSID)"
           }
         }
       }
     },
-    "Ohne Bridge nicht verfügbar": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not available without a bridge"
+    "Zeigt die App; der Anruf läuft weiter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows the app; the call continues"
           }
         }
       }
     },
-    "Die Apple Watch telefoniert nur über eine Bridge. Im Direktmodus klingelt sie nicht mit.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Watch makes calls only through a bridge. In direct mode it doesn’t ring."
+    "Zu den Einstellungen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to Settings"
           }
         }
       }
     },
-    "Mit Bridge": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "With a bridge"
+    "Zu viele Versuche. Warte eine Minute und versuche es dann erneut." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too many attempts. Wait a minute, then try again."
           }
         }
       }
     },
-    "Direkt mit FRITZ!Box (nur zu Hause)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Directly with FRITZ!Box (home only)"
+    "Zugriff erlauben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow access"
           }
         }
       }
     },
-    "Ohne Bridge, nur im Heim-WLAN, ohne Apple Watch.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No bridge, home Wi-Fi only, no Apple Watch."
+    "Zum Koppeln ins Heim-WLAN oder Tailscale" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect to your home Wi-Fi or Tailscale to pair"
           }
         }
       }
     },
-    "Melde an der FRITZ!Box an …": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registering with the FRITZ!Box …"
+    "Zum Koppeln muss die Bridge erreichbar sein." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge must be reachable to pair."
           }
         }
       }
     },
-    "Nur im Heim-WLAN verfügbar – unterwegs nicht erreichbar": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Home Wi-Fi only – not reachable away from home"
+    "Zurück zum Anruf" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to Call"
           }
         }
       }
     },
-    "Die FRITZ!Box lehnt die Anmeldung ab. Zum Prüfen tippen.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The FRITZ!Box rejects the login. Tap to check."
+    "Zurückrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call back"
           }
         }
       }
     }
-  }
+  },
+  "version" : "1.0"
 }
