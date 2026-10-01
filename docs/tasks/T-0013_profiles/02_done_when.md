@@ -9,5 +9,5 @@
 - [x] Koppeln ins Profil per QR und Heimnetz-Freigabe; Watch erbt das Profil; Verschieben trennt mit 4004 und verbindet ins neue Profil
 - [x] CLI, TUI, Dashboard und Admin-API mit Tests
 - [x] `go test -race ./...`, `go vet ./...`, `swift test` grün
-- [ ] CI grün
+- [x] CI grün (Bridge 36850334503, Add-on 36850334375, iOS 36850334387)
 - [ ] Mit zwei echten IP-Telefonen an der FRITZ!Box getestet (User)

@@ -15,7 +15,7 @@
 
 ## CI
 
-- Siehe Push von `feat/profiles` (Bridge, App-Build, Add-on-Linter).
+- Bridge (Tests, Docker) 36850334503, Home-Assistant-Add-on (Linter, Image-Smoke-Test) 36850334375, iOS (App-Build, Kit-Tests) 36850334387: grün.
 
 ## Nicht verifiziert
 
