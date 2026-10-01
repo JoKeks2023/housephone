@@ -1,0 +1,15 @@
+// Base settings for the whole project (Debug and Release).
+//
+// Your own team and bundle IDs go into Local.xcconfig next to this file.
+// It is not checked in; "Housephone einrichten.command" in the repo root
+// writes it. Values there override the defaults below.
+
+// Apple Developer team that signs the app.
+DEVELOPMENT_TEAM = T9CA6D7T8N
+
+// Bundle IDs: <prefix>.housephone (iPhone), <prefix>.housephone.watchkitapp
+// (watch) and <prefix>.housephone.localpush (Local Push extension). The
+// bridge's APNs topic must be <prefix>.housephone.voip.
+HOUSEPHONE_BUNDLE_PREFIX = com.jorisconrad
+
+#include? "Local.xcconfig"

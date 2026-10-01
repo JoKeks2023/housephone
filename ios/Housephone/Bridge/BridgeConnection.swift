@@ -352,8 +352,10 @@ final class BridgeConnection {
         return "\(version) (\(build))"
     }
 
-    /// APNs topic of this app's VoIP pushes.
-    static let voipPushTopic = "com.jorisconrad.housephone.voip"
+    /// APNs topic of this app's VoIP pushes: the bundle ID plus `.voip`.
+    /// The bundle ID comes from HOUSEPHONE_BUNDLE_PREFIX (ios/Config), so
+    /// the bridge's `apns.topic` must be `<prefix>.housephone.voip`.
+    static let voipPushTopic = (Bundle.main.bundleIdentifier ?? "com.jorisconrad.housephone") + ".voip"
 
     /// Debug builds get their push tokens from the APNs sandbox.
     static var pushEnvironment: PushEnvironment {

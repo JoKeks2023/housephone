@@ -41,7 +41,8 @@ final class WatchBridge {
     @ObservationIgnored private var retryTask: Task<Void, Never>?
     @ObservationIgnored private let logger = Logger(subsystem: "com.jorisconrad.housephone.watch", category: "bridge")
 
-    static let voipPushTopic = "com.jorisconrad.housephone.watchkitapp.voip"
+    /// The watch app's bundle ID plus `.voip` (see BridgeConnection).
+    static let voipPushTopic = (Bundle.main.bundleIdentifier ?? "com.jorisconrad.housephone.watchkitapp") + ".voip"
     private static let pairedAtKey = "housephone.pairedAt"
 
     /// When this watch paired, to ignore an unpair instruction from the
