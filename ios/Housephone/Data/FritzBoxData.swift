@@ -103,7 +103,9 @@ final class FritzBoxData {
         switch error as? TR064Error {
         case .unreachable: String(localized: "Die FRITZ!Box antwortet nicht. Bist du im Heim-WLAN?")
         case .authentication: String(localized: "Die FRITZ!Box hat die Anmeldung abgelehnt. Prüfe Benutzer und Kennwort für TR-064.")
+        case .notAllowed: String(localized: "Dem FRITZ!Box-Benutzer fehlt das Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“.")
         case .unsupported: String(localized: "Die FRITZ!Box bietet diese Funktion nicht an.")
+        case .secondFactorRequired, .secondFactorBlocked, .secondFactorBusy: String(localized: "Die FRITZ!Box wartet auf eine Bestätigung. Versuche es gleich noch einmal.")
         case .invalidResponse, nil: String(localized: "Die FRITZ!Box hat unerwartet geantwortet.")
         }
     }
