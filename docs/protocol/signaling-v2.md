@@ -33,6 +33,7 @@ Die Bridge lauscht auf zwei Adressen. Beide sprechen dasselbe Protokoll mit ders
 | Wer darf | jeder, der den Tunnel erreicht | nur Absender aus `bridge.trustedNetworks`, sonst `403` `{"code":"home_network_required"}` |
 | `/v1/ws`, `GET /v1/calls/{id}`, `PUT`/`DELETE /v1/device`, `GET /v1/phonebook`, `GET /v1/history`, `/v1/health` | ja (HP2) | ja (HP2) |
 | `POST /v1/pair` | nein, `404` | ja |
+| `POST /v1/pair/lan`, `…/reveal`, `GET /v1/pair/lan/{id}` (v2.1) | nein, `403` `home_network_required` | ja |
 | `pair.companion.request` | `error` `home_network_required` | ja |
 
 - **Absenderprüfung:** Nur die TCP-Gegenstelle zählt (`RemoteAddr`), nie `CF-Connecting-IP` oder `X-Forwarded-For`. Standard sind `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `fc00::/7`, `169.254.0.0/16` und `fe80::/10`. Mit `bridge.tailscale: true` kommen `100.64.0.0/10` und `fd7a:115c:a1e0::/48` dazu.
@@ -57,3 +58,37 @@ Die Bridge lauscht auf zwei Adressen. Beide sprechen dasselbe Protokoll mit ders
 - 16 Zeichen aus `A-Z2-9` ohne `0 O 1 I`, also 80 Bit.
 - 10 min gültig, einmalig.
 - Anzeige als `XXXX-XXXX-XXXX-XXXX`; Eingabe mit oder ohne Bindestriche, Groß- und Kleinschreibung egal.
+
+## Koppeln im Heimnetz ohne QR-Code (v2.1)
+
+Begründung und Sicherheitsargument: `docs/architecture/ADR-0007-koppeln-im-heimnetz.md`. Testvektoren: `fixtures/crypto/lan-pairing-vectors.json`, Beispiele: `fixtures/http/pair-lan.*.json`. Nur auf dem privaten Zugang.
+
+**Finden:** Bonjour-Dienst `_housephone._tcp` auf dem Port von `privateListen`. Instanzname = Bridge-Name. TXT: `txtvers=1`, `proto=hp2`, `pair=lan`, `fp=<erste 8 Zeichen des Fingerabdrucks>`. Die App verbindet sich mit `ws://<IPv4>:<Port>/v1/ws` als `lanUrl`.
+
+**Ablauf:**
+
+| Schritt | Anfrage | Antwort |
+|---|---|---|
+| 1 | `POST /v1/pair/lan` `{deviceName, platform: "ios", model?, publicKey, commitment}` | `200` `{pairingId, bridgeId, bridgeName, bridgePublicKey, bridgeEphemeral, bridgeNonce, expiresAt, signature}` |
+| 2 | `POST /v1/pair/lan/{pairingId}/reveal` `{deviceEphemeral, deviceNonce, proof}` | `200` `{status: "pending", expiresAt}` |
+| 3 | `GET /v1/pair/lan/{pairingId}?wait=<s, max 25>` (Long-Poll) | `200` `{status: "pending" \| "denied" \| "expired"}` oder `{status: "approved", sealed}` |
+
+Kanonische Eingaben (Zeilen mit `\n`, Werte Base64url ohne Padding):
+
+- `commitment = b64(SHA-256("HP2-LAN-COMMIT", publicKey, deviceEphemeral, deviceNonce))`
+- Signatur der Bridge in Schritt 1: Ed25519 über `"HP2-LAN-OFFER", pairingId, bridgeId, publicKey, commitment, bridgePublicKey, bridgeEphemeral, bridgeNonce`
+- `T = SHA-256("HP2-LAN-TRANSCRIPT", pairingId, bridgeId, publicKey, commitment, bridgePublicKey, bridgeEphemeral, bridgeNonce, deviceEphemeral, deviceNonce)`
+- `proof` = ECDSA P-256 (Geräteschlüssel) über `"HP2-LAN-PROOF", b64(T)`
+- `SAS = uint32_be(HKDF-SHA256(X25519, salt = T, info = "HP2-LAN-SAS", 4)) mod 1000000`, sechsstellig mit führenden Nullen; Anzeige „123 456“
+- Freigabe-Schlüssel `K = HKDF-SHA256(X25519, salt = T, info = "HP2-LAN-SEAL", 32)`
+- `sealed = b64(ChaCha20-Poly1305(K, Zähler 0, AAD "HP2", JSON {deviceId, bridgeId, bridgeName, publicUrl, lanUrl, signature}))`, `signature` = Ed25519 über `"HP2-LAN-APPROVED", b64(T), deviceId, bridgeId, publicUrl, lanUrl`
+
+**Regeln:**
+
+- Nur `platform: "ios"`; die Watch koppelt weiter über `pair.companion`.
+- Schritte 2 und 3 nur von derselben Absenderadresse (bzw. /64) wie Schritt 1, sonst `404` bzw. `expired`.
+- Falsches Commitment, falscher Beweis oder ungültiger Schlüssel in Schritt 2: `403` `pairing_invalid`, die Anfrage ist danach weg.
+- Eine Anfrage wartet 2 Minuten auf den Admin; Ergebnis danach noch 1 Minute abholbar. Unbekannt oder abgelaufen: `{status: "expired"}`.
+- Grenzen: 5 Starts pro Absender in 10 Minuten, 30 pro Stunde insgesamt, höchstens 5 offen (`429` `pairing_rate_limited`). Ein neuer Start derselben Adresse ersetzt ihre alte Anfrage.
+- Freigabe nur durch einen Admin: TUI (Tab „Kopplung“), `housephone-bridge devices pending|approve|deny` oder das HA-Dashboard, jeweils mit Anzeige des Codes.
+- Nach `approved` prüft das Gerät die Signatur mit dem Bridge-Schlüssel aus Schritt 1 und pinnt ihn. `publicUrl` leer: Das Gerät nutzt `lanUrl` für beides.

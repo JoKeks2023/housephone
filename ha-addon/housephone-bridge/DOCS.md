@@ -58,9 +58,13 @@ Das Dashboard zeigt:
 
 Und du kannst dort:
 
-- **ein Gerät koppeln**: „Code erzeugen“ zeigt QR-Code und Code. Das iPhone
-  muss dafür im Heim-WLAN oder per Tailscale verbunden sein. Die Seite meldet,
-  welches Gerät den Code benutzt hat.
+- **Kopplungsanfragen freigeben**: Im Heim-WLAN findet die App die Bridge
+  von selbst (Bonjour) und zeigt einen sechsstelligen Code. Derselbe Code
+  erscheint hier oben unter „Kopplungsanfragen aus dem Heimnetz“. Nur
+  freigeben, wenn beide Codes gleich sind.
+- **ein Gerät mit QR-Code koppeln**: „Code erzeugen“ zeigt QR-Code und Code.
+  Das iPhone muss dafür im Heim-WLAN oder per Tailscale verbunden sein. Die
+  Seite meldet, welches Gerät den Code benutzt hat.
 - Geräte umbenennen und entfernen (sofort getrennt, laufende Anrufe enden;
   über das Gerät gekoppelte Uhren werden mit entfernt, wenn du nichts anderes
   wählst).
@@ -80,6 +84,7 @@ Und du kannst dort:
 | Heimnetz-URL | leer = automatisch aus der LAN-IP; mit Tailscale die Tailscale-IP |
 | Tunnel-Port | Port auf 172.30.32.1 für Cloudflared (Standard 8080) |
 | Tailscale erlauben | Koppeln und Direktverbindung auch über Tailscale |
+| Im Heimnetz ankündigen (Bonjour) | Die App findet die Bridge im WLAN ohne QR-Code (Standard: an) |
 | FRITZ!Box-Adresse | LAN-IP der FRITZ!Box; die Bridge startet nur mit einer Adresse im Heimnetz |
 | IP-Telefon | Benutzername und Kennwort aus der FRITZ!Box |
 | FRITZ!Box-Benutzer | optional, für Telefonbuch und Anrufliste |
