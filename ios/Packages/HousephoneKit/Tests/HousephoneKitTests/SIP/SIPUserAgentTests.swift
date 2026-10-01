@@ -42,7 +42,8 @@ struct SIPUserAgentTests {
         #expect(register.from?.uri == "sip:620@192.0.2.1")
         #expect(register.contact?.uri == "sip:620@192.0.2.10:5062")
         #expect(register.headers["Via"]?.hasPrefix("SIP/2.0/UDP 192.0.2.10:5062;branch=z9hG4bK") == true)
-        let registers = transport.allSent.filter { $0.method == "REGISTER" }
+        var branches = Set<String>()
+        let registers = transport.allSent.filter { $0.method == "REGISTER" && branches.insert($0.topViaBranch ?? "").inserted }
         #expect(registers[0].cseq!.number + 1 == registers[1].cseq!.number)
         #expect(registers[0].topViaBranch != registers[1].topViaBranch)
         #expect(Set(registers.map(\.callID)).count == 1)
@@ -60,7 +61,9 @@ struct SIPUserAgentTests {
         await started
         #expect(await agent.registration == .failed(.authentication))
         try await Task.sleep(for: .milliseconds(100))
-        #expect(transport.count { $0.method == "REGISTER" } == 2)
+        // No new attempt after the rejected answer. Retransmissions of the
+        // two requests (Timer E) are not attempts and are not counted.
+        #expect(transport.transactions("REGISTER") == 2)
         await agent.stop()
     }
 
