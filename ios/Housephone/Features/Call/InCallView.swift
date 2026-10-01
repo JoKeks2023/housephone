@@ -11,11 +11,14 @@ struct InCallView: View {
     @Environment(AppModel.self) private var appModel
     @State private var showsKeypad = false
     @State private var dtmfDigits = ""
+    /// The caller's contact photo, full size, for the avatar and the
+    /// background.
+    @State private var photo: Data?
     @Namespace private var glass
 
     var body: some View {
         ZStack {
-            CallBackground()
+            CallBackground(photo: photo, tint: AvatarTint.forName(callerName))
             if let call = callCenter.activeCall {
                 GeometryReader { proxy in
                     content(for: call, height: proxy.size.height)
@@ -23,12 +26,25 @@ struct InCallView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .task(id: callCenter.activeCall?.remoteNumber) {
+            guard let number = callCenter.activeCall?.remoteNumber, !number.isEmpty else {
+                photo = nil
+                return
+            }
+            let loaded = await contacts.image(for: number)
+            withMotion(Theme.Motion.standard) { photo = loaded }
+        }
         .motion(Theme.Motion.standard, value: showsKeypad)
         .onChange(of: callCenter.activeCall?.phase) { _, phase in
             guard let phase, let call = callCenter.activeCall else { return }
             if phase == .ended { showsKeypad = false }
             AccessibilityNotification.Announcement(CallStatusLine.announcement(for: call)).post()
         }
+    }
+
+    private var callerName: String? {
+        guard let call = callCenter.activeCall else { return nil }
+        return contacts.name(for: call.remoteNumber) ?? call.remoteName
     }
 
     // MARK: - Layout
@@ -114,7 +130,8 @@ struct InCallView: View {
     private func header(call: CallSession, name: String?) -> some View {
         VStack(spacing: showsKeypad ? Theme.Space.s1 : Theme.Space.s3) {
             if !showsKeypad {
-                AvatarView(name: name, size: 88)
+                AvatarView(name: name, imageData: photo, size: 128)
+                    .shadow(color: .black.opacity(0.3), radius: 16, y: 6)
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
             }
             Text(name ?? (call.remoteNumber.isEmpty ? String(localized: "Unbekannt") : call.remoteNumber))
@@ -262,18 +279,44 @@ struct CallStatusLine: View {
     }
 }
 
-/// True black with a soft accent glow from the top: the call screen is
-/// the app's signature surface.
+/// Like the Phone app: the caller's photo, blurred and darkened, fills
+/// the screen. Without a photo, true black with a soft glow in the
+/// caller's identity color (or the accent for unknown numbers).
 private struct CallBackground: View {
+    let photo: Data?
+    let tint: AvatarTint?
+
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     var body: some View {
         ZStack {
             Color.black
-            RadialGradient(
-                colors: [Color.accentColor.opacity(0.28), .clear],
-                center: .init(x: 0.5, y: -0.05),
-                startRadius: 0,
-                endRadius: 520
-            )
+            if let image = photo.flatMap(UIImage.init(data:)), !reduceTransparency {
+                // Overlay on a clear view: the filled image must not grow
+                // the layout beyond the screen.
+                Color.clear
+                    .overlay {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .blur(radius: 60, opaque: true)
+                    }
+                    .clipped()
+                    .overlay(Color.black.opacity(0.45))
+                    .transition(.opacity)
+            } else {
+                RadialGradient(
+                    colors: [(tint?.color ?? Color.accentColor).opacity(0.32), .clear],
+                    center: .init(x: 0.5, y: -0.05),
+                    startRadius: 0,
+                    endRadius: 560
+                )
+                LinearGradient(
+                    colors: [.clear, (tint?.color ?? Color.accentColor).opacity(0.10)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+            }
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)

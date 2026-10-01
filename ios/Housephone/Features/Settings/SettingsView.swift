@@ -14,6 +14,15 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    SettingsOverviewCard()
+                }
+                .listRowBackground(
+                    // Ambient material: the card's own accent tint, kept faint.
+                    Color(.secondarySystemGroupedBackground)
+                        .overlay(LinearGradient(colors: [Theme.accent.opacity(0.14), .clear], startPoint: .topLeading, endPoint: .center))
+                )
+
                 if direct.isEnabled {
                     DirectSettingsSection()
                     Section("Dieses iPhone") {
@@ -33,6 +42,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            .appBackground(.grouped)
             .navigationTitle("Einstellungen")
             .confirmationDialog("Kopplung aufheben?", isPresented: $confirmsUnpair, titleVisibility: .visible) {
                 Button("Kopplung aufheben", role: .destructive) {

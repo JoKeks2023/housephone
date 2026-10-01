@@ -14,6 +14,8 @@ struct ContactEntry: Identifiable, Hashable, Sendable {
     let name: String
     let sortKey: String
     let numbers: [Number]
+    /// The contact's small photo, if it has one.
+    let thumbnail: Data?
 }
 
 /// Read-only view of the system contacts: a list for the contacts tab and
@@ -27,6 +29,7 @@ final class ContactsDirectory {
 
     @ObservationIgnored private let store = CNContactStore()
     @ObservationIgnored private var namesByNumber: [String: String] = [:]
+    @ObservationIgnored private var entriesByNumber: [String: ContactEntry] = [:]
     @ObservationIgnored private var changeObserver: (any NSObjectProtocol)?
     /// Names for numbers that are not in the iPhone's contacts, e.g. from
     /// the FRITZ!Box phonebook.
@@ -59,6 +62,7 @@ final class ContactsDirectory {
         guard canRead else {
             contacts = []
             namesByNumber = [:]
+            entriesByNumber = [:]
             return
         }
         isLoading = true
@@ -66,12 +70,17 @@ final class ContactsDirectory {
             let loaded = await Self.fetchContacts()
             contacts = loaded
             var index: [String: String] = [:]
+            var entries: [String: ContactEntry] = [:]
             for contact in loaded {
                 for number in contact.numbers {
-                    if let key = PhoneNumber.matchKey(number.value) { index[key] = contact.name }
+                    if let key = PhoneNumber.matchKey(number.value) {
+                        index[key] = contact.name
+                        entries[key] = contact
+                    }
                 }
             }
             namesByNumber = index
+            entriesByNumber = entries
             isLoading = false
         }
     }
@@ -84,6 +93,31 @@ final class ContactsDirectory {
         return namesByNumber[key] ?? fallbackName?(number)
     }
 
+    /// The iPhone contact with this number, if any (no FRITZ!Box fallback).
+    func contact(for number: String) -> ContactEntry? {
+        guard let key = PhoneNumber.matchKey(number) else { return nil }
+        return entriesByNumber[key]
+    }
+
+    /// Small photo of the contact with this number, for list rows.
+    func thumbnail(for number: String) -> Data? {
+        contact(for: number)?.thumbnail
+    }
+
+    /// The full-size photo, for the call screen. Loaded on demand: keeping
+    /// every full photo in memory would be wasteful.
+    func image(for number: String) async -> Data? {
+        guard let contact = contact(for: number) else { return nil }
+        let id = contact.id
+        return await Self.fetchImage(contactID: id) ?? contact.thumbnail
+    }
+
+    @concurrent
+    nonisolated private static func fetchImage(contactID: String) async -> Data? {
+        let keys: [any CNKeyDescriptor] = [CNContactImageDataKey as CNKeyDescriptor]
+        return try? CNContactStore().unifiedContact(withIdentifier: contactID, keysToFetch: keys).imageData
+    }
+
     /// Runs off the main actor: enumerating a large address book takes a while.
     @concurrent
     nonisolated private static func fetchContacts() async -> [ContactEntry] {
@@ -92,6 +126,7 @@ final class ContactsDirectory {
             CNContactFormatter.descriptorForRequiredKeys(for: .fullName),
             CNContactPhoneNumbersKey as CNKeyDescriptor,
             CNContactOrganizationNameKey as CNKeyDescriptor,
+            CNContactThumbnailImageDataKey as CNKeyDescriptor,
         ]
         let request = CNContactFetchRequest(keysToFetch: keys)
         request.sortOrder = .userDefault
@@ -110,7 +145,7 @@ final class ContactsDirectory {
                         value: labeled.value.stringValue
                     )
                 }
-                result.append(ContactEntry(id: contact.identifier, name: name, sortKey: name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current), numbers: numbers))
+                result.append(ContactEntry(id: contact.identifier, name: name, sortKey: name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current), numbers: numbers, thumbnail: contact.thumbnailImageData))
             }
         } catch {
             return []

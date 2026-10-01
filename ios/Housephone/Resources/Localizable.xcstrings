@@ -21,6 +21,26 @@
         }
       }
     },
+    "%@ aus Favoriten entfernen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove %@ from Favorites"
+          }
+        }
+      }
+    },
+    "%@ zu Favoriten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add %@ to Favorites"
+          }
+        }
+      }
+    },
     "%@: %@" : {
       "localizations" : {
         "en" : {
@@ -37,6 +57,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld numbers"
+          }
+        }
+      }
+    },
+    "%lld verpasst" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld missed"
           }
         }
       }
@@ -117,6 +147,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete all calls?"
+          }
+        }
+      }
+    },
+    "Alle Anrufe zeigen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show all calls"
           }
         }
       }
@@ -281,6 +321,16 @@
         }
       }
     },
+    "Anrufe über Housephone erscheinen hier. Mit TR-064 siehst du auch die Anrufliste deiner FRITZ!Box." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls made with Housephone appear here. With TR-064 you also see your FRITZ!Box's call list."
+          }
+        }
+      }
+    },
     "Anrufen" : {
       "localizations" : {
         "en" : {
@@ -367,6 +417,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Off"
+          }
+        }
+      }
+    },
+    "Aus Favoriten entfernen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from Favorites"
           }
         }
       }
@@ -471,6 +531,26 @@
         }
       }
     },
+    "Bereit · direkt über die FRITZ!Box" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready · directly through the FRITZ!Box"
+          }
+        }
+      }
+    },
+    "Bereit · über deine Bridge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready · through your bridge"
+          }
+        }
+      }
+    },
     "Besetzt" : {
       "localizations" : {
         "en" : {
@@ -512,11 +592,22 @@
       }
     },
     "Bridge erreichbar, aber nicht an der FRITZ!Box angemeldet" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bridge reachable, but not registered with the FRITZ!Box"
+          }
+        }
+      }
+    },
+    "Bridge nicht an der FRITZ!Box angemeldet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bridge not signed in to the FRITZ!Box"
           }
         }
       }
@@ -781,6 +872,16 @@
         }
       }
     },
+    "Details" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details"
+          }
+        }
+      }
+    },
     "Die Anrufliste der FRITZ!Box ist leer." : {
       "localizations" : {
         "en" : {
@@ -872,6 +973,7 @@
       }
     },
     "Die Bridge kennt dieses iPhone nicht mehr. Zum Neu-Koppeln tippen." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -942,6 +1044,7 @@
       }
     },
     "Die FRITZ!Box lehnt die Anmeldung ab. Zum Prüfen tippen." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1071,6 +1174,16 @@
         }
       }
     },
+    "Direkt mit der FRITZ!Box" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Directly with the FRITZ!Box"
+          }
+        }
+      }
+    },
     "Direkt mit FRITZ!Box" : {
       "localizations" : {
         "en" : {
@@ -1127,6 +1240,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You can allow access in Settings. Dialing works without it, too – using the keypad."
+          }
+        }
+      }
+    },
+    "Eingehend" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incoming"
           }
         }
       }
@@ -1221,12 +1344,32 @@
         }
       }
     },
+    "Erreichbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reachable"
+          }
+        }
+      }
+    },
     "Es läuft bereits ein Anruf." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "A call is already in progress."
+          }
+        }
+      }
+    },
+    "Favorisieren" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add favorite"
           }
         }
       }
@@ -1271,6 +1414,16 @@
         }
       }
     },
+    "Fertig" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
     "Filter" : {
       "localizations" : {
         "en" : {
@@ -1311,6 +1464,16 @@
         }
       }
     },
+    "FRITZ!Box lehnt die Anmeldung ab" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FRITZ!Box rejects the sign-in"
+          }
+        }
+      }
+    },
     "FRITZ!Box nicht angemeldet" : {
       "localizations" : {
         "en" : {
@@ -1337,6 +1500,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "FRITZ!Box user"
+          }
+        }
+      }
+    },
+    "FRITZ!Box-Favoriten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FRITZ!Box favorites"
           }
         }
       }
@@ -1447,6 +1620,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Limits without a bridge"
+          }
+        }
+      }
+    },
+    "Halte einen Kontakt gedrückt und wähle „Zu Favoriten“." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold a contact and choose “Add to Favorites”."
           }
         }
       }
@@ -1691,6 +1874,16 @@
         }
       }
     },
+    "Keine Watch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No watch"
+          }
+        }
+      }
+    },
     "Kennwort" : {
       "localizations" : {
         "en" : {
@@ -1781,6 +1974,16 @@
         }
       }
     },
+    "Kopieren" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
     "Koppeln" : {
       "localizations" : {
         "en" : {
@@ -1851,6 +2054,16 @@
         }
       }
     },
+    "Kopplung ungültig – neu koppeln" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing invalid – pair again"
+          }
+        }
+      }
+    },
     "Läuft gerade" : {
       "localizations" : {
         "en" : {
@@ -1877,6 +2090,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "In your FRITZ!Box, go to Telephony → Telephony Devices → Configure New Device, add a “Telephone (with and without answering machine)” as “LAN/WLAN (IP telephone)”, and enter its user name and password here."
+          }
+        }
+      }
+    },
+    "Leitung" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Line"
           }
         }
       }
@@ -1927,6 +2150,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Registering with the FRITZ!Box …"
+          }
+        }
+      }
+    },
+    "Meldet sich an …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signing in …"
           }
         }
       }
@@ -2101,6 +2334,16 @@
         }
       }
     },
+    "Nicht im Heim-WLAN" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not on home Wi-Fi"
+          }
+        }
+      }
+    },
     "Noch keine Anrufe" : {
       "localizations" : {
         "en" : {
@@ -2191,7 +2434,18 @@
         }
       }
     },
+    "Nur im Heim-WLAN verfügbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only available on your home Wi-Fi"
+          }
+        }
+      }
+    },
     "Nur im Heim-WLAN verfügbar – unterwegs nicht erreichbar" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2217,6 +2471,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Housephone waits for calls in the background only on this Wi-Fi. The app doesn’t read the name itself; that would require your location."
+          }
+        }
+      }
+    },
+    "Nur mit Bridge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only with a bridge"
+          }
+        }
+      }
+    },
+    "Nur zu Hause" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only at home"
           }
         }
       }
@@ -2491,6 +2765,16 @@
         }
       }
     },
+    "Telefon" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone"
+          }
+        }
+      }
+    },
     "Telefonbuch & Anrufliste" : {
       "localizations" : {
         "en" : {
@@ -2521,6 +2805,16 @@
         }
       }
     },
+    "TR-064 aktivieren" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on TR-064"
+          }
+        }
+      }
+    },
     "Über" : {
       "localizations" : {
         "en" : {
@@ -2531,12 +2825,32 @@
         }
       }
     },
+    "Über deine Bridge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Through your bridge"
+          }
+        }
+      }
+    },
     "Überall erreichbar" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reachable everywhere"
+          }
+        }
+      }
+    },
+    "Übernimmt diese Nummer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uses this number"
           }
         }
       }
@@ -2567,6 +2881,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unknown"
+          }
+        }
+      }
+    },
+    "Unterwegs" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Away from home"
           }
         }
       }
@@ -2741,6 +3065,16 @@
         }
       }
     },
+    "Zeigt alle Anrufe mit dieser Nummer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows all calls with this number"
+          }
+        }
+      }
+    },
     "Zeigt die App; der Anruf läuft weiter" : {
       "localizations" : {
         "en" : {
@@ -2751,12 +3085,32 @@
         }
       }
     },
+    "Zeigt die verpassten Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows the missed calls"
+          }
+        }
+      }
+    },
     "Zu den Einstellungen" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Go to Settings"
+          }
+        }
+      }
+    },
+    "Zu Favoriten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add to Favorites"
           }
         }
       }
@@ -2797,6 +3151,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The bridge must be reachable to pair."
+          }
+        }
+      }
+    },
+    "Zum Tastenfeld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to keypad"
           }
         }
       }

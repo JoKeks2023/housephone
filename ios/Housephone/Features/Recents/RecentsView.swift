@@ -12,18 +12,24 @@ struct RecentsView: View {
     @Environment(CallCenter.self) private var callCenter
     @Environment(ContactsDirectory.self) private var contacts
     @Environment(FritzBoxData.self) private var fritzBox
+    @Environment(DirectPhone.self) private var direct
+    @Environment(AppModel.self) private var appModel
     @Query(sort: \CallRecord.date, order: .reverse) private var records: [CallRecord]
-    @State private var filter: Filter = .all
+    @State private var details: DetailsTarget?
     @State private var confirmsDeleteAll = false
     @AppStorage("recents.source") private var source: ListSource = .iPhone
 
     private var showsFritzBox: Bool { fritzBox.showsHistory && source == .fritzBox }
+
+    private var filter: Filter { appModel.recentsShowsMissedOnly ? .missed : .all }
 
     private var visibleRecords: [CallRecord] {
         filter == .all ? records : records.filter(\.isMissed)
     }
 
     var body: some View {
+        @Bindable var appModel = appModel
+
         NavigationStack {
             Group {
                 if showsFritzBox {
@@ -38,9 +44,9 @@ struct RecentsView: View {
             .navigationTitle("Anrufe")
             .listSourceMenu($source, isAvailable: fritzBox.showsHistory)
             .safeAreaBar(edge: .top) {
-                Picker("Filter", selection: $filter) {
-                    Text("Alle").tag(Filter.all)
-                    Text("Verpasst").tag(Filter.missed)
+                Picker("Filter", selection: $appModel.recentsShowsMissedOnly) {
+                    Text("Alle").tag(false)
+                    Text("Verpasst").tag(true)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, Theme.Space.s4)
@@ -59,6 +65,14 @@ struct RecentsView: View {
                     }
                 }
             }
+            .sheet(item: $details) { target in
+                CallDetailsSheet(number: target.number, recordedName: target.name)
+                    .presentationDetents([.medium, .large])
+            }
+            // Seen means seen: the badge and the status card count only
+            // missed calls after the last look at this list.
+            .onAppear { appModel.recentsSeenAt = .now }
+            .onDisappear { appModel.recentsSeenAt = .now }
             .confirmationDialog("Alle Anrufe löschen?", isPresented: $confirmsDeleteAll, titleVisibility: .visible) {
                 Button("Alle löschen", role: .destructive) { deleteAll() }
             } message: {
@@ -71,13 +85,12 @@ struct RecentsView: View {
     private var housephoneList: some View {
         Group {
             if records.isEmpty {
-                EmptyStateView(
-                    symbol: "clock",
-                    title: "Noch keine Anrufe",
-                    message: "Anrufe über Housephone erscheinen hier – und in der Telefon-App."
-                )
+                emptyRecents
             } else if visibleRecords.isEmpty {
-                EmptyStateView(symbol: "phone.arrow.down.left", title: "Keine verpassten Anrufe", message: "Alles erledigt.")
+                EmptyStateView(symbol: "checkmark.circle", title: "Keine verpassten Anrufe", message: "Alles erledigt.") {
+                    Button("Alle Anrufe zeigen") { appModel.recentsShowsMissedOnly = false }
+                        .buttonStyle(.glass)
+                }
             } else {
                 List {
                     ForEach(visibleRecords) { record in
@@ -92,7 +105,28 @@ struct RecentsView: View {
                     }
                 }
                 .listStyle(.plain)
+                .appBackground()
                 .motion(Theme.Motion.standard, value: filter)
+            }
+        }
+    }
+
+    /// No calls yet: start one, or (without a bridge) get the FRITZ!Box's
+    /// call list, which already knows every call of the line.
+    private var emptyRecents: some View {
+        let offersTR064 = direct.isEnabled && direct.configuration?.usesTR064 != true
+        return EmptyStateView(
+            symbol: "clock",
+            title: "Noch keine Anrufe",
+            message: offersTR064
+                ? "Anrufe über Housephone erscheinen hier. Mit TR-064 siehst du auch die Anrufliste deiner FRITZ!Box."
+                : "Anrufe über Housephone erscheinen hier – und in der Telefon-App."
+        ) {
+            Button("Zum Tastenfeld") { appModel.selectedTab = .keypad }
+                .buttonStyle(.glassProminent)
+            if offersTR064 {
+                Button("TR-064 aktivieren") { appModel.selectedTab = .settings }
+                    .buttonStyle(.glass)
             }
         }
     }
@@ -111,7 +145,9 @@ struct RecentsView: View {
             symbol: Self.symbol(for: record),
             detail: detail,
             isMissed: record.isMissed,
-            date: record.date
+            date: record.date,
+            imageData: contacts.thumbnail(for: record.number),
+            onInfo: record.number.isEmpty ? nil : { details = DetailsTarget(number: record.number, name: recordedName) }
         ) {
             call(record)
         }
@@ -140,6 +176,13 @@ struct RecentsView: View {
         try? modelContext.delete(model: CallRecord.self)
         try? modelContext.save()
     }
+}
+
+/// The number whose details sheet is open.
+struct DetailsTarget: Identifiable {
+    let number: String
+    let name: String?
+    var id: String { number }
 }
 
 /// Where a list's entries come from. Calls and Contacts offer the same

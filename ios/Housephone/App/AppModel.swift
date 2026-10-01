@@ -18,6 +18,13 @@ final class AppModel {
     /// The call screen is minimized to the pill above the tab bar, e.g.
     /// to look up a number during a call. Resets with every new call.
     var isCallMinimized = false
+    /// When the recents were last looked at: missed calls after this count
+    /// as new (tab badge, status card).
+    var recentsSeenAt: Date = UserDefaults.standard.object(forKey: "recents.seenAt") as? Date ?? .distantPast {
+        didSet { UserDefaults.standard.set(recentsSeenAt, forKey: "recents.seenAt") }
+    }
+    /// The recents filter, so "missed" can be opened from elsewhere.
+    var recentsShowsMissedOnly = false
 
     /// Minimizing needs the tab bar accessory to bring the call back.
     static var canMinimizeCall: Bool {

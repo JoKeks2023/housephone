@@ -1,4 +1,5 @@
 import HousephoneKit
+import SwiftData
 import SwiftUI
 
 struct RootView: View {
@@ -123,6 +124,19 @@ struct MainTabView: View {
     @Environment(AppModel.self) private var appModel
     @Environment(CallCenter.self) private var callCenter
 
+    @Query(
+        filter: #Predicate<CallRecord> { $0.directionRaw == "incoming" && $0.outcomeRaw == "missed" },
+        sort: \CallRecord.date,
+        order: .reverse
+    )
+    private var missedCalls: [CallRecord]
+
+    /// Missed calls since the recents were last looked at, as the tab
+    /// badge (like the Phone app).
+    private var newMissed: Int {
+        missedCalls.prefix { $0.date > appModel.recentsSeenAt }.count
+    }
+
     var body: some View {
         if #available(iOS 26.1, *) {
             tabs.tabViewBottomAccessory(isEnabled: appModel.isCallMinimized && callCenter.activeCall != nil) {
@@ -140,6 +154,7 @@ struct MainTabView: View {
             Tab("Anrufe", systemImage: "clock", value: AppModel.Tab.recents) {
                 RecentsView()
             }
+            .badge(newMissed)
             Tab("Tastenfeld", systemImage: "circle.grid.3x3.fill", value: AppModel.Tab.keypad) {
                 KeypadView()
             }

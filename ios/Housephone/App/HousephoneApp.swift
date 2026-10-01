@@ -18,6 +18,7 @@ struct HousephoneApp: App {
                 .environment(services.contacts)
                 .environment(services.fritzBox)
                 .environment(services.appModel)
+                .environment(services.favorites)
                 .modelContainer(services.modelContainer)
                 .onOpenURL { url in
                     services.appModel.open(url)

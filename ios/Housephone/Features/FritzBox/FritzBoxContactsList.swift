@@ -59,9 +59,12 @@ struct FritzBoxContactsList: View {
                     if let failure = resource.failure {
                         FritzBoxStaleNotice(failure: failure, fetchedAt: resource.fetchedAt)
                     }
+                    if query.isEmpty {
+                        FavoritesSection(showsHint: false)
+                    }
                     let favorites = matches.filter(\.favorite)
                     if query.isEmpty, !favorites.isEmpty {
-                        Section("Favoriten") {
+                        Section("FRITZ!Box-Favoriten") {
                             ForEach(favorites) { contact in
                                 row(contact)
                             }
@@ -76,6 +79,7 @@ struct FritzBoxContactsList: View {
                     }
                 }
                 .listStyle(.plain)
+                .appBackground()
             }
         }
         .searchable(text: $searchText, prompt: Text("Name oder Nummer"))
