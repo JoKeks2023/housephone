@@ -40,7 +40,7 @@ configuration:
     description: Team ID of the Apple Developer account.
   apns_topic:
     name: APNs topic
-    description: The app's bundle ID plus ".voip".
+    description: The app's bundle ID plus ".voip", i.e. <prefix>.housephone.voip. The "Housephone einrichten" script shows it at the end.
   log_level:
     name: Log level
     description: Phone numbers are always masked in the log.

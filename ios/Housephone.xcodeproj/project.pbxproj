@@ -40,6 +40,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C0FF1C0000000000000000A1 /* Housephone.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Housephone.xcconfig; sourceTree = "<group>"; };
 		2F39AC5F6E8B537142EE1694 /* HousephoneLocalPush.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = HousephoneLocalPush.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		60EB083C463E76C08EB7324A /* Housephone.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Housephone.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		61E65336FDD80B6C9F6AA7D8 /* HousephoneKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HousephoneKit; path = Packages/HousephoneKit; sourceTree = SOURCE_ROOT; };
@@ -140,6 +141,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		C0FF1C0000000000000000A2 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				C0FF1C0000000000000000A1 /* Housephone.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 		044AD2BA500BC96C67C4368B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -169,6 +178,7 @@
 		DB0482FE742096768AB76DBF = {
 			isa = PBXGroup;
 			children = (
+				C0FF1C0000000000000000A2 /* Config */,
 				7A444F88E5710BD5F302B069 /* Housephone */,
 				A96752AAF23593F8E0A1A57B /* HousephoneLocalPush */,
 				6E752E8BADA8367D6057CE0A /* HousephoneWatch */,
@@ -360,6 +370,7 @@
 /* Begin XCBuildConfiguration section */
 		3054293F62210B6129F2D865 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0FF1C0000000000000000A1 /* Housephone.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -396,7 +407,6 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = T9CA6D7T8N;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -433,6 +443,7 @@
 		};
 		305EDE2F9C4850998926807F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0FF1C0000000000000000A1 /* Housephone.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -469,7 +480,6 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = T9CA6D7T8N;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -507,7 +517,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone.localpush;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HOUSEPHONE_BUNDLE_PREFIX).housephone.localpush";
 				PRODUCT_NAME = HousephoneLocalPush;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -521,7 +531,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HousephoneWatch/HousephoneWatch.entitlements;
 				INFOPLIST_FILE = HousephoneWatch/Info.plist;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HOUSEPHONE_BUNDLE_PREFIX).housephone.watchkitapp";
 				PRODUCT_NAME = HousephoneWatch;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -541,7 +551,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HOUSEPHONE_BUNDLE_PREFIX).housephone";
 				PRODUCT_NAME = Housephone;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -555,7 +565,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HousephoneWatch/HousephoneWatch.entitlements;
 				INFOPLIST_FILE = HousephoneWatch/Info.plist;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HOUSEPHONE_BUNDLE_PREFIX).housephone.watchkitapp";
 				PRODUCT_NAME = HousephoneWatch;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -573,7 +583,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone.localpush;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HOUSEPHONE_BUNDLE_PREFIX).housephone.localpush";
 				PRODUCT_NAME = HousephoneLocalPush;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -592,7 +602,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.jorisconrad.housephone;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HOUSEPHONE_BUNDLE_PREFIX).housephone";
 				PRODUCT_NAME = Housephone;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;

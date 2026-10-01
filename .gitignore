@@ -22,3 +22,6 @@ bridge/data/
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# Per-developer team and bundle prefix (Housephone einrichten.command)
+ios/Config/Local.xcconfig

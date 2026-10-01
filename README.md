@@ -232,20 +232,19 @@ Weitere Tabs: **1** Übersicht · **2** Geräte · **3** Kopplung · **4** Anruf
 
 ### 6 · App aufs iPhone (und die Watch)
 
-Auf dem Mac, einmalig:
+Auf dem Mac, einmalig: im Finder **`Housephone einrichten.command`** im Housephone-Ordner doppelklicken. Das Skript prüft Xcode, lässt dich dein **Apple-Team** und das **Bundle-ID-Präfix** aus einer Liste wählen, schreibt beides nach `ios/Config/Local.xcconfig` (nicht eingecheckt), zeigt das passende `apns.topic` für die Bridge und öffnet auf Wunsch das Projekt.
 
-```sh
-open housephone/ios/Housephone.xcodeproj
-```
+> [!NOTE]
+> Hast du Housephone als ZIP von GitHub geladen, blockiert macOS das Skript beim ersten Mal. Dann: Rechtsklick → **Öffnen**, oder einmal `xattr -d com.apple.quarantine "Housephone einrichten.command"`. Mit `git clone` passiert das nicht.
 
-1. Oben dein **iPhone** als Ziel, Scheme **Housephone** → ▶︎
+1. In Xcode oben dein **iPhone** als Ziel, Scheme **Housephone** → ▶︎
 2. **Beim ersten Mal:** auf dem iPhone **Einstellungen → Datenschutz & Sicherheit → Entwicklermodus** einschalten
 3. **Watch:** in der **Watch-App** auf dem iPhone → **Verfügbare Apps → Housephone → Installieren**, falls sie nicht automatisch kommt
 
 <details>
 <summary><b>Xcode bemängelt „Push Notifications“?</b></summary>
 
-Auf [developer.apple.com → Identifiers](https://developer.apple.com/account/resources/identifiers/list) bei `com.jorisconrad.housephone` und `…watchkitapp` **Push Notifications** aktivieren und erneut bauen.
+Auf [developer.apple.com → Identifiers](https://developer.apple.com/account/resources/identifiers/list) bei `<präfix>.housephone` und `…watchkitapp` (Standard: `com.jorisconrad`) **Push Notifications** aktivieren und erneut bauen.
 </details>
 
 ### 7 · iPhone koppeln

@@ -40,7 +40,7 @@ configuration:
     description: Team-ID des Apple-Developer-Kontos.
   apns_topic:
     name: APNs Topic
-    description: Bundle-ID der App plus „.voip“.
+    description: Bundle-ID der App plus „.voip“, also <präfix>.housephone.voip. Zeigt das Skript „Housephone einrichten“ am Ende an.
   log_level:
     name: Log-Level
     description: Telefonnummern stehen immer gekürzt im Log.

@@ -44,7 +44,7 @@ Die Bridge ermittelt ihre öffentliche IPv4 automatisch: Sie fragt alle 30 s die
 1. [developer.apple.com](https://developer.apple.com/account/resources/authkeys/list) → **Certificates, Identifiers & Profiles → Keys → +**.
 2. Namen vergeben und **Apple Push Notifications service (APNs)** ankreuzen, dann registrieren.
 3. `AuthKey_XXXXXXXXXX.p8` herunterladen – **das geht nur einmal** – und die **Key ID** notieren.
-4. Team-ID: `T9CA6D7T8N`, Topic: `com.jorisconrad.housephone.voip` (Standardwerte in `config.example.yaml`).
+4. Team-ID: `T9CA6D7T8N`, Topic: `com.jorisconrad.housephone.voip` (Standardwerte in `config.example.yaml`). Mit eigenem Team und Präfix (`Housephone einrichten.command`): deine Team-ID und `<präfix>.housephone.voip`; das Skript zeigt beide Werte am Ende an.
 
 Welches APNs-Environment ein Gerät braucht, meldet die App selbst:
 - Aus Xcode installierte Debug-Builds nutzen `development` (Sandbox).

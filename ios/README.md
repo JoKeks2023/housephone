@@ -4,13 +4,16 @@ SwiftUI-App (iOS 26+) mit CallKit und PushKit, dazu eine eigenständige Apple-Wa
 
 ## Bauen
 
+Einmalig `Housephone einrichten.command` im Repo-Ordner doppelklicken (oder im Terminal starten), dann:
+
 ```sh
 open ios/Housephone.xcodeproj
 ```
 
 - Auf ein **echtes iPhone** bauen. CallKit, PushKit und Audio lassen sich im Simulator nicht sinnvoll testen.
-- Signing ist automatisch mit Team `T9CA6D7T8N`.
-- Bundle-IDs: `com.jorisconrad.housephone` (iPhone) und `com.jorisconrad.housephone.watchkitapp` (Watch).
+- **Team und Bundle-IDs** stehen nicht in der `project.pbxproj`, sondern in `ios/Config/Housephone.xcconfig` (Standard: Team `T9CA6D7T8N`, Präfix `com.jorisconrad`). Eigene Werte schreibt das Setup-Skript nach `ios/Config/Local.xcconfig` (nicht eingecheckt); die überschreibt die Standards. Ohne Rückfragen: `./"Housephone einrichten.command" --team ABCDE12345 --prefix org.example`.
+- Bundle-IDs: `<präfix>.housephone` (iPhone), `<präfix>.housephone.watchkitapp` (Watch), `<präfix>.housephone.localpush` (Local-Push-Extension). Die App leitet ihr VoIP-Topic aus der eigenen Bundle-ID ab (`<bundle-id>.voip`); in der Bridge muss deshalb `apns.topic` = `<präfix>.housephone.voip` sein.
+- Signing in Xcode bleibt automatisch. Team oder Präfix nicht im Xcode-Reiter „Signing & Capabilities“ ändern: Das schreibt in die `project.pbxproj` und überdeckt die xcconfig. Stattdessen das Skript erneut starten.
 - Die Capability „Push Notifications“ muss im Developer-Account für beide App-IDs aktiv sein. `aps-environment` steht in den Entitlements.
 - Die Watch-App wird mit dem Scheme **Housephone** gebaut und in die iPhone-App eingebettet (`PlugIns/`).
 - Das Xcode-Projekt ist eingecheckt und nutzt synchronisierte Ordner: Neue Dateien in `Housephone/`, `HousephoneWatch/` und `HousephoneLocalPush/` erscheinen automatisch in Xcode, ohne Generator. Einstellungen, Info.plist und Entitlements änderst du direkt in Xcode.
