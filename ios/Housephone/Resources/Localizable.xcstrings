@@ -552,6 +552,7 @@
       }
     },
     "Außerhalb deines Heim-WLANs wartet Housephone nicht auf Anrufe." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -973,6 +974,7 @@
       }
     },
     "Den QR-Code zeigt dein Server mit `housephone-bridge pair` an." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2295,6 +2297,7 @@
       }
     },
     "Klingeln im Hintergrund nur zu Hause" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

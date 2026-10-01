@@ -2,6 +2,7 @@
   "sourceLanguage" : "de",
   "strings" : {
     "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -18,7 +19,20 @@
       },
       "shouldTranslate" : false
     },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "HousephoneWatch"
+          }
+        }
+      }
+    },
     "NSMicrophoneUsageDescription" : {
+      "comment" : "Privacy - Microphone Usage Description",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -32,8 +46,7 @@
             "value" : "Housephone needs the microphone so the other person can hear you when you talk on your watch."
           }
         }
-      },
-      "shouldTranslate" : true
+      }
     }
   },
   "version" : "1.0"
