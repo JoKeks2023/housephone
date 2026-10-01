@@ -31,6 +31,7 @@ type fakeAPI struct {
 	profiles []admin.ProfileInfo
 	paired   []string // "name/profile" of created codes
 	moved    []string // "id/profile"
+	admins   []string // "+id" promoted, "-id" demoted
 }
 
 func (f *fakeAPI) Status(context.Context) (admin.Status, error) {
@@ -38,6 +39,14 @@ func (f *fakeAPI) Status(context.Context) (admin.Status, error) {
 		PublicIP: "94.1.2.3", PublicIPSource: "fritzbox", MediaPort: 50000, APNsConfigured: true,
 		DevicesTotal: 2, DevicesOnline: 1, StartedAt: t0.Add(-90 * time.Minute), Fingerprint: "AEbIfOzLcNeN", PublicURL: "wss://phone.x.de/v1/ws",
 		Profiles: f.profiles}, nil
+}
+func (f *fakeAPI) PromoteDevice(_ context.Context, id string) (admin.DeviceInfo, error) {
+	f.admins = append(f.admins, "+"+id)
+	return admin.DeviceInfo{ID: id, Name: "iPhone von Joris", Admin: true, AdminEnrollUntil: t0.Add(time.Hour)}, nil
+}
+func (f *fakeAPI) DemoteDevice(_ context.Context, id string) (admin.DeviceInfo, error) {
+	f.admins = append(f.admins, "-"+id)
+	return admin.DeviceInfo{ID: id, Name: "iPhone von Joris"}, nil
 }
 func (f *fakeAPI) MoveDevice(_ context.Context, id, profile string) (admin.MoveResult, error) {
 	f.moved = append(f.moved, id+"/"+profile)
@@ -163,6 +172,24 @@ func TestOverview(t *testing.T) {
 	m = press(t, m, "k")
 	if v := plain(m.View()); !strings.Contains(v, "password=••••••") {
 		t.Fatalf("config view:\n%s", v)
+	}
+}
+
+// a promotes the selected iPhone (ADR-0009); a watch is refused.
+func TestDevicesPromote(t *testing.T) {
+	api := &fakeAPI{}
+	m := press(t, newTest(t, api), "2", "a")
+	if strings.Join(api.admins, ",") != "+i1" || !strings.Contains(plain(m.View()), "Face ID") {
+		t.Fatalf("promote %v\n%s", api.admins, plain(m.View()))
+	}
+	m = press(t, m, "down", "a")
+	if len(api.admins) != 1 || !strings.Contains(plain(m.View()), "Nur ein iPhone") {
+		t.Fatalf("watch promoted %v", api.admins)
+	}
+	// A is only for admins; the fake's devices are none.
+	press(t, m, "up", "A")
+	if len(api.admins) != 1 {
+		t.Fatalf("demoted a non-admin %v", api.admins)
 	}
 }
 

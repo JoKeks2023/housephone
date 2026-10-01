@@ -106,6 +106,14 @@ func (s *Server) Handler() http.Handler {
 		dev, err := s.svc.RenameDevice(r.PathValue("id"), req.Name)
 		s.reply(w, dev, err)
 	})
+	mux.HandleFunc("POST /v1/devices/{id}/promote", func(w http.ResponseWriter, r *http.Request) {
+		dev, err := s.svc.PromoteDevice(r.PathValue("id"))
+		s.reply(w, dev, err)
+	})
+	mux.HandleFunc("POST /v1/devices/{id}/demote", func(w http.ResponseWriter, r *http.Request) {
+		dev, err := s.svc.DemoteDevice(r.PathValue("id"))
+		s.reply(w, dev, err)
+	})
 	mux.HandleFunc("DELETE /v1/devices/{id}", func(w http.ResponseWriter, r *http.Request) {
 		res, err := s.svc.RemoveDevice(r.PathValue("id"), r.URL.Query().Get("keepCompanions") == "1")
 		s.reply(w, res, err)
@@ -185,6 +193,8 @@ func (s *Server) reply(w http.ResponseWriter, v any, err error) {
 		writeError(w, http.StatusNotFound, "nicht gefunden")
 	case errors.Is(err, ErrUnknownProfile):
 		writeError(w, http.StatusBadRequest, ErrUnknownProfile.Error())
+	case errors.Is(err, ErrNotAllowed):
+		writeError(w, http.StatusBadRequest, ErrNotAllowed.Error())
 	default:
 		s.log.Error("admin request failed", "error", err)
 		writeError(w, http.StatusInternalServerError, err.Error())

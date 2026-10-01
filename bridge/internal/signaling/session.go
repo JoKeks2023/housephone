@@ -218,6 +218,7 @@ func (srv *Server) runDevice(ctx context.Context, conn *hp2.Conn, dev store.Devi
 		Features:      srv.featuresFor(dev),
 		LanURL:        srv.cfg.LanURL,
 		Profile:       srv.profileInfo(dev),
+		Admin:         adminRoleForWelcome(dev, srv.cfg.Now()),
 	}))
 	if helloErr != nil {
 		sess.Send(errorEnvelope(protocol.ErrorBadRequest, helloErr.Error()))

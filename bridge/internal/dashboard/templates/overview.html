@@ -49,7 +49,7 @@
 {{if .Data.Devices}}<ul class="list">{{range .Data.Devices}}
 <li>
 <div><span class="dot {{if .Online}}ok{{else}}off{{end}}"></span><strong>{{.Name}}</strong>
-<small>{{if $multi}}{{$L.T "profile"}}: {{.ProfileName}} · {{end}}{{.Platform}}{{with .Model}} · {{.}}{{end}} · {{if .Online}}{{$L.T "online"}}{{else}}{{$L.T "lastSeen"}}: {{if .LastSeen.IsZero}}{{$L.T "never"}}{{else}}{{date .LastSeen}}{{end}}{{end}}{{with .PairedByName}} · {{$L.T "via"}} {{.}}{{end}} · <code>{{.KeyFingerprint}}</code></small></div>
+<small>{{if $multi}}{{$L.T "profile"}}: {{.ProfileName}} · {{end}}{{.Platform}}{{with .Model}} · {{.}}{{end}} · {{if .Online}}{{$L.T "online"}}{{else}}{{$L.T "lastSeen"}}: {{if .LastSeen.IsZero}}{{$L.T "never"}}{{else}}{{date .LastSeen}}{{end}}{{end}}{{with .PairedByName}} · {{$L.T "via"}} {{.}}{{end}}{{if .Admin}} · <strong>{{$L.T "admin"}}</strong>{{if not .AdminEnrollUntil.IsZero}} ({{$L.T "adminEnrollUntil"}} {{clock .AdminEnrollUntil}}){{else if not .AdminEnrolled}} ({{$L.T "adminNoKey"}}){{end}}{{end}} · <code>{{.KeyFingerprint}}</code></small></div>
 <div class="actions">
 <details><summary>{{$L.T "rename"}}</summary>
 <form method="post" action="devices/{{.ID}}/rename" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}"><input name="name" value="{{.Name}}" maxlength="64" required aria-label="{{$L.T "rename"}}"><button>{{$L.T "save"}}</button></form>
@@ -57,6 +57,7 @@
 {{if and $multi (not .PairedBy)}}<details><summary>{{$L.T "move"}}</summary>
 <form method="post" action="devices/{{.ID}}/move" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}">{{$current := .Profile}}<select name="profile" aria-label="{{$L.T "moveTo"}}">{{range $profiles}}<option value="{{.ID}}"{{if eq .ID $current}} selected{{end}}>{{.Name}}</option>{{end}}</select><button>{{$L.T "move"}}</button></form>
 </details>{{end}}
+{{if eq .Platform "ios"}}{{if .Admin}}<form method="post" action="devices/{{.ID}}/demote" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}"><button>{{$L.T "demote"}}</button></form>{{if not .AdminEnrolled}}<form method="post" action="devices/{{.ID}}/promote" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}"><button>{{$L.T "reenroll"}}</button></form>{{end}}{{else}}<form method="post" action="devices/{{.ID}}/promote" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}"><button>{{$L.T "promote"}}</button></form>{{end}}{{end}}
 <a class="button danger" href="devices/{{.ID}}/remove">{{$L.T "remove"}}</a>
 </div>
 </li>

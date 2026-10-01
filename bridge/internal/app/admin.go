@@ -18,8 +18,27 @@ import (
 	"github.com/JoKeks2023/housephone/bridge/internal/version"
 )
 
-// adminService implements admin.Service for the running bridge.
-type adminService struct{ b *Bridge }
+// adminService implements admin.Service for the running bridge. actor is
+// the admin device acting through the app (ADR-0009); nil for the server
+// itself (CLI, TUI, dashboard).
+type adminService struct {
+	b     *Bridge
+	actor *store.Device
+}
+
+// actorName names who acted in admin.action: the admin device, or "" for
+// the server.
+func (s adminService) actorName() string {
+	if s.actor == nil {
+		return ""
+	}
+	return s.actor.Name
+}
+
+// announce tells all devices about an admin action (ADR-0009).
+func (s adminService) announce(action, target, targetProfile string) {
+	s.b.signaling.AnnounceAdminAction(s.actorName(), action, target, targetProfile)
+}
 
 var _ admin.Service = adminService{}
 
@@ -109,6 +128,10 @@ func (s adminService) deviceInfo(d store.Device, names map[string]string, online
 		PairedBy:       d.PairedBy, PairedByName: names[d.PairedBy],
 		Profile:   d.ProfileID(),
 		CreatedAt: d.CreatedAt, LastSeen: d.LastSeen,
+		Admin: d.Admin && d.CanBeAdmin(), AdminEnrolled: d.Admin && d.AdminKey != "",
+	}
+	if d.AdminEnrollOpen(time.Now()) {
+		info.AdminEnrollUntil = d.AdminEnrollUntil
 	}
 	if p, ok := s.b.profiles.Get(d.ProfileID()); ok {
 		info.ProfileName = p.Name
@@ -142,6 +165,7 @@ func (s adminService) RenameDevice(id, name string) (admin.DeviceInfo, error) {
 	if err != nil {
 		return admin.DeviceInfo{}, err
 	}
+	s.announce(protocol.AdminActionRename, dev.Name, dev.ProfileID())
 	return s.deviceInfo(dev, map[string]string{}, s.b.signaling.Online()), nil
 }
 
@@ -186,6 +210,7 @@ func (s adminService) RemoveDevice(id string, keepCompanions bool) (admin.Remove
 		}
 	}
 	s.b.log.Info("devices removed via admin", "count", len(res.Removed))
+	s.announce(protocol.AdminActionRemove, dev.Name, dev.ProfileID())
 	return res, nil
 }
 
@@ -226,7 +251,59 @@ func (s adminService) MoveDevice(id, profileID string) (admin.MoveResult, error)
 		res.Moved = append(res.Moved, s.deviceInfo(moved, nil, online))
 	}
 	s.b.log.Info("devices moved via admin", "count", len(res.Moved), "profile", p.ID)
+	// Both profiles may see the name: the old one loses the device, the
+	// new one gains it.
+	s.announce(protocol.AdminActionMove, dev.Name, dev.ProfileID())
 	return res, nil
+}
+
+// PromoteDevice makes an iPhone admin and opens the window in which it
+// enrolls its Face ID key (ADR-0009). Promoting an admin again reopens the
+// window, e.g. after Face ID was set up anew; its old key stays valid
+// until the new one is enrolled.
+func (s adminService) PromoteDevice(id string) (admin.DeviceInfo, error) {
+	dev, err := s.b.Devices.Get(id)
+	if errors.Is(err, store.ErrDeviceNotFound) {
+		return admin.DeviceInfo{}, admin.ErrNotFound
+	}
+	if err != nil {
+		return admin.DeviceInfo{}, err
+	}
+	if !dev.CanBeAdmin() {
+		return admin.DeviceInfo{}, admin.ErrNotAllowed
+	}
+	until := time.Now().Add(signaling.AdminEnrollWindow).UTC()
+	dev, err = s.b.Devices.Update(id, func(d *store.Device) {
+		d.Admin = true
+		d.AdminEnrollUntil = until
+	})
+	if err != nil {
+		return admin.DeviceInfo{}, err
+	}
+	s.b.log.Info("device promoted to admin", "device", dev.ID)
+	s.b.signaling.SendAdminRole(dev)
+	s.announce(protocol.AdminActionPromote, dev.Name, "")
+	return s.deviceInfo(dev, nil, s.b.signaling.Online()), nil
+}
+
+// DemoteDevice takes the admin role and key away; it takes effect with
+// the next request.
+func (s adminService) DemoteDevice(id string) (admin.DeviceInfo, error) {
+	dev, err := s.b.Devices.Update(id, func(d *store.Device) {
+		d.Admin = false
+		d.AdminKey = ""
+		d.AdminEnrollUntil = time.Time{}
+	})
+	if errors.Is(err, store.ErrDeviceNotFound) {
+		return admin.DeviceInfo{}, admin.ErrNotFound
+	}
+	if err != nil {
+		return admin.DeviceInfo{}, err
+	}
+	s.b.log.Info("device demoted", "device", dev.ID)
+	s.b.signaling.SendAdminRole(dev)
+	s.announce(protocol.AdminActionDemote, dev.Name, "")
+	return s.deviceInfo(dev, nil, s.b.signaling.Online()), nil
 }
 
 func (s adminService) CreatePairing(name, profileID string) (admin.PairingInfo, error) {
@@ -243,6 +320,7 @@ func (s adminService) CreatePairing(name, profileID string) (admin.PairingInfo, 
 		return admin.PairingInfo{}, err
 	}
 	fp := s.b.Key.Fingerprint()
+	s.announce(protocol.AdminActionInvite, pc.Name, p.ID)
 	return admin.PairingInfo{
 		Code: pc.Code, Grouped: hp2.GroupCode(pc.Code), Fingerprint: fp, ExpiresAt: pc.ExpiresAt,
 		Link:    PairingLink(s.b.cfg.Bridge.PublicURL, s.b.lanURL, pc.Code, fp, s.b.cfg.Bridge.Name),
@@ -277,7 +355,10 @@ func (s adminService) PairingState(code string) (admin.PairingState, error) {
 }
 
 func (s adminService) RevokePairing(code string) error {
-	_, err := s.b.Pairing.Revoke(code)
+	revoked, err := s.b.Pairing.Revoke(code)
+	if err == nil && revoked {
+		s.announce(protocol.AdminActionRevokeInvite, "", "")
+	}
 	return err
 }
 
@@ -303,11 +384,15 @@ func (s adminService) ApproveLanPairing(id, profileID string) (admin.DeviceInfo,
 	if err != nil {
 		return admin.DeviceInfo{}, err
 	}
+	s.announce(protocol.AdminActionApprove, dev.Name, dev.ProfileID())
 	return s.deviceInfo(dev, nil, s.b.signaling.Online()), nil
 }
 
 func (s adminService) DenyLanPairing(id string) error {
 	err := s.b.signaling.DenyLanPairing(id)
+	if err == nil {
+		s.announce(protocol.AdminActionDeny, "", "")
+	}
 	if errors.Is(err, signaling.ErrLanPairingNotFound) {
 		return admin.ErrNotFound
 	}

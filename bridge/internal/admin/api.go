@@ -19,6 +19,10 @@ var ErrNotFound = errors.New("not found")
 // ErrUnknownProfile is returned for a profile that is not configured.
 var ErrUnknownProfile = errors.New("unbekanntes Profil")
 
+// ErrNotAllowed is returned for an admin action that is not possible, e.g.
+// making a watch admin (ADR-0009).
+var ErrNotAllowed = errors.New("nicht erlaubt")
+
 // ProfileInfo is a household profile (ADR-0008): one IP phone at the
 // FRITZ!Box with its own number.
 type ProfileInfo struct {
@@ -80,21 +84,26 @@ type Status struct {
 
 // DeviceInfo is a paired device.
 type DeviceInfo struct {
-	ID             string    `json:"id"`
-	Name           string    `json:"name"`
-	Platform       string    `json:"platform"`
-	Model          string    `json:"model,omitempty"`
-	KeyFingerprint string    `json:"keyFingerprint"`
-	Media          string    `json:"media"` // "webrtc" | "websocket-pcma"
-	Push           string    `json:"push"`  // "", "development", "production"
-	PairedBy       string    `json:"pairedBy,omitempty"`
-	PairedByName   string    `json:"pairedByName,omitempty"`
-	Profile        string    `json:"profile"`
-	ProfileName    string    `json:"profileName"`
-	CreatedAt      time.Time `json:"createdAt"`
-	LastSeen       time.Time `json:"lastSeen,omitzero"`
-	Online         bool      `json:"online"`
-	OnlineSince    time.Time `json:"onlineSince,omitzero"`
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Platform       string `json:"platform"`
+	Model          string `json:"model,omitempty"`
+	KeyFingerprint string `json:"keyFingerprint"`
+	Media          string `json:"media"` // "webrtc" | "websocket-pcma"
+	Push           string `json:"push"`  // "", "development", "production"
+	PairedBy       string `json:"pairedBy,omitempty"`
+	PairedByName   string `json:"pairedByName,omitempty"`
+	Profile        string `json:"profile"`
+	ProfileName    string `json:"profileName"`
+	// Admin may manage the bridge from the app (ADR-0009); AdminEnrolled:
+	// its Face ID key is known; AdminEnrollUntil: the window to enroll it.
+	Admin            bool      `json:"admin,omitempty"`
+	AdminEnrolled    bool      `json:"adminEnrolled,omitempty"`
+	AdminEnrollUntil time.Time `json:"adminEnrollUntil,omitzero"`
+	CreatedAt        time.Time `json:"createdAt"`
+	LastSeen         time.Time `json:"lastSeen,omitzero"`
+	Online           bool      `json:"online"`
+	OnlineSince      time.Time `json:"onlineSince,omitzero"`
 }
 
 // RemoveResult lists what devices remove took away.
@@ -184,6 +193,12 @@ type Service interface {
 	// MoveDevice moves a device and its watches to another profile and
 	// reconnects them.
 	MoveDevice(id, profile string) (MoveResult, error)
+	// PromoteDevice makes an iPhone admin and opens the window in which
+	// it enrolls its Face ID key; on an admin it reopens the window (new
+	// key after a Face ID change). ErrNotAllowed for a watch.
+	PromoteDevice(id string) (DeviceInfo, error)
+	// DemoteDevice takes the admin role and key away.
+	DemoteDevice(id string) (DeviceInfo, error)
 	// CreatePairing creates a code whose device joins profile ("" is the
 	// default profile).
 	CreatePairing(name, profile string) (PairingInfo, error)

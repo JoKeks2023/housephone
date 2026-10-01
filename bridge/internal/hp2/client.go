@@ -30,6 +30,9 @@ type Client struct {
 	BridgePub ed25519.PublicKey
 	HTTP      *http.Client
 	Now       func() time.Time
+	// AdminKey, if set, adds the HP2-Admin signature to every request
+	// (ADR-0009).
+	AdminKey DeviceKey
 }
 
 func (c *Client) now() time.Time {
@@ -72,6 +75,13 @@ func (c *Client) Do(ctx context.Context, method, requestURI string, body []byte,
 		}
 	}
 	req.Header.Set("Authorization", creq.Authorization())
+	if c.AdminKey != nil {
+		sig, err := creq.AdminSignature(c.AdminKey, method, requestURI, body)
+		if err != nil {
+			return Response{}, err
+		}
+		req.Header.Set(AdminHeader, sig)
+	}
 	if len(body) > 0 {
 		req.Header.Set("Content-Type", "application/json")
 	}

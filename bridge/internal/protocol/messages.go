@@ -43,6 +43,12 @@ const (
 	// TypeDevicePaired tells the connected devices that another device was
 	// paired (v2).
 	TypeDevicePaired = "device.paired"
+	// TypeAdminAction tells every connected device that an admin changed
+	// something (ADR-0009).
+	TypeAdminAction = "admin.action"
+	// TypeAdminRole tells a device that its admin role changed (promoted,
+	// demoted, key enrolled).
+	TypeAdminRole = "admin.role"
 )
 
 // Media capabilities in hello/device.update (v1.1).
@@ -126,7 +132,18 @@ const (
 	// ErrorHomeNetworkRequired: pairing and administration are only
 	// available over the private listener (home network / Tailscale).
 	ErrorHomeNetworkRequired = "home_network_required"
-	ErrorInternal            = "internal"
+	// ErrorAdminRequired (ADR-0009): the device is not admin, has no admin
+	// key, or the HP2-Admin signature is missing or wrong.
+	ErrorAdminRequired = "admin_required"
+	// ErrorAdminEnrollClosed: the device may not enroll an admin key now
+	// (not admin, or the enrollment window is over).
+	ErrorAdminEnrollClosed = "admin_enroll_closed"
+	// ErrorNotAllowed: the admin action is not possible, e.g. making a
+	// watch admin.
+	ErrorNotAllowed = "not_allowed"
+	// ErrorNotFound: unknown device, pairing request or code.
+	ErrorNotFound = "not_found"
+	ErrorInternal = "internal"
 )
 
 // WebSocket close codes beyond RFC 6455.
@@ -288,6 +305,73 @@ type Welcome struct {
 	// Profile is the household profile of the device (ADR-0008). Older
 	// apps ignore it.
 	Profile *ProfileInfo `json:"profile,omitempty"`
+	// Admin is set for admin devices only (ADR-0009). Older apps ignore
+	// it.
+	Admin *AdminRole `json:"admin,omitempty"`
+}
+
+// AdminRole is a device's admin state, in welcome and admin.role.
+type AdminRole struct {
+	// Admin is false in admin.role after a demotion.
+	Admin bool `json:"admin"`
+	// Enrolled: the bridge knows the device's admin key.
+	Enrolled bool `json:"enrolled"`
+	// EnrollUntil is the end of the window to enroll (or replace) the
+	// admin key; omitted when closed.
+	EnrollUntil *time.Time `json:"enrollUntil,omitempty"`
+}
+
+// AdminAction announces an admin action to all devices (admin.action).
+type AdminAction struct {
+	// Actor is the name of the admin device, or "" for the server (CLI,
+	// TUI, dashboard).
+	Actor  string `json:"actor"`
+	Action string `json:"action"`
+	// Target names the device or request the action was about. Only sent
+	// to devices of the target's profile and to admins (ADR-0008: other
+	// profiles don't learn about each other's devices).
+	Target string    `json:"target,omitempty"`
+	At     time.Time `json:"at"`
+}
+
+// AdminAction.Action values.
+const (
+	AdminActionRename       = "device.rename"
+	AdminActionRemove       = "device.remove"
+	AdminActionMove         = "device.move"
+	AdminActionPromote      = "device.promote"
+	AdminActionDemote       = "device.demote"
+	AdminActionEnroll       = "admin.enroll"
+	AdminActionInvite       = "pairing.create"
+	AdminActionRevokeInvite = "pairing.revoke"
+	AdminActionApprove      = "pairing.approve"
+	AdminActionDeny         = "pairing.deny"
+)
+
+// Bodies of the admin endpoints (/v1/admin/*, ADR-0009).
+
+// AdminEnroll is the body of POST /v1/admin/enroll.
+type AdminEnroll struct {
+	// AdminKey is the admin key (base64url X9.63 P-256).
+	AdminKey string `json:"adminKey"`
+	// Proof is the admin key's signature over hp2.AdminEnrollMessage.
+	Proof string `json:"proof"`
+}
+
+// AdminRename is the body of PUT /v1/admin/devices/{id}.
+type AdminRename struct {
+	Name string `json:"name"`
+}
+
+// AdminProfileChoice is the body of …/move and …/approve.
+type AdminProfileChoice struct {
+	Profile string `json:"profile"`
+}
+
+// AdminInvite is the body of POST /v1/admin/pairings.
+type AdminInvite struct {
+	Name    string `json:"name"`
+	Profile string `json:"profile"`
 }
 
 // ProfileInfo names the device's profile in welcome: whose line it rings

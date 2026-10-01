@@ -336,6 +336,10 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		Directory:         directory,
 		Profiles:          b.profiles,
 		Logger:            log,
+		// Administration from the app (ADR-0009), private listener only.
+		Admin: func(actor store.Device) admin.Service {
+			return adminService{b: b, actor: &actor}
+		},
 	})
 
 	b.listener, err = net.Listen("tcp", cfg.Bridge.Listen)
