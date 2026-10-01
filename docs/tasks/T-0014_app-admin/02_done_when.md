@@ -9,5 +9,5 @@
 - [x] Jede Admin-Aktion an alle Geräte; Gerätename nur für eigenes Profil und Admins
 - [x] Go ↔ Swift: Testvektoren in beiden Implementierungen grün
 - [x] `go test -race ./...`, `go vet ./...`, `swift test` grün
-- [ ] CI grün (siehe Validierungsbericht)
+- [x] CI grün (Bridge 36853398355, Add-on 36853398369, iOS 36853636570)
 - [ ] Auf einem echten iPhone mit Face ID im Heimnetz ausprobiert (User)
