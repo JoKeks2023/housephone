@@ -159,7 +159,7 @@ struct PairingView: View {
     }
 }
 
-private enum PairingFailure: Equatable {
+enum PairingFailure: Equatable {
     case codeInvalid
     case rateLimited
     case unreachable

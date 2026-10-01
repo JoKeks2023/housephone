@@ -131,6 +131,26 @@
         }
       }
     },
+    "Adresse eingeben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter address"
+          }
+        }
+      }
+    },
+    "Adresse eingeben (Tailscale)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter address (Tailscale)"
+          }
+        }
+      }
+    },
     "Alle" : {
       "localizations" : {
         "en" : {
@@ -401,6 +421,16 @@
         }
       }
     },
+    "Auf der Bridge wurde die Kopplung abgelehnt. Wenn das ein Versehen war, versuche es erneut." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The pairing was denied on the bridge. If that was a mistake, try again."
+          }
+        }
+      }
+    },
     "Auflegen" : {
       "localizations" : {
         "en" : {
@@ -591,6 +621,26 @@
         }
       }
     },
+    "Bridge „%@“ gefunden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bridge “%@” found"
+          }
+        }
+      }
+    },
+    "Bridge „%@“ gefunden – koppeln?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bridge “%@” found – pair?"
+          }
+        }
+      }
+    },
     "Bridge erreichbar, aber nicht an der FRITZ!Box angemeldet" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -668,6 +718,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Code %@"
+          }
+        }
+      }
+    },
+    "Code vergleichen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare the code"
           }
         }
       }
@@ -999,6 +1059,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The bridge says: %@"
+          }
+        }
+      }
+    },
+    "Die Freigabe auf der Bridge kam nicht rechtzeitig. Versuche es erneut und gib die Kopplung innerhalb von zwei Minuten frei." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge didn't approve in time. Try again and approve the pairing within two minutes."
           }
         }
       }
@@ -1444,6 +1514,16 @@
         }
       }
     },
+    "Freigeben in der TUI (Taste 3), mit „housephone-bridge devices approve“ oder im Home-Assistant-Dashboard." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Approve in the TUI (key 3), with “housephone-bridge devices approve” or in the Home Assistant dashboard."
+          }
+        }
+      }
+    },
     "FRITZ!Box" : {
       "localizations" : {
         "en" : {
@@ -1520,6 +1600,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "FRITZ!Box error %lld"
+          }
+        }
+      }
+    },
+    "Für Tailscale: die Tailscale-IP des Servers. Im Heim-WLAN findet Housephone die Bridge von selbst." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For Tailscale: the server's Tailscale IP. On your home Wi-Fi Housephone finds the bridge by itself."
           }
         }
       }
@@ -1624,6 +1714,16 @@
         }
       }
     },
+    "Gültig noch %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valid for %@"
+          }
+        }
+      }
+    },
     "Halte einen Kontakt gedrückt und wähle „Zu Favoriten“." : {
       "localizations" : {
         "en" : {
@@ -1684,6 +1784,16 @@
         }
       }
     },
+    "Housephone darf das lokale Netzwerk nicht nutzen und findet deine Bridge deshalb nicht." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Housephone isn't allowed to use the local network, so it can't find your bridge."
+          }
+        }
+      }
+    },
     "Housephone ist nicht an der FRITZ!Box angemeldet. Prüfe die Zugangsdaten in den Einstellungen." : {
       "localizations" : {
         "en" : {
@@ -1724,6 +1834,26 @@
         }
       }
     },
+    "Housephone zeigt gleich einen Code. Vergleiche ihn mit der Anzeige auf deiner Bridge und gib die Kopplung dort frei." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Housephone will show a code. Compare it with the one on your bridge and approve the pairing there."
+          }
+        }
+      }
+    },
+    "Im Heim-WLAN – tippen zum Koppeln" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On your home Wi-Fi – tap to pair"
+          }
+        }
+      }
+    },
     "Im Hintergrund klingelt es erst, wenn Apple Housephone die Local-Push-Freigabe erteilt hat." : {
       "localizations" : {
         "en" : {
@@ -1740,6 +1870,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open in Keypad"
+          }
+        }
+      }
+    },
+    "In den Einstellungen erlauben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow in Settings"
           }
         }
       }
@@ -1780,6 +1920,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iOS hasn't enabled Housephone for background calls yet. This happens automatically once the app is opened with an internet connection. If it stays this way, check the bridge's push key (APNs)."
+          }
+        }
+      }
+    },
+    "IP-Adresse der Bridge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bridge IP address"
           }
         }
       }
@@ -1994,12 +2144,32 @@
         }
       }
     },
+    "Koppelt dieses iPhone mit der Bridge, nachdem du einen Code verglichen hast." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairs this iPhone with the bridge after you compared a code."
+          }
+        }
+      }
+    },
     "Kopple zuerst deine Bridge, dann kannst du telefonieren." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pair your bridge first, then you can make calls."
+          }
+        }
+      }
+    },
+    "Kopplung abgelehnt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing denied"
           }
         }
       }
@@ -2220,6 +2390,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "With CallKit – on the Lock Screen and in your call history."
+          }
+        }
+      }
+    },
+    "Mit QR-Code koppeln" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pair with a QR code"
           }
         }
       }
@@ -2605,6 +2785,16 @@
         }
       }
     },
+    "Port" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Port"
+          }
+        }
+      }
+    },
     "Privat" : {
       "localizations" : {
         "en" : {
@@ -2751,6 +2941,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mute"
+          }
+        }
+      }
+    },
+    "Suche im Heim-WLAN nach deiner Bridge …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Looking for your bridge on the home Wi-Fi …"
           }
         }
       }
@@ -2955,12 +3155,32 @@
         }
       }
     },
+    "Verbindung zur Bridge wird aufgebaut" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecting to the bridge"
+          }
+        }
+      }
+    },
     "Verbunden" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Connected"
+          }
+        }
+      }
+    },
+    "Vergleiche diesen Code mit der Anzeige auf deiner Bridge. Gib die Kopplung nur frei, wenn beide gleich sind." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare this code with the one shown on your bridge. Only approve the pairing if both match."
           }
         }
       }
@@ -3045,12 +3265,32 @@
         }
       }
     },
+    "Warte auf Freigabe …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for approval …"
+          }
+        }
+      }
+    },
     "Watch koppelt sich …" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Watch is pairing …"
+          }
+        }
+      }
+    },
+    "Weiter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
           }
         }
       }
@@ -3091,6 +3331,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shows the missed calls"
+          }
+        }
+      }
+    },
+    "Zeit abgelaufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time's up"
           }
         }
       }
