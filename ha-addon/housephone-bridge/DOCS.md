@@ -87,11 +87,40 @@ Und du kannst dort:
 | Im Heimnetz ankündigen (Bonjour) | Die App findet die Bridge im WLAN ohne QR-Code (Standard: an) |
 | FRITZ!Box-Adresse | LAN-IP der FRITZ!Box; die Bridge startet nur mit einer Adresse im Heimnetz |
 | IP-Telefon | Benutzername und Kennwort aus der FRITZ!Box |
+| Name / Nummern des Hauptprofils | optional, nur bei mehreren Profilen wichtig (siehe unten) |
+| Weitere Profile | optional, je Person ein eigenes IP-Telefon (siehe unten) |
 | FRITZ!Box-Benutzer | optional, für Telefonbuch und Anrufliste |
 | APNs | Schlüsseldatei, Key ID, Team ID, Topic |
 | Log-Level | `info` reicht; Nummern stehen immer gekürzt im Log |
 
 Kennwörter stehen nur in den Add-on-Optionen und nie im Log.
+
+## Mehrere Personen mit eigener Nummer
+
+Jede Person bekommt ein eigenes **Profil**: ein eigenes IP-Telefon an der
+FRITZ!Box mit eigener Nummer. Anrufe auf ihre Nummer klingeln nur bei ihren
+Geräten, sie ruft mit ihrer Nummer an und sieht nur ihre Anrufe in der
+Anrufliste.
+
+1. In der FRITZ!Box ein weiteres IP-Telefon anlegen und dort ihre Nummer für
+   ausgehende und ankommende Anrufe wählen. Beim ersten IP-Telefon nur noch
+   deine Nummer auswählen.
+2. In den Add-on-Optionen unter **Weitere Profile** einen Eintrag ergänzen:
+   ```yaml
+   - id: profil-b
+     name: Profil B
+     sip_username: "621"
+     sip_password: KENNWORT
+     numbers: 030 1234568
+   ```
+   und unter **Eigene Nummern des Hauptprofils** deine Nummer eintragen. Ohne
+   eigene Nummern sieht ein Profil bei mehreren Profilen keine Anrufliste.
+3. Add-on neu starten. Das Dashboard zeigt dann eine Karte **Profile** mit dem
+   Anmeldestatus jedes IP-Telefons.
+4. Beim Freigeben einer Kopplungsanfrage oder beim Erzeugen eines Codes das
+   Profil auswählen. Die Watch kommt automatisch ins Profil ihres iPhones.
+   Falsch zugeordnete Geräte verschiebst du in der Geräteliste mit
+   **Verschieben**; sie verbinden sich dabei neu.
 
 ## Daten und Sicherung
 

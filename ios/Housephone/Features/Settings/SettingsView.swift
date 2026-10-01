@@ -73,6 +73,18 @@ struct SettingsView: View {
             bridgeStatusRow
             if let credentials = bridge.credentials {
                 LabeledContent("Name", value: bridge.welcome?.bridgeName ?? credentials.bridgeName)
+                // Several people with their own number share the bridge
+                // (ADR-0008): whose line this iPhone rings on.
+                if let profile = bridge.welcome?.profile, profile.isWorthShowing {
+                    LabeledContent("Profil", value: profile.name)
+                    if let number = profile.number {
+                        LabeledContent("Eigene Nummer") {
+                            Text(number)
+                                .monospacedDigit()
+                                .textSelection(.enabled)
+                        }
+                    }
+                }
                 LabeledContent("Adresse") {
                     Text(credentials.bridgeURL.host() ?? credentials.bridgeURL.absoluteString)
                         .font(.callout.monospaced())

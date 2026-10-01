@@ -296,6 +296,37 @@ Die IP statt des MagicDNS-Namens nehmen: iOS lässt unverschlüsselte Verbindung
    ```
    in `config.yaml`: `fritzbox:` → `username: "housephone"`, dann `docker compose up -d`
 
+<details>
+<summary><b>👨‍👩‍👧 Optional: Mehrere Personen mit eigener Nummer</b></summary>
+
+Jede Person bekommt ein eigenes **Profil**: ein eigenes IP-Telefon an der FRITZ!Box, eigene Nummer, eigene Geräte. Anrufe auf ihre Nummer klingeln nur bei ihren Geräten, sie ruft mit ihrer Nummer an und sieht nur ihre Anrufe in der Anrufliste.
+
+1. **FRITZ!Box → Telefonie → Telefoniegeräte → Neues Gerät → Telefon → LAN/WLAN (IP-Telefon):** zweites IP-Telefon anlegen, z. B. Benutzername `621`. Unter *Ausgehende Anrufe* und *Ankommende Anrufe* ihre Nummer wählen. Beim ersten IP-Telefon nur noch deine Nummer auswählen.
+2. **Server:**
+   ```sh
+   printf '%s' 'KENNWORT-DES-ZWEITEN-IP-TELEFONS' > secrets/sip_password_b && chmod 600 secrets/sip_password_b
+   ```
+   in `config.yaml`:
+   ```yaml
+   profile:
+     name: "Profil A"          # du (das IP-Telefon aus sip:)
+     numbers: ["030 1234567"]
+   lines:
+     - id: profil-b
+       name: "Profil B"
+       sip:
+         username: "621"
+         passwordFile: /secrets/sip_password_b
+       numbers: ["030 1234568"]
+   ```
+   dann `docker compose up -d`. `./housephone profiles` zeigt beide Profile; im Selbsttest der TUI muss jedes „angemeldet“ sein.
+3. **Ihr iPhone koppeln:** wie in Schritt 7, nur beim Freigeben das Profil wählen (TUI fragt nach, CLI: `./housephone devices approve -profile profil-b <ID>`, QR-Code: `./housephone pair -profile profil-b`). Ihre Watch landet automatisch im selben Profil.
+
+> [!NOTE]
+> Bestehende Geräte bleiben im ersten Profil. Ein falsch zugeordnetes Gerät verschiebst du mit `./housephone devices move <ID> profil-b` (oder in der TUI mit `p`); es verbindet sich dabei neu. Im Home-Assistant-Add-on stehen dieselben Felder unter *Weitere Profile*, Zuordnen und Verschieben geht im Dashboard.
+
+</details>
+
 ### 9 · Ausprobieren
 
 - [ ] **Ausgehend:** im Tastenfeld wählen → Freiton → Gespräch
@@ -315,6 +346,8 @@ Alle Befehle im Ordner `housephone/bridge`:
 | ➕ Gerät koppeln | `./housephone pair -name "iPad"` |
 | ✅ Kopplung ohne QR freigeben | `./housephone devices pending`, dann `./housephone devices approve <ID>` |
 | 📋 Geräte anzeigen | `./housephone devices list` |
+| 👨‍👩‍👧 Profile anzeigen | `./housephone profiles` |
+| ↔️ Gerät in ein anderes Profil | `./housephone devices move <ID> <PROFIL>` |
 | 🗑 Gerät entfernen (wirkt sofort) | `./housephone devices remove <ID>` |
 | 🔑 Fingerabdruck der Bridge | `./housephone identity` |
 | 📜 Logs | `docker compose logs -f housephone-bridge` |

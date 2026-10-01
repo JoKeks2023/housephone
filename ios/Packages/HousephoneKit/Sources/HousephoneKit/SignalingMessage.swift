@@ -224,18 +224,48 @@ public struct Welcome: Codable, Sendable, Equatable {
     /// The bridge's private listener (home network / Tailscale), preferred
     /// when reachable. `nil` from bridges without one.
     public var lanUrl: URL?
+    /// The household profile this device belongs to (v2.2, ADR-0008):
+    /// whose line it rings on and with which number it calls out. `nil`
+    /// from bridges before profiles.
+    public var profile: BridgeProfile?
 
-    public init(bridgeId: String, bridgeName: String, bridgeVersion: String, sipRegistered: Bool, features: [BridgeFeature]? = nil, lanUrl: URL? = nil) {
+    public init(bridgeId: String, bridgeName: String, bridgeVersion: String, sipRegistered: Bool, features: [BridgeFeature]? = nil, lanUrl: URL? = nil, profile: BridgeProfile? = nil) {
         self.bridgeId = bridgeId
         self.bridgeName = bridgeName
         self.bridgeVersion = bridgeVersion
         self.sipRegistered = sipRegistered
         self.features = features
         self.lanUrl = lanUrl
+        self.profile = profile
     }
 
     public func supports(_ feature: BridgeFeature) -> Bool {
         features?.contains(feature) == true
+    }
+}
+
+/// `welcome.profile` (v2.2): one person of the household with their own
+/// IP phone at the FRITZ!Box.
+public struct BridgeProfile: Codable, Sendable, Equatable {
+    /// The profile of the bridge's `sip` block; devices without a profile
+    /// belong to it.
+    public static let defaultID = "default"
+
+    public var id: String
+    public var name: String
+    /// The profile's first own number; `nil` if none is configured.
+    public var number: String?
+
+    public init(id: String, name: String, number: String? = nil) {
+        self.id = id
+        self.name = name
+        self.number = number
+    }
+
+    /// Whether the app should show the profile: a household with a single
+    /// profile and no own number has nothing worth showing.
+    public var isWorthShowing: Bool {
+        id != Self.defaultID || number != nil
     }
 }
 

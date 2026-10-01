@@ -67,6 +67,29 @@ sip:
   rtpPortMax: 40199
   registerExpirySeconds: 300
 
+# Mehrere Personen mit eigener Festnetznummer (optional, ADR-0008).
+# Das IP-Telefon oben ist das Standardprofil; jede weitere Person bekommt ein
+# eigenes IP-Telefon in der FRITZ!Box und einen Eintrag unter lines. Welche
+# Nummer ein Profil nach außen zeigt und auf welche es klingelt, stellst du in
+# der FRITZ!Box am jeweiligen IP-Telefon ein.
+profile:
+  # Name in App und TUI. Leer = "Standard".
+  name: ""
+  # Eigene Nummern. Bei mehreren Profilen sieht jedes Profil nur die Anrufe auf
+  # seinen Nummern in der Anrufliste; ohne Nummern dann gar keine.
+  numbers: []
+  # FRITZ!Box-Telefonbücher (0, 1, …). Leer = alle.
+  phonebooks: []
+lines: []
+#  - id: profil-b              # a-z, 0-9, "-"; steht bei jedem Gerät des Profils
+#    name: "Profil B"
+#    sip:
+#      username: "621"         # eigenes IP-Telefon in der FRITZ!Box
+#      passwordFile: /secrets/sip_password_b   # secrets/sip_password_b, wie sip_password
+#      bindPort: 5063          # leer = sip.bindPort + 1 + Position
+#    numbers: ["030 1234568"]
+#    phonebooks: []
+
 media:
   # Einziger UDP-Port für den Ton zu den Geräten. In der FRITZ!Box freigeben:
   # Internet → Freigaben → Portfreigaben → dieser Server → UDP 50000.

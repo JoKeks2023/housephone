@@ -26,6 +26,15 @@ configuration:
   sip_password:
     name: IP phone password
     description: Never logged.
+  profile_name:
+    name: Main profile name (optional)
+    description: Only matters with several profiles, e.g. your first name. Empty means "Standard".
+  profile_numbers:
+    name: Main profile's own numbers (optional)
+    description: Comma separated, e.g. 030 1234567. With several profiles a profile only sees the calls on its own numbers in the call list.
+  lines:
+    name: Further profiles
+    description: Everyone with their own landline number gets their own IP phone in the FRITZ!Box and an entry here with id (a-z, 0-9, -), name, sip_username, sip_password and numbers (comma separated). Then pair devices into the right profile in the dashboard.
   fritzbox_username:
     name: FRITZ!Box user (optional)
     description: For the phonebook and call list. Needs only the right "Voice messages, fax messages, FRITZ!App Fon and call list".
