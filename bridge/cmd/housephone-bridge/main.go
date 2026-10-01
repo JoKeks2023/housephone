@@ -4,10 +4,12 @@
 //
 //	housephone-bridge [-config config.yaml] serve
 //	housephone-bridge serve -ha-options /data/options.json   (Home Assistant add-on)
-//	housephone-bridge [-config config.yaml] pair [-name "iPhone Joris"]
+//	housephone-bridge [-config config.yaml] pair [-name "iPhone"] [-profile ID]
+//	housephone-bridge [-config config.yaml] profiles
 //	housephone-bridge [-config config.yaml] identity
 //	housephone-bridge [-config config.yaml] devices list
 //	housephone-bridge [-config config.yaml] devices remove <device-id>
+//	housephone-bridge [-config config.yaml] devices move <device-id> <profile-id>
 //	housephone-bridge version
 package main
 
@@ -55,16 +57,19 @@ func usage(w io.Writer) {
 Befehle:
   serve                     Bridge starten
   serve -ha-options PFAD    Bridge als Home-Assistant-Add-on starten (mit Dashboard)
-  pair [-name NAME]         Kopplungscode + QR-Code für ein neues Gerät erzeugen
+  pair [-name NAME] [-profile ID]
+                            Kopplungscode + QR-Code für ein neues Gerät erzeugen
                             und warten, bis es gekoppelt ist (Strg-C: Code ungültig)
+  profiles                  Profile (eigene IP-Telefone mit eigener Nummer) anzeigen
   tui                       Admin-Oberfläche (Status, Geräte, Kopplung, Anrufe, Logs, Selbsttest)
   identity                  Fingerabdruck der Bridge anzeigen
   devices list              Gekoppelte Geräte anzeigen
   devices remove <id>       Gerät entfernen (bei laufender Bridge sofort getrennt)
   devices rename <id> NAME  Gerät umbenennen
+  devices move <id> PROFIL  Gerät (und seine Uhren) in ein anderes Profil verschieben
   devices pending           Kopplungsanfragen aus dem Heimnetz anzeigen (ohne QR-Code)
   devices approve <id>      Anfrage freigeben, wenn das iPhone denselben Code zeigt
-                            (-code 123456 ohne Rückfrage)
+                            (-code 123456 ohne Rückfrage, -profile ID für das Profil)
   devices deny <id>         Anfrage ablehnen
   version                   Version anzeigen
 
@@ -128,6 +133,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("pair", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		name := fs.String("name", "", "device name shown in the bridge (optional)")
+		profileID := fs.String("profile", "", "Profil, zu dem das Gerät gehört (ohne Angabe: Standardprofil)")
 		if err := fs.Parse(rest[1:]); err != nil {
 			return err
 		}
@@ -140,7 +146,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 		}
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
-		return pair(ctx, cfg, *name, stdout, 500*time.Millisecond)
+		return pair(ctx, cfg, *name, *profileID, stdout, 500*time.Millisecond)
 	case "identity":
 		cfg, err := config.Load(*configPath, true)
 		if err != nil {
@@ -153,6 +159,12 @@ func run(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 		return devices(cfg, rest[1:], stdout)
+	case "profiles":
+		cfg, err := config.Load(*configPath, true)
+		if err != nil {
+			return err
+		}
+		return profiles(cfg, stdout)
 	case "tui":
 		cfg, err := config.Load(*configPath, true)
 		if err != nil {
@@ -212,7 +224,11 @@ var (
 // pair creates a one-time code, shows it as QR code, link and grouped
 // text, and waits until a device used it (and reports which one) or the
 // code expired. Cancelling ctx (Ctrl-C) revokes the code.
-func pair(ctx context.Context, cfg config.Config, name string, out io.Writer, poll time.Duration) error {
+func pair(ctx context.Context, cfg config.Config, name, profileID string, out io.Writer, poll time.Duration) error {
+	prof, ok := cfg.Profiles().Get(profileID)
+	if !ok {
+		return fmt.Errorf("unbekanntes Profil %q (housephone-bridge profiles zeigt alle)", profileID)
+	}
 	key, err := app.LoadIdentityKey(cfg.Bridge.DataDir, true)
 	if err != nil {
 		return err
@@ -223,7 +239,7 @@ func pair(ctx context.Context, cfg config.Config, name string, out io.Writer, po
 		return err
 	}
 	pairing := store.NewPairing(cfg.Bridge.DataDir)
-	pc, err := pairing.Create(name, time.Now())
+	pc, err := pairing.CreateFor(name, storedProfile(prof.ID), time.Now())
 	if err != nil {
 		return err
 	}
@@ -243,6 +259,9 @@ func pair(ctx context.Context, cfg config.Config, name string, out io.Writer, po
 	fmt.Fprintln(out)
 	fmt.Fprintf(out, "Code:   %s\n", hp2.GroupCode(pc.Code))
 	fmt.Fprintf(out, "Bridge: %s\n", key.Fingerprint())
+	if cfg.Profiles().Multi() {
+		fmt.Fprintf(out, "Profil: %s\n", displayName(prof.Name))
+	}
 	fmt.Fprintf(out, "Link:   %s\n", link)
 	fmt.Fprintf(out, "Heimnetz: %s (zum Koppeln muss das Gerät im WLAN oder per Tailscale verbunden sein)\n", lanURL)
 	fmt.Fprintf(out, "Gültig: bis %s (einmalig)\n", pc.ExpiresAt.Local().Format("15:04:05"))
@@ -337,8 +356,9 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 		for _, d := range list {
 			names[d.ID] = displayName(d.Name)
 		}
+		profiles := cfg.Profiles()
 		tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(tw, "ID\tNAME\tPLATTFORM\tSCHLÜSSEL\tPUSH\tGEKOPPELT\tÜBER\tZULETZT GESEHEN")
+		fmt.Fprintln(tw, "ID\tNAME\tPROFIL\tPLATTFORM\tSCHLÜSSEL\tPUSH\tGEKOPPELT\tÜBER\tZULETZT GESEHEN")
 		for _, d := range list {
 			pushInfo := "nein"
 			if d.PushToken != "" {
@@ -359,7 +379,11 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 			if d.PublicKey == "" {
 				keyInfo = "fehlt (neu koppeln)"
 			}
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", d.ID, displayName(d.Name), displayName(d.Platform), keyInfo, pushInfo, d.CreatedAt.Local().Format("02.01.2006 15:04"), via, lastSeen)
+			profileName := d.ProfileID() + " (entfernt)"
+			if p, ok := profiles.Get(d.ProfileID()); ok {
+				profileName = p.Name
+			}
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", d.ID, displayName(d.Name), displayName(profileName), displayName(d.Platform), keyInfo, pushInfo, d.CreatedAt.Local().Format("02.01.2006 15:04"), via, lastSeen)
 		}
 		return tw.Flush()
 	}
@@ -375,6 +399,8 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 			return removeDeviceLive(client, args[1:], out)
 		}
 		return removeDevice(reg, store.NewPairing(cfg.Bridge.DataDir), args[1:], out)
+	case "move":
+		return moveDevice(cfg, reg, client, args[1:], out)
 	case "rename":
 		if len(args) != 3 {
 			return errors.New("usage: devices rename <device-id> NAME")
@@ -394,7 +420,7 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 		fmt.Fprintf(out, "Umbenannt: %s (%s)\n", d.ID, displayName(d.Name))
 		return nil
 	}
-	return fmt.Errorf("unbekannter devices-Befehl %q (list|remove|rename|pending|approve|deny)", args[0])
+	return fmt.Errorf("unbekannter devices-Befehl %q (list|remove|rename|move|pending|approve|deny)", args[0])
 }
 
 // removeDeviceLive removes a device through the running bridge, which

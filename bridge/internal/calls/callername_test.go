@@ -29,7 +29,7 @@ func TestCallerNameFromPhonebook(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newHarness(t, device("dev-a", "tok-a"))
 			var lookups atomic.Int32
-			h.m.opts.CallerNames = func(number string) string {
+			h.m.opts.CallerNames = func(_, number string) string {
 				lookups.Add(1)
 				return phonebook[number]
 			}

@@ -24,6 +24,7 @@ import (
 
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
 	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
+	"github.com/JoKeks2023/housephone/bridge/internal/profile"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
@@ -34,6 +35,9 @@ type Hub interface {
 	DeviceDisconnected(calls.DeviceConn)
 	HandleDeviceMessage(calls.DeviceConn, protocol.Envelope)
 	SIPRegistered() bool
+	// SIPRegisteredFor is the registration of one profile's line
+	// (ADR-0008).
+	SIPRegisteredFor(profileID string) bool
 	// CallStatus answers GET /v1/calls/{callId} for one device (v1.1).
 	CallStatus(deviceID, callID string) (protocol.CallStatus, bool)
 	// DeviceRevoked ends the calls of a device that was removed while it
@@ -45,8 +49,12 @@ type Hub interface {
 // implemented by fritzbox.Directory). Errors may implement
 // UserMessage() string for the error message sent to the app.
 type Directory interface {
-	Phonebook(ctx context.Context) (body []byte, etag string, err error)
-	History(ctx context.Context, limit int) ([]byte, error)
+	// Phonebook returns the contacts of the given FRITZ!Box phonebooks
+	// (nil: all).
+	Phonebook(ctx context.Context, books []string) (body []byte, etag string, err error)
+	// History returns the call list; with own numbers only the calls on
+	// them (nil: all).
+	History(ctx context.Context, limit int, own []string) ([]byte, error)
 	Features() []string
 }
 
@@ -75,7 +83,10 @@ type Config struct {
 	Hub               Hub
 	// Directory is nil when fritzbox.username is not configured.
 	Directory Directory
-	Logger    *slog.Logger
+	// Profiles are the household profiles (ADR-0008); the zero value is a
+	// single default profile.
+	Profiles profile.Set
+	Logger   *slog.Logger
 
 	PingInterval     time.Duration
 	FirstMessageWait time.Duration
@@ -450,6 +461,17 @@ func (s *Server) pair(req protocol.PairRequest, decodeErr error, ip string) (pro
 	if name == "" {
 		name = req.Platform
 	}
+	// ADR-0008: a device joins the profile chosen for its code; a watch
+	// joins the profile of the iPhone that requested its code.
+	profileID := pc.Profile
+	if pc.ParentID != "" {
+		parent, err := s.cfg.Devices.Get(pc.ParentID)
+		if err != nil {
+			s.log.Error("companion parent lookup failed", "error", err)
+			return protocol.PairResponse{}, errPairInternal
+		}
+		profileID = parent.Profile
+	}
 	dev := store.Device{
 		ID:        uuid.NewString(),
 		Name:      name,
@@ -457,6 +479,7 @@ func (s *Server) pair(req protocol.PairRequest, decodeErr error, ip string) (pro
 		Model:     sanitizeName(req.Model),
 		PublicKey: req.PublicKey,
 		PairedBy:  pc.ParentID,
+		Profile:   profileID,
 		CreatedAt: now.UTC(),
 	}
 	if err := s.cfg.Devices.Add(dev); err != nil {
@@ -476,8 +499,9 @@ func (s *Server) pair(req protocol.PairRequest, decodeErr error, ip string) (pro
 	}), nil
 }
 
-// broadcastDevicePaired tells every other connected device about a new
-// pairing, so an unexpected one does not go unnoticed.
+// broadcastDevicePaired tells the other connected devices of the same
+// profile about a new pairing, so an unexpected one does not go unnoticed.
+// Other profiles don't learn about each other's devices (ADR-0008).
 func (s *Server) broadcastDevicePaired(dev store.Device, now time.Time) {
 	env := protocol.MustEnvelope(protocol.TypeDevicePaired, protocol.DevicePaired{
 		DeviceName: dev.Name,
@@ -487,7 +511,7 @@ func (s *Server) broadcastDevicePaired(dev store.Device, now time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for id, sess := range s.sessions {
-		if id != dev.ID {
+		if id != dev.ID && sess.profileID == dev.ProfileID() {
 			sess.Send(env)
 		}
 	}

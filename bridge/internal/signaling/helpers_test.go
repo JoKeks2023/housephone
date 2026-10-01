@@ -51,6 +51,11 @@ func (h *fakeHub) HandleDeviceMessage(c calls.DeviceConn, env protocol.Envelope)
 	h.messages <- env
 }
 func (h *fakeHub) SIPRegistered() bool { return true }
+
+// SIPRegisteredFor: only the default line and "b" are registered.
+func (h *fakeHub) SIPRegisteredFor(profileID string) bool {
+	return profileID == "" || profileID == "default" || profileID == "b"
+}
 func (h *fakeHub) DeviceRevoked(c calls.DeviceConn) {
 	h.mu.Lock()
 	h.revoked = append(h.revoked, c.DeviceID())

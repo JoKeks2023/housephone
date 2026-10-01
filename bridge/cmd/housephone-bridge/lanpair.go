@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -46,11 +47,12 @@ func lanPairing(client *admin.Client, args []string, in io.Reader, out io.Writer
 	fs := flag.NewFlagSet("devices "+args[0], flag.ContinueOnError)
 	fs.SetOutput(out)
 	code := fs.String("code", "", "Code, den das iPhone zeigt (freigeben ohne Rückfrage)")
+	profileID := fs.String("profile", "", "Profil, zu dem das Gerät gehört (ohne Angabe: Rückfrage bei mehreren Profilen, sonst das Standardprofil)")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
 	if fs.NArg() != 1 {
-		return fmt.Errorf("usage: devices %s [-code 123456] <id>", args[0])
+		return fmt.Errorf("usage: devices %s [-code 123456] [-profile ID] <id>", args[0])
 	}
 	req, err := findLanRequest(list, fs.Arg(0))
 	if err != nil {
@@ -66,24 +68,58 @@ func lanPairing(client *admin.Client, args []string, in io.Reader, out io.Writer
 
 	fmt.Fprintf(out, "Anfrage von %s (%s, %s), Schlüssel %s\nCode auf der Bridge: %s\n", displayName(req.DeviceName),
 		displayName(orDash(req.Model)), req.IP, req.KeyFingerprint, admin.GroupSAS(req.SAS))
+	reader := bufio.NewReader(in)
 	if *code != "" {
 		if strings.ReplaceAll(*code, " ", "") != req.SAS {
 			return errors.New("der Code stimmt nicht – nicht freigegeben")
 		}
 	} else {
 		fmt.Fprint(out, "Zeigt das iPhone genau diesen Code? [j/N] ")
-		answer, _ := bufio.NewReader(in).ReadString('\n')
+		answer, _ := reader.ReadString('\n')
 		if a := strings.ToLower(strings.TrimSpace(answer)); a != "j" && a != "ja" && a != "y" && a != "yes" {
 			fmt.Fprintln(out, "Nicht freigegeben. Die Anfrage wartet weiter; ablehnen mit: devices deny "+req.ID)
 			return nil
 		}
 	}
-	dev, err := client.ApproveLanPairing(ctx, req.ID)
+	chosen := *profileID
+	if chosen == "" && *code == "" {
+		// ADR-0008: with several profiles the admin picks whose device it is.
+		profiles, err := client.Profiles(ctx)
+		if err != nil {
+			return err
+		}
+		if chosen, err = askProfile(profiles, reader, out); err != nil {
+			return err
+		}
+	}
+	dev, err := client.ApproveLanPairing(ctx, req.ID, chosen)
+	if errors.Is(err, admin.ErrUnknownProfile) {
+		return fmt.Errorf("unbekanntes Profil %q (housephone-bridge profiles zeigt alle)", chosen)
+	}
 	if err != nil {
 		return lanErr(err)
 	}
-	fmt.Fprintf(out, "Gekoppelt: %s (%s), ID %s\n", displayName(dev.Name), dev.Platform, dev.ID)
+	fmt.Fprintf(out, "Gekoppelt: %s (%s), Profil %s, ID %s\n", displayName(dev.Name), dev.Platform, displayName(dev.ProfileName), dev.ID)
 	return nil
+}
+
+// askProfile lets the admin pick a profile by number; with one profile
+// there is nothing to ask.
+func askProfile(profiles []admin.ProfileInfo, in *bufio.Reader, out io.Writer) (string, error) {
+	if len(profiles) < 2 {
+		return "", nil
+	}
+	fmt.Fprintln(out, "Zu welchem Profil gehört das Gerät?")
+	for i, p := range profiles {
+		fmt.Fprintf(out, "  %d) %s\n", i+1, displayName(p.Name))
+	}
+	fmt.Fprint(out, "Nummer: ")
+	answer, _ := in.ReadString('\n')
+	n, err := strconv.Atoi(strings.TrimSpace(answer))
+	if err != nil || n < 1 || n > len(profiles) {
+		return "", errors.New("keine gültige Auswahl – nicht freigegeben")
+	}
+	return profiles[n-1].ID, nil
 }
 
 // findLanRequest accepts the full ID or a unique prefix of at least four

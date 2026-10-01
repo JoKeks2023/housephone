@@ -21,6 +21,9 @@ type fakeDirectory struct {
 	err       error
 	features  []string
 	lastLimit int
+	// lastBooks and lastOwn are the profile filters of the last request.
+	lastBooks []string
+	lastOwn   []string
 }
 
 type messageError struct{ msg string }
@@ -28,16 +31,18 @@ type messageError struct{ msg string }
 func (e messageError) Error() string       { return "fritzbox: " + e.msg }
 func (e messageError) UserMessage() string { return e.msg }
 
-func (d *fakeDirectory) Phonebook(context.Context) ([]byte, string, error) {
+func (d *fakeDirectory) Phonebook(_ context.Context, books []string) ([]byte, string, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	d.lastBooks = books
 	return d.body, d.etag, d.err
 }
 
-func (d *fakeDirectory) History(_ context.Context, limit int) ([]byte, error) {
+func (d *fakeDirectory) History(_ context.Context, limit int, own []string) ([]byte, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.lastLimit = limit
+	d.lastOwn = own
 	return d.history, d.err
 }
 

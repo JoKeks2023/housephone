@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/admin"
@@ -22,6 +23,7 @@ import (
 	"github.com/JoKeks2023/housephone/bridge/internal/lan"
 	"github.com/JoKeks2023/housephone/bridge/internal/logsafe"
 	"github.com/JoKeks2023/housephone/bridge/internal/media"
+	"github.com/JoKeks2023/housephone/bridge/internal/profile"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/push"
 	"github.com/JoKeks2023/housephone/bridge/internal/signaling"
@@ -74,11 +76,15 @@ type Bridge struct {
 	log      *slog.Logger
 	Identity store.Identity
 	// Key signs every answer; devices pin its fingerprint when pairing.
-	Key       *hp2.Identity
-	Devices   *store.Devices
-	Pairing   *store.Pairing
-	manager   *calls.Manager
-	sip       *sipleg.Leg
+	Key     *hp2.Identity
+	Devices *store.Devices
+	Pairing *store.Pairing
+	manager *calls.Manager
+	sip     *sipleg.Leg
+	// lines are the SIP legs of the profiles beyond the default one
+	// (ADR-0008), in config order.
+	lines     []profileLeg
+	profiles  profile.Set
 	engine    *media.Engine
 	signaling *signaling.Server
 	listener  net.Listener
@@ -101,6 +107,12 @@ type Bridge struct {
 	dashboard   *dashboardOptions
 	// dashboardListener is nil without a dashboard.
 	dashboardListener net.Listener
+}
+
+// profileLeg is the IP phone of one further profile.
+type profileLeg struct {
+	id  string
+	leg *sipleg.Leg
 }
 
 // New prepares all components; nothing is served before Run. The context
@@ -130,6 +142,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		Key:      key,
 		Devices:  store.NewDevices(cfg.Bridge.DataDir),
 		Pairing:  store.NewPairing(cfg.Bridge.DataDir),
+		profiles: cfg.Profiles(),
 
 		startedAt: time.Now(),
 		recorder:  admin.NewRecorder(50, nil),
@@ -208,7 +221,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		log.Warn("APNs is not configured: devices only ring while the app is open")
 	}
 
-	var callerNames func(string) string
+	var callerNames func(profileID, number string) string
 	var directory signaling.Directory
 	if cfg.FritzBox.Enabled() {
 		loc, err := time.LoadLocation(cfg.FritzBox.Timezone)
@@ -228,7 +241,10 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 			CountryCode: cfg.FritzBox.CountryCode,
 			Logger:      log,
 		})
-		callerNames = b.directory.CallerName
+		callerNames = func(profileID, number string) string {
+			p, _ := b.profiles.Get(profileID)
+			return b.directory.CallerNameIn(number, p.Phonebooks)
+		}
 		directory = b.directory
 	}
 
@@ -265,6 +281,30 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		return nil, err
 	}
 	b.manager.SetSIP(b.sip)
+	// Every further profile is its own IP phone on its own SIP port; the
+	// FRITZ!Box sends its calls there (ADR-0008).
+	for i, line := range cfg.Lines {
+		id := line.ID
+		leg, err := sipleg.New(sipleg.Config{
+			Registrar:      registrar,
+			Port:           cfg.SIP.Port,
+			Username:       line.SIP.Username,
+			Password:       line.SIP.Password,
+			BindHost:       b.sip.BindHost(),
+			BindPort:       cfg.LineBindPort(i),
+			RTPPortMin:     cfg.SIP.RTPPortMin,
+			RTPPortMax:     cfg.SIP.RTPPortMax,
+			RegisterExpiry: time.Duration(cfg.SIP.RegisterExpirySeconds) * time.Second,
+			OnRegistration: func(registered bool) { b.manager.BroadcastProfileStatus(id, registered) },
+			Logger:         log.With("profile", id),
+		})
+		if err != nil {
+			b.engine.Close()
+			return nil, fmt.Errorf("lines[%d] (%s): %w", i, id, err)
+		}
+		b.lines = append(b.lines, profileLeg{id: id, leg: leg})
+		b.manager.SetLine(id, leg)
+	}
 	if cfg.Bridge.PrivateListen != "" {
 		b.privateListener, err = net.Listen("tcp", cfg.Bridge.PrivateListen)
 		if err != nil {
@@ -294,6 +334,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 		Pairing:           b.Pairing,
 		Hub:               b.manager,
 		Directory:         directory,
+		Profiles:          b.profiles,
 		Logger:            log,
 	})
 
@@ -339,8 +380,9 @@ func (b *Bridge) PrivateAddr() string {
 // LanURL is the private listener URL sent to devices.
 func (b *Bridge) LanURL() string { return b.lanURL }
 
-// SIPRegistered reports the FRITZ!Box registration.
-func (b *Bridge) SIPRegistered() bool { return b.sip.Registered() }
+// SIPRegistered reports whether every profile's line is registered at the
+// FRITZ!Box.
+func (b *Bridge) SIPRegistered() bool { return b.manager.SIPRegistered() }
 
 // Run serves until ctx ends, then shuts down gracefully.
 func (b *Bridge) Run(ctx context.Context) error {
@@ -356,7 +398,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 	}
 	srv := newServer(b.signaling.PublicHandler())
 	var privateSrv *http.Server
-	errCh := make(chan error, 4)
+	errCh := make(chan error, 4+len(b.lines))
 	if !b.noAdmin {
 		// The admin API is a convenience: without it the bridge still
 		// serves calls, so a problem is logged instead of stopping it.
@@ -399,11 +441,23 @@ func (b *Bridge) Run(ctx context.Context) error {
 	}
 	sipCtx, stopSIP := context.WithCancel(context.Background())
 	sipDone := make(chan struct{})
+	var sipWG sync.WaitGroup
+	serveSIP := func(leg *sipleg.Leg, handler func(context.Context, calls.IncomingSIPCall)) {
+		sipWG.Add(1)
+		go func() {
+			defer sipWG.Done()
+			if err := leg.Serve(sipCtx, handler); err != nil {
+				errCh <- err
+			}
+		}()
+	}
+	serveSIP(b.sip, b.manager.HandleIncoming)
+	for _, l := range b.lines {
+		serveSIP(l.leg, b.manager.HandleIncomingFor(l.id))
+	}
 	go func() {
-		defer close(sipDone)
-		if err := b.sip.Serve(sipCtx, b.manager.HandleIncoming); err != nil {
-			errCh <- err
-		}
+		sipWG.Wait()
+		close(sipDone)
 	}()
 	if b.directory != nil {
 		go b.directory.Warmup(ctx)

@@ -59,9 +59,12 @@ type leg struct {
 
 // call is an actor: all fields below ops are only touched by run().
 type call struct {
-	m         *Manager
-	id        string
-	dir       direction
+	m   *Manager
+	id  string
+	dir direction
+	// profile is the household profile whose line carries the call
+	// (ADR-0008); only that profile's devices take part in it.
+	profile   string
 	log       *slog.Logger
 	startedAt time.Time
 
@@ -123,12 +126,13 @@ type dtmfJob struct {
 	digits string
 }
 
-func newCall(m *Manager, id string, dir direction) *call {
+func newCall(m *Manager, id string, dir direction, profileID string) *call {
 	return &call{
 		m:         m,
 		id:        id,
 		dir:       dir,
-		log:       m.log.With("call", id, "direction", dir.String()),
+		profile:   profileID,
+		log:       m.log.With("call", id, "direction", dir.String(), "profile", profileID),
 		startedAt: protocol.Timestamp(m.opts.Now()),
 		ops:       make(chan func(), 64),
 		done:      make(chan struct{}),

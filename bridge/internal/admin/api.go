@@ -16,6 +16,31 @@ const SocketName = "admin.sock"
 // ErrNotFound is returned for unknown devices or codes.
 var ErrNotFound = errors.New("not found")
 
+// ErrUnknownProfile is returned for a profile that is not configured.
+var ErrUnknownProfile = errors.New("unbekanntes Profil")
+
+// ProfileInfo is a household profile (ADR-0008): one IP phone at the
+// FRITZ!Box with its own number.
+type ProfileInfo struct {
+	ID         string   `json:"id"`
+	Name       string   `json:"name"`
+	SIPUser    string   `json:"sipUser"`
+	Numbers    []string `json:"numbers,omitempty"`
+	Phonebooks []string `json:"phonebooks,omitempty"`
+	Registered bool     `json:"registered"`
+	// HistoryAllowed is false for a profile without own numbers in a
+	// household with several profiles: it sees no call list.
+	HistoryAllowed bool `json:"historyAllowed"`
+	Devices        int  `json:"devices"`
+	DevicesOnline  int  `json:"devicesOnline"`
+}
+
+// MoveResult lists the devices moved to another profile: the device and
+// the watches paired through it.
+type MoveResult struct {
+	Moved []DeviceInfo `json:"moved"`
+}
+
 // Status is the overview of a running bridge.
 type Status struct {
 	Version     string    `json:"version"`
@@ -30,9 +55,12 @@ type Status struct {
 	PrivateListen string `json:"privateListen,omitempty"`
 	LanURL        string `json:"lanUrl,omitempty"`
 
+	// SIPRegistered: every profile's line is registered.
 	SIPRegistered bool   `json:"sipRegistered"`
 	Registrar     string `json:"registrar"`
 	SIPUser       string `json:"sipUser"`
+	// Profiles are the household profiles, the default one first.
+	Profiles []ProfileInfo `json:"profiles"`
 
 	PublicIP       string `json:"publicIp"`
 	PublicIPSource string `json:"publicIpSource"`
@@ -61,6 +89,8 @@ type DeviceInfo struct {
 	Push           string    `json:"push"`  // "", "development", "production"
 	PairedBy       string    `json:"pairedBy,omitempty"`
 	PairedByName   string    `json:"pairedByName,omitempty"`
+	Profile        string    `json:"profile"`
+	ProfileName    string    `json:"profileName"`
 	CreatedAt      time.Time `json:"createdAt"`
 	LastSeen       time.Time `json:"lastSeen,omitzero"`
 	Online         bool      `json:"online"`
@@ -78,6 +108,8 @@ type PairingInfo struct {
 	Code        string    `json:"code"`
 	Grouped     string    `json:"grouped"`
 	Link        string    `json:"link"`
+	Profile     string    `json:"profile"`
+	ProfileName string    `json:"profileName"`
 	Fingerprint string    `json:"fingerprint"`
 	ExpiresAt   time.Time `json:"expiresAt"`
 }
@@ -144,15 +176,22 @@ type Check struct {
 // Service is what the running bridge offers the admin API.
 type Service interface {
 	Status() Status
+	// Profiles lists the household profiles (ADR-0008).
+	Profiles() []ProfileInfo
 	Devices() ([]DeviceInfo, error)
 	RenameDevice(id, name string) (DeviceInfo, error)
 	RemoveDevice(id string, keepCompanions bool) (RemoveResult, error)
-	CreatePairing(name string) (PairingInfo, error)
+	// MoveDevice moves a device and its watches to another profile and
+	// reconnects them.
+	MoveDevice(id, profile string) (MoveResult, error)
+	// CreatePairing creates a code whose device joins profile ("" is the
+	// default profile).
+	CreatePairing(name, profile string) (PairingInfo, error)
 	PairingState(code string) (PairingState, error)
 	RevokePairing(code string) error
 	// LanPairings lists the requests waiting for approval (ADR-0007).
 	LanPairings() []LanPairingRequest
-	ApproveLanPairing(id string) (DeviceInfo, error)
+	ApproveLanPairing(id, profile string) (DeviceInfo, error)
 	DenyLanPairing(id string) error
 	Calls() CallsView
 	Stats() Stats

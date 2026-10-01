@@ -28,9 +28,25 @@ type Device struct {
 	// PairedBy is the device that requested the companion pairing code
 	// this device paired with (the iPhone of a watch). Empty for devices
 	// paired with a code from the pair command.
-	PairedBy  string    `json:"pairedBy,omitempty"`
+	PairedBy string `json:"pairedBy,omitempty"`
+	// Profile is the household profile the device belongs to (ADR-0008).
+	// Empty: the default profile (devices paired before profiles existed).
+	Profile   string    `json:"profile,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 	LastSeen  time.Time `json:"lastSeen,omitzero"`
+}
+
+// DefaultProfile mirrors profile.DefaultID; store must not import other
+// packages of the bridge.
+const DefaultProfile = "default"
+
+// ProfileID is the device's profile; devices without one belong to the
+// default profile.
+func (d Device) ProfileID() string {
+	if d.Profile == "" {
+		return DefaultProfile
+	}
+	return d.Profile
 }
 
 // MediaWebSocketPCMA is the media capability of devices without WebRTC (the

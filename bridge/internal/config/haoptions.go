@@ -27,22 +27,37 @@ const (
 
 // HAOptions mirrors the add-on schema (ha-addon/housephone-bridge/config.yaml).
 type HAOptions struct {
-	BridgeName       string `json:"bridge_name"`
-	PublicURL        string `json:"public_url"`
-	LanURL           string `json:"lan_url"`
-	TunnelPort       int    `json:"tunnel_port"`
-	Tailscale        bool   `json:"tailscale"`
-	Bonjour          *bool  `json:"bonjour"`
-	FritzBoxHost     string `json:"fritzbox_host"`
-	SIPUsername      string `json:"sip_username"`
-	SIPPassword      string `json:"sip_password"`
-	FritzBoxUsername string `json:"fritzbox_username"`
-	FritzBoxPassword string `json:"fritzbox_password"`
-	APNsKeyFile      string `json:"apns_key_file"`
-	APNsKeyID        string `json:"apns_key_id"`
-	APNsTeamID       string `json:"apns_team_id"`
-	APNsTopic        string `json:"apns_topic"`
-	LogLevel         string `json:"log_level"`
+	BridgeName   string `json:"bridge_name"`
+	PublicURL    string `json:"public_url"`
+	LanURL       string `json:"lan_url"`
+	TunnelPort   int    `json:"tunnel_port"`
+	Tailscale    bool   `json:"tailscale"`
+	Bonjour      *bool  `json:"bonjour"`
+	FritzBoxHost string `json:"fritzbox_host"`
+	SIPUsername  string `json:"sip_username"`
+	SIPPassword  string `json:"sip_password"`
+	// ProfileName and ProfileNumbers describe the default profile (the
+	// sip_* options); numbers are comma separated.
+	ProfileName      string          `json:"profile_name"`
+	ProfileNumbers   string          `json:"profile_numbers"`
+	Lines            []HALineOptions `json:"lines"`
+	FritzBoxUsername string          `json:"fritzbox_username"`
+	FritzBoxPassword string          `json:"fritzbox_password"`
+	APNsKeyFile      string          `json:"apns_key_file"`
+	APNsKeyID        string          `json:"apns_key_id"`
+	APNsTeamID       string          `json:"apns_team_id"`
+	APNsTopic        string          `json:"apns_topic"`
+	LogLevel         string          `json:"log_level"`
+}
+
+// HALineOptions is a further profile in the add-on options (ADR-0008).
+type HALineOptions struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	SIPUsername string `json:"sip_username"`
+	SIPPassword string `json:"sip_password"`
+	// Numbers are comma separated.
+	Numbers string `json:"numbers"`
 }
 
 // LoadHAOptions builds the configuration from the add-on options at path.
@@ -86,6 +101,16 @@ func (o HAOptions) Config() Config {
 	setIf(&c.SIP.Registrar, o.FritzBoxHost)
 	c.SIP.Username = strings.TrimSpace(o.SIPUsername)
 	c.SIP.Password = o.SIPPassword
+	c.Profile.Name = strings.TrimSpace(o.ProfileName)
+	c.Profile.Numbers = splitList(o.ProfileNumbers)
+	for _, l := range o.Lines {
+		c.Lines = append(c.Lines, Line{
+			ID:      strings.TrimSpace(l.ID),
+			Name:    strings.TrimSpace(l.Name),
+			SIP:     LineSIP{Username: strings.TrimSpace(l.SIPUsername), Password: l.SIPPassword},
+			Numbers: splitList(l.Numbers),
+		})
+	}
 	c.FritzBox.Username = strings.TrimSpace(o.FritzBoxUsername)
 	c.FritzBox.Password = o.FritzBoxPassword
 	c.APNs.KeyFile = strings.TrimSpace(o.APNsKeyFile)
@@ -94,6 +119,17 @@ func (o HAOptions) Config() Config {
 	setIf(&c.APNs.Topic, o.APNsTopic)
 	setIf(&c.Log.Level, o.LogLevel)
 	return c
+}
+
+// splitList splits a comma separated option, dropping empty entries.
+func splitList(raw string) []string {
+	var out []string
+	for _, part := range strings.Split(raw, ",") {
+		if part = strings.TrimSpace(part); part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 func setIf(dst *string, v string) {

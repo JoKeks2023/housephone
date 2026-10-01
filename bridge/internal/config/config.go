@@ -15,6 +15,8 @@ import (
 	_ "time/tzdata"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/JoKeks2023/housephone/bridge/internal/profile"
 )
 
 // Environment variables that override configuration values.
@@ -39,8 +41,13 @@ const (
 const DefaultConfigPath = "config.yaml"
 
 type Config struct {
-	Bridge   Bridge   `yaml:"bridge"`
-	SIP      SIP      `yaml:"sip"`
+	Bridge Bridge `yaml:"bridge"`
+	SIP    SIP    `yaml:"sip"`
+	// Profile names the profile of the sip block (the default profile).
+	Profile DefaultProfile `yaml:"profile"`
+	// Lines are further profiles, each its own IP phone at the FRITZ!Box
+	// with its own number (ADR-0008).
+	Lines    []Line   `yaml:"lines"`
 	Media    Media    `yaml:"media"`
 	APNs     APNs     `yaml:"apns"`
 	FritzBox FritzBox `yaml:"fritzbox"`
@@ -189,6 +196,72 @@ type SIP struct {
 	RegisterExpirySeconds int `yaml:"registerExpirySeconds"`
 }
 
+// DefaultProfile describes the profile of the sip block. Devices paired
+// before profiles existed belong to it.
+type DefaultProfile struct {
+	// Name is shown in the app and the TUI. Empty: "Standard".
+	Name string `yaml:"name"`
+	// Numbers are the own landline numbers, e.g. ["030 1234567"]. With
+	// several profiles they filter the call list; the first is shown in
+	// the app.
+	Numbers []string `yaml:"numbers"`
+	// Phonebooks are FRITZ!Box phonebook IDs (0, 1, …). Empty: all.
+	Phonebooks []string `yaml:"phonebooks"`
+}
+
+// Line is a further profile: its own IP phone at the FRITZ!Box. The
+// registrar, bind host and RTP ports are shared with the sip block.
+type Line struct {
+	// ID is stored with every device of the profile: a-z, 0-9 and "-".
+	ID         string   `yaml:"id"`
+	Name       string   `yaml:"name"`
+	SIP        LineSIP  `yaml:"sip"`
+	Numbers    []string `yaml:"numbers"`
+	Phonebooks []string `yaml:"phonebooks"`
+}
+
+// LineSIP is the IP phone of a line.
+type LineSIP struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	// PasswordFile is read at start (e.g. a Docker secret) and takes
+	// precedence over Password.
+	PasswordFile string `yaml:"passwordFile"`
+	// BindPort is the local SIP port of this line. Empty: sip.bindPort +
+	// 1 + the line's position.
+	BindPort int `yaml:"bindPort"`
+}
+
+// DefaultProfileName is the name of the default profile if none is set.
+const DefaultProfileName = "Standard"
+
+// Profiles returns all profiles, the default profile (sip block) first.
+func (c Config) Profiles() profile.Set {
+	name := strings.TrimSpace(c.Profile.Name)
+	if name == "" {
+		name = DefaultProfileName
+	}
+	list := []profile.Profile{{
+		ID: profile.DefaultID, Name: name, SIPUser: c.SIP.Username,
+		Numbers: c.Profile.Numbers, Phonebooks: c.Profile.Phonebooks,
+	}}
+	for _, l := range c.Lines {
+		list = append(list, profile.Profile{
+			ID: l.ID, Name: strings.TrimSpace(l.Name), SIPUser: l.SIP.Username,
+			Numbers: l.Numbers, Phonebooks: l.Phonebooks,
+		})
+	}
+	return profile.NewSet(list...)
+}
+
+// LineBindPort is the local SIP port of line i (0-based).
+func (c Config) LineBindPort(i int) int {
+	if p := c.Lines[i].SIP.BindPort; p != 0 {
+		return p
+	}
+	return c.SIP.BindPort + 1 + i
+}
+
 type Media struct {
 	// UDPPort is the single UDP port for all WebRTC media (forward it on the
 	// FRITZ!Box to this server).
@@ -322,6 +395,17 @@ func (c *Config) applyEnv(lookup func(string) (string, bool)) error {
 			*f.dst = strings.TrimSpace(string(data))
 		}
 	}
+	for i := range c.Lines {
+		l := &c.Lines[i].SIP
+		if l.PasswordFile == "" {
+			continue
+		}
+		data, err := os.ReadFile(l.PasswordFile)
+		if err != nil {
+			return fmt.Errorf("lines[%d].sip.passwordFile: %w", i, err)
+		}
+		l.Password = strings.TrimSpace(string(data))
+	}
 	return nil
 }
 
@@ -385,6 +469,7 @@ func (c Config) ValidateServe() error {
 	if c.SIP.RTPPortMin <= 0 || c.SIP.RTPPortMax < c.SIP.RTPPortMin || c.SIP.RTPPortMax > 65535 {
 		errs = append(errs, fmt.Errorf("sip.rtpPortMin/rtpPortMax invalid: %d-%d", c.SIP.RTPPortMin, c.SIP.RTPPortMax))
 	}
+	errs = append(errs, c.validateProfiles()...)
 	if c.SIP.RegisterExpirySeconds < 60 {
 		errs = append(errs, errors.New("sip.registerExpirySeconds must be at least 60"))
 	}
@@ -415,6 +500,75 @@ func (c Config) ValidateServe() error {
 		errs = append(errs, errors.New("apns: keyFile, keyId, teamId and topic must all be set"))
 	}
 	return errors.Join(errs...)
+}
+
+// validateProfiles checks the default profile and the lines.
+func (c Config) validateProfiles() []error {
+	var errs []error
+	if len(c.Lines)+1 > profile.MaxProfiles {
+		errs = append(errs, fmt.Errorf("lines: at most %d profiles (including the sip block), got %d", profile.MaxProfiles, len(c.Lines)+1))
+	}
+	errs = append(errs, validateNumbers("profile", c.Profile.Numbers, c.Profile.Phonebooks)...)
+	ids := map[string]bool{profile.DefaultID: true}
+	users := map[string]bool{c.SIP.Username: true}
+	ports := map[int]string{c.SIP.BindPort: "sip.bindPort"}
+	for i, l := range c.Lines {
+		field := fmt.Sprintf("lines[%d]", i)
+		switch {
+		case !profile.IDPattern.MatchString(l.ID):
+			errs = append(errs, fmt.Errorf("%s.id must match %s, got %q", field, profile.IDPattern, l.ID))
+		case ids[l.ID]:
+			errs = append(errs, fmt.Errorf("%s.id %q is used twice (%q is the sip block)", field, l.ID, profile.DefaultID))
+		}
+		ids[l.ID] = true
+		if strings.TrimSpace(l.Name) == "" {
+			errs = append(errs, fmt.Errorf("%s.name is required", field))
+		}
+		switch {
+		case l.SIP.Username == "":
+			errs = append(errs, fmt.Errorf("%s.sip.username is required", field))
+		case users[l.SIP.Username]:
+			errs = append(errs, fmt.Errorf("%s.sip.username %q is used twice: every profile needs its own IP phone", field, l.SIP.Username))
+		}
+		users[l.SIP.Username] = true
+		if l.SIP.Password == "" {
+			errs = append(errs, fmt.Errorf("%s.sip.password or passwordFile is required", field))
+		}
+		port := c.LineBindPort(i)
+		if err := validPort(field+".sip.bindPort", port); err != nil {
+			errs = append(errs, err)
+		} else if other, used := ports[port]; used {
+			errs = append(errs, fmt.Errorf("%s.sip.bindPort %d is already used by %s", field, port, other))
+		}
+		ports[port] = field + ".sip.bindPort"
+		errs = append(errs, validateNumbers(field, l.Numbers, l.Phonebooks)...)
+	}
+	return errs
+}
+
+func validateNumbers(field string, numbers, phonebooks []string) []error {
+	var errs []error
+	for _, n := range numbers {
+		digits, ok := 0, len(n) <= 32
+		for _, r := range n {
+			switch {
+			case r >= '0' && r <= '9':
+				digits++
+			case strings.ContainsRune("+ /-()", r):
+			default:
+				ok = false
+			}
+		}
+		if !ok || digits < 3 {
+			errs = append(errs, fmt.Errorf("%s.numbers: %q is no phone number", field, n))
+		}
+	}
+	for _, id := range phonebooks {
+		if !isDigits(id) {
+			errs = append(errs, fmt.Errorf("%s.phonebooks: %q is no FRITZ!Box phonebook ID (0, 1, …)", field, id))
+		}
+	}
+	return errs
 }
 
 // ValidatePair checks everything the pair command needs.

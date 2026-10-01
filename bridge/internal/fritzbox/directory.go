@@ -7,9 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/JoKeks2023/housephone/bridge/internal/profile"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 )
 
@@ -63,6 +66,8 @@ type phonebookCache struct {
 	// names maps national numbers to contact names; "" marks numbers that
 	// belong to more than one name. Kept after failed refreshes.
 	names map[string]string
+	// contacts are kept for the per-profile phonebooks (ADR-0008).
+	contacts []protocol.Contact
 }
 
 type historyCache struct {
@@ -138,25 +143,45 @@ func (d *Directory) Features() []string {
 	return features
 }
 
-// Phonebook returns the JSON body of GET /v1/phonebook and its ETag.
-func (d *Directory) Phonebook(ctx context.Context) ([]byte, string, error) {
+// Phonebook returns the JSON body of GET /v1/phonebook and its ETag: the
+// contacts of the given FRITZ!Box phonebook IDs, or of all for nil
+// (ADR-0008: a profile may have its own phonebooks).
+func (d *Directory) Phonebook(ctx context.Context, books []string) ([]byte, string, error) {
 	d.mu.Lock()
-	if d.phonebook.ok && d.cfg.Now().Sub(d.phonebook.fetchedAt) < d.cfg.PhonebookTTL {
-		body, etag := d.phonebook.body, d.phonebook.etag
-		d.mu.Unlock()
+	fresh := d.phonebook.ok && d.cfg.Now().Sub(d.phonebook.fetchedAt) < d.cfg.PhonebookTTL
+	d.mu.Unlock()
+	if !fresh {
+		if err := d.refreshPhonebook(ctx); err != nil {
+			return nil, "", err
+		}
+	}
+	d.mu.Lock()
+	body, etag := d.phonebook.body, d.phonebook.etag
+	contacts, fetchedAt := d.phonebook.contacts, d.phonebook.fetchedAt
+	d.mu.Unlock()
+	if books == nil {
 		return body, etag, nil
 	}
-	d.mu.Unlock()
-	if err := d.refreshPhonebook(ctx); err != nil {
-		return nil, "", err
+	return phonebookBody(inPhonebooks(contacts, books), fetchedAt)
+}
+
+// inPhonebooks keeps the contacts of the given phonebooks; contact IDs are
+// "<phonebook id>-<uniqueid>".
+func inPhonebooks(contacts []protocol.Contact, books []string) []protocol.Contact {
+	out := []protocol.Contact{}
+	for _, c := range contacts {
+		book, _, _ := strings.Cut(c.ID, "-")
+		if slices.Contains(books, book) {
+			out = append(out, c)
+		}
 	}
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	return d.phonebook.body, d.phonebook.etag, nil
+	return out
 }
 
 // History returns the JSON body of GET /v1/history for up to limit calls.
-func (d *Directory) History(ctx context.Context, limit int) ([]byte, error) {
+// With own numbers only the calls on them are included (ADR-0008); nil
+// returns all.
+func (d *Directory) History(ctx context.Context, limit int, own []string) ([]byte, error) {
 	limit = min(max(limit, 1), HistoryMaxLimit)
 	d.mu.Lock()
 	fresh := d.history.ok && d.cfg.Now().Sub(d.history.fetchedAt) < d.cfg.HistoryTTL
@@ -169,6 +194,15 @@ func (d *Directory) History(ctx context.Context, limit int) ([]byte, error) {
 	d.mu.Lock()
 	calls, fetchedAt := d.history.calls, d.history.fetchedAt
 	d.mu.Unlock()
+	if own != nil {
+		mine := []protocol.HistoryCall{}
+		for _, c := range calls {
+			if profile.OwnsNumber(c.OwnNumber, own) {
+				mine = append(mine, c)
+			}
+		}
+		calls = mine
+	}
 	if len(calls) > limit {
 		calls = calls[:limit]
 	}
@@ -195,6 +229,24 @@ func (d *Directory) CallerName(number string) string {
 		go func() { _ = d.refreshPhonebook(context.Background()) }()
 	}
 	return name
+}
+
+// CallerNameIn is CallerName limited to the given phonebooks (nil: all),
+// so an incoming call of one profile is never named from another
+// profile's phonebook (ADR-0008).
+func (d *Directory) CallerNameIn(number string, books []string) string {
+	if books == nil {
+		return d.CallerName(number)
+	}
+	key := nationalNumber(number, d.cfg.CountryCode)
+	if key == "" {
+		return ""
+	}
+	_ = d.CallerName(number) // refreshes a stale cache in the background
+	d.mu.Lock()
+	contacts := d.phonebook.contacts
+	d.mu.Unlock()
+	return nameIndex(inPhonebooks(contacts, books), d.cfg.CountryCode)[key]
 }
 
 func (d *Directory) refreshPhonebook(ctx context.Context) error {
@@ -227,6 +279,7 @@ func (d *Directory) refreshPhonebook(ctx context.Context) error {
 		d.phonebook.fetchedAt = d.cfg.Now()
 		d.phonebook.body, d.phonebook.etag = body, etag
 		d.phonebook.names = nameIndex(contacts, d.cfg.CountryCode)
+		d.phonebook.contacts = contacts
 	} else {
 		d.phonebook.ok = false
 	}

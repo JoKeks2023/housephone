@@ -22,9 +22,12 @@ const audioQueue = 25
 // calls.DeviceConn.
 type session struct {
 	deviceID string
-	conn     *hp2.Conn
-	out      chan protocol.Envelope
-	audio    chan []byte
+	// profileID is the device's profile when it connected (ADR-0008); a
+	// move to another profile closes the session.
+	profileID string
+	conn      *hp2.Conn
+	out       chan protocol.Envelope
+	audio     chan []byte
 
 	mu      sync.Mutex
 	closed  bool
@@ -52,6 +55,8 @@ func newSession(deviceID string, conn *hp2.Conn) *session {
 }
 
 func (s *session) DeviceID() string { return s.deviceID }
+
+func (s *session) ProfileID() string { return s.profileID }
 
 // Send queues a message. A device that cannot keep up is disconnected.
 func (s *session) Send(env protocol.Envelope) {
@@ -163,6 +168,7 @@ func (srv *Server) runDevice(ctx context.Context, conn *hp2.Conn, dev store.Devi
 
 	sess := newSession(dev.ID, conn)
 	sess.private = private
+	sess.profileID = dev.ProfileID()
 	srv.mu.Lock()
 	old := srv.sessions[dev.ID]
 	srv.sessions[dev.ID] = sess
@@ -208,9 +214,10 @@ func (srv *Server) runDevice(ctx context.Context, conn *hp2.Conn, dev store.Devi
 		BridgeID:      srv.cfg.BridgeID,
 		BridgeName:    srv.cfg.BridgeName,
 		BridgeVersion: srv.cfg.BridgeVersion,
-		SIPRegistered: srv.cfg.Hub.SIPRegistered(),
-		Features:      srv.features(),
+		SIPRegistered: srv.cfg.Hub.SIPRegisteredFor(sess.profileID),
+		Features:      srv.featuresFor(dev),
 		LanURL:        srv.cfg.LanURL,
+		Profile:       srv.profileInfo(dev),
 	}))
 	if helloErr != nil {
 		sess.Send(errorEnvelope(protocol.ErrorBadRequest, helloErr.Error()))
@@ -325,9 +332,23 @@ func (srv *Server) revokeIfRemoved(sess *session) bool {
 		return true
 	}
 	sess.mu.Unlock()
-	_, err := srv.cfg.Devices.Get(sess.deviceID)
+	dev, err := srv.cfg.Devices.Get(sess.deviceID)
 	if err == nil {
-		return false
+		if dev.ProfileID() == sess.profileID {
+			return false
+		}
+		// Moved to another profile (ADR-0008): its calls end and it
+		// reconnects into the new profile.
+		sess.mu.Lock()
+		already := sess.revoked
+		sess.revoked = true
+		sess.mu.Unlock()
+		if !already {
+			srv.log.Info("device moved to another profile; reconnecting it", "device", sess.deviceID, "profile", dev.ProfileID())
+			srv.cfg.Hub.DeviceRevoked(sess)
+			sess.close(websocket.StatusCode(protocol.CloseProfileChanged), "profile changed")
+		}
+		return true
 	}
 	if !errors.Is(err, store.ErrDeviceNotFound) {
 		srv.log.Warn("checking device failed", "device", sess.deviceID, "error", err)

@@ -32,7 +32,10 @@ type PairingCode struct {
 	ParentID string `json:"parentId,omitempty"`
 	// Platform restricts which platform may pair with the code (companion
 	// codes: "watchos"). Empty allows any platform.
-	Platform  string    `json:"platform,omitempty"`
+	Platform string `json:"platform,omitempty"`
+	// Profile is the profile the device joins (ADR-0008); empty is the
+	// default profile. Companion devices join their parent's profile.
+	Profile   string    `json:"profile,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 	ExpiresAt time.Time `json:"expiresAt"`
 }
@@ -140,13 +143,20 @@ func NewPairing(dataDir string) *Pairing {
 	return &Pairing{path: filepath.Join(dataDir, "pairing.json")}
 }
 
-// Create adds a new code valid for PairingTTL and drops expired ones.
+// Create adds a new code for the default profile, valid for PairingTTL,
+// and drops expired ones.
 func (p *Pairing) Create(name string, now time.Time) (PairingCode, error) {
+	return p.CreateFor(name, "", now)
+}
+
+// CreateFor adds a new code whose device joins profileID ("" is the default
+// profile, ADR-0008).
+func (p *Pairing) CreateFor(name, profileID string, now time.Time) (PairingCode, error) {
 	code, err := newPairingCode()
 	if err != nil {
 		return PairingCode{}, err
 	}
-	pc := PairingCode{Code: code, Name: name, CreatedAt: now.UTC(), ExpiresAt: now.UTC().Add(PairingTTL)}
+	pc := PairingCode{Code: code, Name: name, Profile: profileID, CreatedAt: now.UTC(), ExpiresAt: now.UTC().Add(PairingTTL)}
 	err = withLock(p.path, func() error {
 		var f pairingFile
 		if err := readJSON(p.path, &f); err != nil {

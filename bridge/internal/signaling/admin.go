@@ -17,7 +17,8 @@ func (s *Server) Online() map[string]time.Time {
 func SanitizeName(s string) string { return sanitizeName(s) }
 
 // RevokeNow closes the connection of a device that was just removed from
-// the store (admin API), without waiting for the periodic check.
+// the store or moved to another profile (admin API), without waiting for
+// the periodic check.
 func (s *Server) RevokeNow(deviceID string) {
 	s.mu.Lock()
 	sess := s.sessions[deviceID]

@@ -20,13 +20,22 @@ const (
 
 const notConfiguredMessage = "Telefonbuch und Anrufliste sind in der Bridge nicht eingerichtet (fritzbox.username in config.yaml)."
 
+const noProfileMessage = "Das Profil dieses Geräts gibt es auf der Bridge nicht mehr."
+
+const noNumbersMessage = "Für dein Profil sind keine eigenen Nummern eingetragen, deshalb zeigt die Bridge keine Anrufliste."
+
 // httpPhonebook handles GET /v1/phonebook (HP2, ETag / If-None-Match).
-func (s *Server) httpPhonebook(w http.ResponseWriter, r *http.Request, _ store.Device) {
+func (s *Server) httpPhonebook(w http.ResponseWriter, r *http.Request, dev store.Device) {
 	if s.cfg.Directory == nil {
 		writeJSON(w, http.StatusServiceUnavailable, protocol.Error{Code: protocol.ErrorFritzBoxUnavailable, Message: notConfiguredMessage})
 		return
 	}
-	body, etag, err := s.cfg.Directory.Phonebook(r.Context())
+	p, ok := s.profileOf(dev)
+	if !ok {
+		writeJSON(w, http.StatusForbidden, protocol.Error{Code: protocol.ErrorUnauthorized, Message: noProfileMessage})
+		return
+	}
+	body, etag, err := s.cfg.Directory.Phonebook(r.Context(), p.Phonebooks)
 	if err != nil {
 		s.writeFritzBoxError(w, err)
 		return
@@ -43,7 +52,7 @@ func (s *Server) httpPhonebook(w http.ResponseWriter, r *http.Request, _ store.D
 }
 
 // httpHistory handles GET /v1/history?limit=n (HP2; 1-500, default 100).
-func (s *Server) httpHistory(w http.ResponseWriter, r *http.Request, _ store.Device) {
+func (s *Server) httpHistory(w http.ResponseWriter, r *http.Request, dev store.Device) {
 	limit := historyDefaultLimit
 	if raw := r.URL.Query().Get("limit"); raw != "" {
 		n, err := strconv.Atoi(raw)
@@ -57,7 +66,22 @@ func (s *Server) httpHistory(w http.ResponseWriter, r *http.Request, _ store.Dev
 		writeJSON(w, http.StatusServiceUnavailable, protocol.Error{Code: protocol.ErrorFritzBoxUnavailable, Message: notConfiguredMessage})
 		return
 	}
-	body, err := s.cfg.Directory.History(r.Context(), limit)
+	// ADR-0008: with several profiles each one only sees the calls on its
+	// own numbers, and a profile without numbers sees none.
+	p, ok := s.profileOf(dev)
+	if !ok {
+		writeJSON(w, http.StatusForbidden, protocol.Error{Code: protocol.ErrorUnauthorized, Message: noProfileMessage})
+		return
+	}
+	if !s.cfg.Profiles.HistoryAllowed(p) {
+		writeJSON(w, http.StatusServiceUnavailable, protocol.Error{Code: protocol.ErrorFritzBoxUnavailable, Message: noNumbersMessage})
+		return
+	}
+	var own []string
+	if s.cfg.Profiles.Multi() {
+		own = p.Numbers
+	}
+	body, err := s.cfg.Directory.History(r.Context(), limit, own)
 	if err != nil {
 		s.writeFritzBoxError(w, err)
 		return

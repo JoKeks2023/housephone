@@ -161,6 +161,10 @@ type AudioSink interface {
 // DeviceConn is an authenticated WebSocket connection of one device.
 type DeviceConn interface {
 	DeviceID() string
+	// ProfileID is the household profile of the device when it connected
+	// (ADR-0008); "" is the default profile. A device moved to another
+	// profile is disconnected, so it never changes during a connection.
+	ProfileID() string
 	// Send queues a message without blocking.
 	Send(env protocol.Envelope)
 	// SendAudio queues a binary audio frame without blocking. Frames are

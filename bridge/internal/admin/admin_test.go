@@ -163,8 +163,23 @@ func (f *fakeService) RemoveDevice(id string, keep bool) (RemoveResult, error) {
 	f.removed = append(f.removed, id)
 	return RemoveResult{Removed: []DeviceInfo{{ID: id}}}, nil
 }
-func (f *fakeService) CreatePairing(name string) (PairingInfo, error) {
-	return PairingInfo{Code: "ABCD", Link: "housephone://pair?v=2"}, nil
+func (f *fakeService) CreatePairing(name, profile string) (PairingInfo, error) {
+	if profile != "" && profile != "b" {
+		return PairingInfo{}, ErrUnknownProfile
+	}
+	return PairingInfo{Code: "ABCD", Link: "housephone://pair?v=2", Profile: profile}, nil
+}
+func (f *fakeService) Profiles() []ProfileInfo {
+	return []ProfileInfo{{ID: "default", Name: "Profil A"}, {ID: "b", Name: "Profil B"}}
+}
+func (f *fakeService) MoveDevice(id, profile string) (MoveResult, error) {
+	switch {
+	case id != "d1":
+		return MoveResult{}, ErrNotFound
+	case profile != "default" && profile != "b":
+		return MoveResult{}, ErrUnknownProfile
+	}
+	return MoveResult{Moved: []DeviceInfo{{ID: id, Profile: profile}}}, nil
 }
 func (f *fakeService) PairingState(code string) (PairingState, error) {
 	f.mu.Lock()
@@ -178,11 +193,11 @@ func (f *fakeService) RevokePairing(string) error { return nil }
 func (f *fakeService) LanPairings() []LanPairingRequest {
 	return []LanPairingRequest{{ID: "r1", DeviceName: "iPhone", SAS: "123456"}}
 }
-func (f *fakeService) ApproveLanPairing(id string) (DeviceInfo, error) {
+func (f *fakeService) ApproveLanPairing(id, profile string) (DeviceInfo, error) {
 	if id != "r1" {
 		return DeviceInfo{}, ErrNotFound
 	}
-	return DeviceInfo{ID: "d3", Name: "iPhone"}, nil
+	return DeviceInfo{ID: "d3", Name: "iPhone", Profile: profile}, nil
 }
 func (f *fakeService) DenyLanPairing(id string) error {
 	if id != "r1" {
@@ -259,11 +274,30 @@ func TestServerOverSocket(t *testing.T) {
 	if l, err := c.LanPairings(ctx); err != nil || len(l) != 1 || l[0].SAS != "123456" {
 		t.Fatalf("lan pairings %+v %v", l, err)
 	}
-	if d, err := c.ApproveLanPairing(ctx, "r1"); err != nil || d.ID != "d3" {
+	if d, err := c.ApproveLanPairing(ctx, "r1", "b"); err != nil || d.ID != "d3" || d.Profile != "b" {
 		t.Fatalf("approve %+v %v", d, err)
 	}
-	if _, err := c.ApproveLanPairing(ctx, "nope"); !errors.Is(err, ErrNotFound) {
+	if _, err := c.ApproveLanPairing(ctx, "nope", ""); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("approve unknown: %v", err)
+	}
+	// Profiles (ADR-0008).
+	if p, err := c.Profiles(ctx); err != nil || len(p) != 2 || p[1].ID != "b" {
+		t.Fatalf("profiles %+v %v", p, err)
+	}
+	if p, err := c.CreatePairing(ctx, "iPhone B", "b"); err != nil || p.Profile != "b" {
+		t.Fatalf("pairing into b %+v %v", p, err)
+	}
+	if _, err := c.CreatePairing(ctx, "", "nope"); !errors.Is(err, ErrUnknownProfile) {
+		t.Fatalf("pairing into an unknown profile: %v", err)
+	}
+	if r, err := c.MoveDevice(ctx, "d1", "b"); err != nil || len(r.Moved) != 1 || r.Moved[0].Profile != "b" {
+		t.Fatalf("move %+v %v", r, err)
+	}
+	if _, err := c.MoveDevice(ctx, "d1", "nope"); !errors.Is(err, ErrUnknownProfile) {
+		t.Fatalf("move to an unknown profile: %v", err)
+	}
+	if _, err := c.MoveDevice(ctx, "nope", "b"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("move an unknown device: %v", err)
 	}
 	if err := c.DenyLanPairing(ctx, "r1"); err != nil {
 		t.Fatalf("deny %v", err)

@@ -71,10 +71,14 @@ func parseCallList(data []byte, loc *time.Location) ([]protocol.HistoryCall, err
 			StartedAt:       protocol.Timestamp(started),
 			DurationSeconds: durationSeconds(c.Duration),
 		}
+		// Caller and Called swap roles with the direction; the own side
+		// decides which profile sees the call (ADR-0008).
 		if call.Direction == protocol.HistoryIncoming {
 			call.Number = cleanNumber(c.Caller)
+			call.OwnNumber = strings.TrimSpace(c.Called)
 		} else {
 			call.Number = cleanNumber(c.Called)
+			call.OwnNumber = strings.TrimSpace(c.Caller)
 		}
 		if call.Direction == protocol.HistoryIncoming && call.Result == protocol.HistoryAnswered {
 			call.AnsweredBy = protocol.AnsweredByPhone
