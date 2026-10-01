@@ -16,6 +16,9 @@ struct DirectConfiguration: Codable, Equatable, Sendable {
     var usesTR064 = false
     var tr064Username = ""
     var tr064Password = ""
+    /// Set when Housephone created the IP phone itself (HPHN-25): its
+    /// `X_AVM-DE_ClientId`, to find and reuse it on the next setup.
+    var fritzBoxClientID: String?
 
     var account: SIPAccount {
         SIPAccount(registrar: registrar.trimmingCharacters(in: .whitespaces), username: sipUsername.trimmingCharacters(in: .whitespaces), password: sipPassword)

@@ -14,6 +14,8 @@ final class FakeSIPTransport: SIPTransport, @unchecked Sendable {
     private let lock = NSLock()
     private var sent: [SIPMessage] = []
     private var consumed = Set<Int>()
+    /// Transactions already handed out by `next`, as "method branch".
+    private var seenTransactions = Set<String>()
     private let endpoint: (host: String, port: UInt16)?
 
     init(endpoint: (host: String, port: UInt16)? = ("192.0.2.10", 5062)) {
@@ -36,14 +38,27 @@ final class FakeSIPTransport: SIPTransport, @unchecked Sendable {
 
     var allSent: [SIPMessage] { lock.withLock { sent } }
 
-    /// The oldest message not yet taken that matches.
+    /// The oldest message not yet taken that matches. Retransmissions of
+    /// a request already taken are skipped: with T1 = 10 ms the user agent
+    /// may send a request again before the test answers it, and that copy
+    /// must not be mistaken for the next transaction.
     func next(_ what: String, timeout: Duration = .seconds(3), where predicate: (SIPMessage) -> Bool) async throws -> SIPMessage {
         let deadline = ContinuousClock.now + timeout
         while ContinuousClock.now < deadline {
             let match: SIPMessage? = lock.withLock {
-                guard let index = sent.indices.first(where: { !consumed.contains($0) && predicate(sent[$0]) }) else { return nil }
-                consumed.insert(index)
-                return sent[index]
+                for index in sent.indices where !consumed.contains(index) {
+                    let message = sent[index]
+                    let key = message.isRequest ? Self.transactionKey(message) : nil
+                    if let key, seenTransactions.contains(key) {
+                        consumed.insert(index)
+                        continue
+                    }
+                    guard predicate(message) else { continue }
+                    consumed.insert(index)
+                    if let key, message.isRequest { seenTransactions.insert(key) }
+                    return message
+                }
+                return nil
             }
             if let match { return match }
             try await Task.sleep(for: .milliseconds(2))
@@ -61,6 +76,18 @@ final class FakeSIPTransport: SIPTransport, @unchecked Sendable {
 
     func count(where predicate: (SIPMessage) -> Bool) -> Int {
         lock.withLock { sent.filter(predicate).count }
+    }
+
+    /// Distinct transactions of `method`; retransmissions count once.
+    func transactions(_ method: String) -> Int {
+        lock.withLock { Set(sent.filter { $0.method == method }.compactMap(Self.transactionKey)).count }
+    }
+
+    /// ACK is not a transaction: every ACK the user agent sends is an
+    /// answer of its own (e.g. to a retransmitted 200) and is kept.
+    private static func transactionKey(_ message: SIPMessage) -> String? {
+        guard message.method != "ACK", let branch = message.topViaBranch else { return nil }
+        return "\(message.method ?? message.cseq?.method ?? "") \(branch)"
     }
 }
 

@@ -1,12 +1,32 @@
 {
   "sourceLanguage" : "de",
   "strings" : {
+    "„%@“ (%@) gibt es schon. Beim Weiterverwenden bekommt es ein neues Kennwort." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@” (%2$@) already exists. Keeping it gives it a new password."
+          }
+        }
+      }
+    },
     "„%@“ wurde %@ mit deiner Bridge gekoppelt. Warst du das nicht? Entferne das Gerät auf dem Server." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "“%1$@” was paired with your bridge %2$@. Not you? Remove the device on the server."
+          }
+        }
+      }
+    },
+    "„Automatisch“ nimmt die erste Nummer der FRITZ!Box." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“Automatic” uses the first number of your FRITZ!Box."
           }
         }
       }
@@ -27,6 +47,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Remove %@ from Favorites"
+          }
+        }
+      }
+    },
+    "%@ gefunden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ found"
           }
         }
       }
@@ -201,6 +231,26 @@
         }
       }
     },
+    "Alle zehn Plätze für IP-Telefone sind belegt. Lösche in der FRITZ!Box ein IP-Telefon, das du nicht mehr brauchst." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All ten IP phone slots are in use. Delete an IP phone you no longer need in your FRITZ!Box."
+          }
+        }
+      }
+    },
+    "Allen Nummern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Numbers"
+          }
+        }
+      }
+    },
     "Alles erledigt." : {
       "localizations" : {
         "en" : {
@@ -217,6 +267,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "on %@"
+          }
+        }
+      }
+    },
+    "An der FRITZ!Box läuft gerade eine andere Bestätigung. Versuche es in zwei Minuten noch einmal." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another confirmation is running on your FRITZ!Box. Try again in two minutes."
           }
         }
       }
@@ -277,6 +337,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Login rejected"
+          }
+        }
+      }
+    },
+    "Anmeldung an der FRITZ!Box" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FRITZ!Box Login"
           }
         }
       }
@@ -501,6 +571,16 @@
         }
       }
     },
+    "Automatisch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic"
+          }
+        }
+      }
+    },
     "AV1-Decoder (Teil von WebRTC)" : {
       "localizations" : {
         "en" : {
@@ -587,6 +667,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Busy"
+          }
+        }
+      }
+    },
+    "Bestätige an der FRITZ!Box" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm on Your FRITZ!Box"
           }
         }
       }
@@ -842,6 +932,16 @@
         }
       }
     },
+    "Dem FRITZ!Box-Benutzer fehlt das Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The FRITZ!Box user lacks the right “Voice messages, fax messages, FRITZ!App Fon and call list”."
+          }
+        }
+      }
+    },
     "Dem Link fehlt die Kennung der Bridge. Erzeuge einen neuen Code." : {
       "localizations" : {
         "en" : {
@@ -968,6 +1068,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apple Watch makes calls only through a bridge. In direct mode it doesn’t ring."
+          }
+        }
+      }
+    },
+    "Die Bestätigung an der FRITZ!Box kam nicht rechtzeitig. Versuche es noch einmal." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The confirmation on your FRITZ!Box didn’t come in time. Try again."
           }
         }
       }
@@ -1103,6 +1213,16 @@
         }
       }
     },
+    "Die FRITZ!Box hat die Anmeldung abgelehnt. Prüfe Benutzer und Kennwort." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your FRITZ!Box rejected the login. Check the user and password."
+          }
+        }
+      }
+    },
     "Die FRITZ!Box hat unerwartet geantwortet." : {
       "localizations" : {
         "en" : {
@@ -1120,6 +1240,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The FRITZ!Box rejects the login. Tap to check."
+          }
+        }
+      }
+    },
+    "Die FRITZ!Box verlangt eine Bestätigung. Versuche es noch einmal." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your FRITZ!Box asks for a confirmation. Try again."
+          }
+        }
+      }
+    },
+    "Die FRITZ!Box wartet auf eine Bestätigung. Versuche es gleich noch einmal." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your FRITZ!Box is waiting for a confirmation. Try again in a moment."
           }
         }
       }
@@ -1304,12 +1444,42 @@
         }
       }
     },
+    "Drücke eine beliebige Taste an der FRITZ!Box." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press any button on your FRITZ!Box."
+          }
+        }
+      }
+    },
     "Du kannst den Zugriff in den Einstellungen erlauben. Wählen geht auch ohne – über das Tastenfeld." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "You can allow access in Settings. Dialing works without it, too – using the keypad."
+          }
+        }
+      }
+    },
+    "Du trägst ein IP-Telefon ein, das du in der FRITZ!Box selbst angelegt hast." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter an IP phone you created in your FRITZ!Box yourself."
+          }
+        }
+      }
+    },
+    "Ein FRITZ!Box-Benutzer mit dem Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“. Die Daten bleiben im Schlüsselbund dieses iPhones." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A FRITZ!Box user with the right “Voice messages, fax messages, FRITZ!App Fon and call list”. The login stays in this iPhone’s keychain."
           }
         }
       }
@@ -1330,6 +1500,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Incoming call"
+          }
+        }
+      }
+    },
+    "Einrichten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Up"
+          }
+        }
+      }
+    },
+    "Einrichtung" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup"
           }
         }
       }
@@ -1400,6 +1590,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pair again"
+          }
+        }
+      }
+    },
+    "Erneut suchen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search Again"
           }
         }
       }
@@ -1514,6 +1714,16 @@
         }
       }
     },
+    "Folge dem Hinweis an der FRITZ!Box." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow the instructions on your FRITZ!Box."
+          }
+        }
+      }
+    },
     "Freigeben in der TUI (Taste 3), mit „housephone-bridge devices approve“ oder im Home-Assistant-Dashboard." : {
       "localizations" : {
         "en" : {
@@ -1600,6 +1810,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "FRITZ!Box error %lld"
+          }
+        }
+      }
+    },
+    "FRITZ!OS %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FRITZ!OS %1$@ · %2$@"
           }
         }
       }
@@ -1804,6 +2024,16 @@
         }
       }
     },
+    "Housephone legt sich mit deiner FRITZ!Box-Anmeldung selbst als IP-Telefon an und lädt Telefonbuch und Anrufliste." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With your FRITZ!Box login, Housephone sets itself up as an IP phone and loads your phonebook and call list."
+          }
+        }
+      }
+    },
     "Housephone meldet sich von der FRITZ!Box ab und löscht die Zugangsdaten von diesem iPhone." : {
       "localizations" : {
         "en" : {
@@ -1994,6 +2224,16 @@
         }
       }
     },
+    "Keine FRITZ!Box gefunden. Bist du im Heim-WLAN?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No FRITZ!Box found. Are you on your home Wi-Fi?"
+          }
+        }
+      }
+    },
     "Keine Kontakte mit Nummer" : {
       "localizations" : {
         "en" : {
@@ -2060,6 +2300,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ringing…"
+          }
+        }
+      }
+    },
+    "Klingelt bei" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rings For"
           }
         }
       }
@@ -2304,6 +2554,16 @@
         }
       }
     },
+    "Manuell" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manual"
+          }
+        }
+      }
+    },
     "Mehr" : {
       "localizations" : {
         "en" : {
@@ -2394,6 +2654,16 @@
         }
       }
     },
+    "Mit FRITZ!Box verbinden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect to FRITZ!Box"
+          }
+        }
+      }
+    },
     "Mit QR-Code koppeln" : {
       "localizations" : {
         "en" : {
@@ -2430,6 +2700,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Name or number"
+          }
+        }
+      }
+    },
+    "Neu anlegen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create New"
           }
         }
       }
@@ -2675,6 +2955,16 @@
         }
       }
     },
+    "Oder wähle an einem Telefon, das an der FRITZ!Box angeschlossen ist: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Or dial on a phone connected to your FRITZ!Box: %@"
+          }
+        }
+      }
+    },
     "Öffne Housephone auf deiner Apple Watch" : {
       "localizations" : {
         "en" : {
@@ -2865,6 +3155,26 @@
         }
       }
     },
+    "Rufnummern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone Numbers"
+          }
+        }
+      }
+    },
+    "Schon eingerichtet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Already Set Up"
+          }
+        }
+      }
+    },
     "Sichern" : {
       "localizations" : {
         "en" : {
@@ -2941,6 +3251,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mute"
+          }
+        }
+      }
+    },
+    "Suche FRITZ!Box im WLAN …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Looking for your FRITZ!Box on Wi-Fi …"
           }
         }
       }
@@ -3265,6 +3585,26 @@
         }
       }
     },
+    "Vorhandenes IP-Telefon" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Existing IP Phone"
+          }
+        }
+      }
+    },
+    "Warte auf Bestätigung …" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for confirmation …"
+          }
+        }
+      }
+    },
     "Warte auf Freigabe …" : {
       "localizations" : {
         "en" : {
@@ -3291,6 +3631,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Continue"
+          }
+        }
+      }
+    },
+    "Weiterverwenden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep Using"
           }
         }
       }
@@ -3361,6 +3711,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add to Favorites"
+          }
+        }
+      }
+    },
+    "Zu viele Bestätigungsversuche. Die FRITZ!Box lässt erst in bis zu einer Stunde wieder einen zu." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too many confirmation attempts. Your FRITZ!Box allows the next one in up to an hour."
           }
         }
       }
