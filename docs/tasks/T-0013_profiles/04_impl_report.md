@@ -29,4 +29,4 @@
 
 ## Nebenbei
 
-- `internal/tui/tui_test.go`: maskierte Beispielnummer „…563“ durch „…567“ ersetzt (fiktiv wie die übrigen).
+- Fiktive Beispielnummer im ganzen Repo auf `0301234567` (maskiert „…567“) vereinheitlicht.
