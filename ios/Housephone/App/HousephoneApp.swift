@@ -15,6 +15,7 @@ struct HousephoneApp: App {
                 .environment(services.direct)
                 .environment(services.callCenter)
                 .environment(services.watchLink)
+                .environment(services.admin)
                 .environment(services.contacts)
                 .environment(services.fritzBox)
                 .environment(services.appModel)

@@ -319,13 +319,15 @@ public struct BridgeHTTPClient: Sendable {
 
     /// Signs the request, verifies the bridge's signature on the response
     /// and opens a sealed body. Success is any 2xx and 304; returns the
-    /// plaintext body.
-    private func send(
+    /// plaintext body. With `adminKey` the request also carries the
+    /// `HP2-Admin` signature (ADR-0009); signing it asks for Face ID.
+    func send(
         method: String,
         url: URL,
         body: Data?,
         credentials: BridgeCredentials,
-        headers: [String: String] = [:]
+        headers: [String: String] = [:],
+        adminKey: (any DeviceSigningKey)? = nil
     ) async throws -> (data: Data, response: HTTPURLResponse) {
         guard let key = try keyStore.key(tag: credentials.keyTag) else {
             // Without its key this device can't prove who it is.
@@ -334,6 +336,10 @@ public struct BridgeHTTPClient: Sendable {
         let exchange = try HP2Signer(credentials: credentials, key: key, now: now).exchange(method: method, url: url, body: body)
         var request = makeRequest(method: method, url: url, body: body)
         request.setValue(exchange.authorization.headerValue, forHTTPHeaderField: "Authorization")
+        if let adminKey {
+            let signature = try exchange.adminSignature(key: adminKey, method: method, pathAndQuery: HP2Signer.pathAndQuery(of: url), body: body ?? Data())
+            request.setValue(signature, forHTTPHeaderField: HP2.adminHeaderName)
+        }
         for (field, value) in headers {
             request.setValue(value, forHTTPHeaderField: field)
         }

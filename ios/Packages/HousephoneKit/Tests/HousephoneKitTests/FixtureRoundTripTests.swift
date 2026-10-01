@@ -24,7 +24,7 @@ struct FixtureRoundTripTests {
     }
 
     @Test func fixturesExist() {
-        #expect(Self.messageFixtures.count == 20)
+        #expect(Self.messageFixtures.count == 22)
     }
 
     @Test(arguments: messageFixtures)
@@ -51,7 +51,7 @@ struct FixtureRoundTripTests {
         let expected: Set = [
             "hello", "device.update", "device.unpair", "pair.companion.request", "pair.companion", "call.media", "call.attach", "call.dial", "call.answer", "call.accept",
             "call.hangup", "call.dtmf", "device.paired", "welcome", "status", "call.incoming", "call.offer",
-            "call.state", "call.ended", "error",
+            "call.state", "call.ended", "error", "admin.action", "admin.role",
         ]
         #expect(types == expected)
     }

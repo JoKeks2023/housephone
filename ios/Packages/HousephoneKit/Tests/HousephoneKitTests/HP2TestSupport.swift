@@ -122,9 +122,10 @@ struct TestDevice: Sendable {
     let key = SoftwareDeviceKey()
     let credentials: BridgeCredentials
 
-    init(bridge: TestBridge, url: String = "wss://phone.example.com/v1/ws") {
+    init(bridge: TestBridge, url: String = "wss://phone.example.com/v1/ws", lanURL: String? = nil) {
         credentials = BridgeCredentials(
             bridgeURL: URL(string: url)!,
+            lanURL: lanURL.flatMap(URL.init(string:)),
             deviceId: DeviceID(UUID(uuidString: "9B1D4C2A-5E6F-4A7B-8C9D-0E1F2A3B4C5D")!),
             bridgeId: bridge.bridgeId,
             bridgeName: "Zuhause",

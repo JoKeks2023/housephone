@@ -35,6 +35,11 @@ final class BridgeConnection {
     private(set) var problem: Problem?
     /// The bridge reported a newly paired device; shown until dismissed.
     private(set) var newlyPairedDevice: DevicePaired?
+    /// This device's admin role (ADR-0009): from `welcome`, updated by
+    /// `admin.role`. `nil` for devices that are not admin.
+    private(set) var adminRole: AdminRole?
+    /// The last admin action the bridge announced; shown until dismissed.
+    private(set) var lastAdminAction: AdminAction?
     /// Increases with every successful (re)connection. Calls use it to
     /// know whether they still need to attach on the current connection.
     private(set) var generation = 0
@@ -188,6 +193,15 @@ final class BridgeConnection {
         newlyPairedDevice = nil
     }
 
+    func dismissAdminAction() {
+        lastAdminAction = nil
+    }
+
+    /// The HTTPS client with this device's key, for the admin API.
+    func httpClient() -> BridgeHTTPClient {
+        BridgeHTTPClient(keyStore: keyStore)
+    }
+
     /// Asks the bridge to forget this device (best effort, at most 3 s),
     /// then removes the local credentials. Works offline too: the bridge
     /// then drops the push token once APNs reports it as unregistered.
@@ -209,6 +223,8 @@ final class BridgeConnection {
         pushToken = nil
         problem = nil
         newlyPairedDevice = nil
+        adminRole = nil
+        lastAdminAction = nil
         status = .unpaired
         onPairingChanged?(false)
     }
@@ -318,6 +334,7 @@ final class BridgeConnection {
             switch state {
             case .connected(let welcome):
                 self.welcome = welcome
+                adminRole = welcome.admin
                 adoptLanURL(welcome.lanUrl)
                 problem = nil
                 status = .online(sipRegistered: welcome.sipRegistered)
@@ -356,6 +373,10 @@ final class BridgeConnection {
                 return
             case .devicePaired(let paired):
                 newlyPairedDevice = paired
+            case .adminRole(let role):
+                adminRole = role.admin ? role : nil
+            case .adminAction(let action):
+                lastAdminAction = action
             case .error(let error) where error.callId == nil && companionWaiter != nil:
                 finishCompanionRequest(.failure(SignalingClientError.bridge(error)))
             default:
