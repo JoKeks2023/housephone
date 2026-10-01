@@ -2,6 +2,7 @@
   "sourceLanguage" : "de",
   "strings" : {
     "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -18,7 +19,20 @@
       },
       "shouldTranslate" : false
     },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Housephone"
+          }
+        }
+      }
+    },
     "NSCameraUsageDescription" : {
+      "comment" : "Privacy - Camera Usage Description",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -32,10 +46,10 @@
             "value" : "Use the camera to scan your bridge's QR code and pair this iPhone."
           }
         }
-      },
-      "shouldTranslate" : true
+      }
     },
     "NSContactsUsageDescription" : {
+      "comment" : "Privacy - Contacts Usage Description",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -49,10 +63,10 @@
             "value" : "Housephone shows your contacts so you can call them directly, and shows callers by name."
           }
         }
-      },
-      "shouldTranslate" : true
+      }
     },
     "NSLocalNetworkUsageDescription" : {
+      "comment" : "Privacy - Local Network Usage Description",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -66,10 +80,10 @@
             "value" : "At home, Housephone talks to your bridge directly so calls stay on your Wi-Fi."
           }
         }
-      },
-      "shouldTranslate" : true
+      }
     },
     "NSMicrophoneUsageDescription" : {
+      "comment" : "Privacy - Microphone Usage Description",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -83,8 +97,7 @@
             "value" : "Housephone needs the microphone so the other person can hear you during calls."
           }
         }
-      },
-      "shouldTranslate" : true
+      }
     }
   },
   "version" : "1.0"
