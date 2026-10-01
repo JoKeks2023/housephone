@@ -25,7 +25,9 @@ public enum AdminKeyError: Error, Equatable, Sendable {
     case invalidated
 }
 
-/// Admin keys in the Secure Enclave, guarded by the current biometry.
+#if !os(watchOS)
+/// Admin keys in the Secure Enclave, guarded by the current biometry. Not
+/// on the watch: it is never admin.
 public struct KeychainAdminKeyStore: AdminKeyStore {
     public let service: String
 
@@ -124,6 +126,8 @@ struct BiometricAdminKey: DeviceSigningKey, @unchecked Sendable {
         }
     }
 }
+
+#endif
 
 /// Admin keys in memory, for tests.
 public final class InMemoryAdminKeyStore: AdminKeyStore, @unchecked Sendable {
