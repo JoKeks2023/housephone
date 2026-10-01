@@ -98,6 +98,9 @@ private struct DeviceContactsContent: View {
                 ContentUnavailableView.search(text: searchText)
             } else {
                 List {
+                    if searchText.isEmpty {
+                        FavoritesSection()
+                    }
                     ForEach(sections, id: \.letter) { section in
                         Section(section.letter) {
                             ForEach(section.contacts) { contact in
@@ -113,6 +116,7 @@ private struct DeviceContactsContent: View {
                     }
                 }
                 .listStyle(.plain)
+                .appBackground()
             }
         }
         .searchable(text: $searchText, prompt: Text("Name oder Nummer"))
@@ -141,10 +145,12 @@ private struct ContactRow: View {
     let contact: ContactEntry
     let onCall: () -> Void
 
+    @Environment(FavoritesStore.self) private var favorites
+
     var body: some View {
         Button(action: onCall) {
             HStack(spacing: Theme.Space.s3) {
-                AvatarView(name: contact.name, size: 36)
+                AvatarView(name: contact.name, imageData: contact.thumbnail, size: 40)
                 VStack(alignment: .leading, spacing: Theme.Space.hairline) {
                     Text(contact.name)
                         .font(.body.weight(.medium))
@@ -162,6 +168,12 @@ private struct ContactRow: View {
                     }
                 }
                 Spacer()
+                if contact.numbers.contains(where: { favorites.contains(number: $0.value) }) {
+                    Image(systemName: "star.fill")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.accentText)
+                        .accessibilityLabel(Text("Favorit"))
+                }
                 Image(systemName: "phone")
                     .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
@@ -178,6 +190,28 @@ private struct ContactRow: View {
                     UIPasteboard.general.string = number.value
                 }
             }
+            ForEach(contact.numbers, id: \.self) { number in
+                if favorites.contains(number: number.value) {
+                    Button(favoriteTitle(remove: true, number), systemImage: "star.slash") {
+                        favorites.remove(number: number.value)
+                    }
+                } else {
+                    Button(favoriteTitle(remove: false, number), systemImage: "star") {
+                        favorites.add(name: contact.name, number: number.value, label: number.label, contactID: contact.id)
+                    }
+                }
+            }
         }
+    }
+
+    /// One entry per number; with several numbers the label tells them apart.
+    private func favoriteTitle(remove: Bool, _ number: ContactEntry.Number) -> String {
+        if contact.numbers.count == 1 {
+            return remove ? String(localized: "Aus Favoriten entfernen") : String(localized: "Zu Favoriten")
+        }
+        let which = number.label ?? number.value
+        return remove
+            ? String(localized: "\(which) aus Favoriten entfernen")
+            : String(localized: "\(which) zu Favoriten")
     }
 }

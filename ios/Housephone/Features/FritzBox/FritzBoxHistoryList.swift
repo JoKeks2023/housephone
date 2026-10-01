@@ -49,13 +49,15 @@ struct FritzBoxHistoryList: View {
                             symbol: call.symbol,
                             detail: [call.outcomeText, call.durationText].compactMap(\.self).joined(separator: " · "),
                             isMissed: call.isMissed,
-                            date: call.startedAt
+                            date: call.startedAt,
+                            imageData: contacts.thumbnail(for: call.number)
                         ) {
                             callBack(call)
                         }
                     }
                 }
                 .listStyle(.plain)
+                .appBackground()
                 .motion(Theme.Motion.standard, value: missedOnly)
             }
         }

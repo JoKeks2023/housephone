@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// One call in a call list (Housephone's own or the FRITZ!Box's): who,
-/// direction and outcome, when. Tap calls back; the context menu offers
-/// copy and "open in keypad". At accessibility text sizes the row stacks
-/// instead of truncating.
+/// direction and outcome, when. Tap calls back, the info button (like the
+/// Phone app) opens the details; the context menu offers copy and "open
+/// in keypad". At accessibility text sizes the row stacks instead of
+/// truncating.
 struct CallHistoryRow: View {
     /// Contact or recorded name; `nil` shows the number.
     let name: String?
@@ -13,6 +14,10 @@ struct CallHistoryRow: View {
     let detail: String
     let isMissed: Bool
     let date: Date
+    /// The contact's photo, if the number belongs to one.
+    var imageData: Data?
+    /// Shows the info button; `nil` for lists without details.
+    var onInfo: (() -> Void)?
     let onCall: () -> Void
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -36,10 +41,28 @@ struct CallHistoryRow: View {
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.Space.s1))
             : AnyLayout(HStackLayout(spacing: Theme.Space.s3))
 
+        HStack(spacing: Theme.Space.s2) {
+            callButton(layout: layout, isAccessibilitySize: isAccessibilitySize)
+            if let onInfo {
+                Button(action: onInfo) {
+                    Image(systemName: "info.circle")
+                        .font(.title3)
+                        .foregroundStyle(Theme.accentText)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableButtonStyle())
+                .accessibilityLabel(Text("Details"))
+                .accessibilityHint(Text("Zeigt alle Anrufe mit dieser Nummer"))
+            }
+        }
+    }
+
+    private func callButton(layout: AnyLayout, isAccessibilitySize: Bool) -> some View {
         Button(action: onCall) {
             layout {
                 HStack(spacing: Theme.Space.s3) {
-                    AvatarView(name: name, size: 40)
+                    AvatarView(name: name, imageData: imageData, size: 40)
                     VStack(alignment: .leading, spacing: Theme.Space.hairline) {
                         Text(title)
                             .font(.body.weight(.medium))

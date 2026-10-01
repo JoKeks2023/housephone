@@ -18,6 +18,7 @@ final class AppServices {
     let callCenter: CallCenter
     let watchLink: WatchLink
     let appModel: AppModel
+    let favorites: FavoritesStore
 
     private init() {
         modelContainer = Self.makeModelContainer()
@@ -37,6 +38,7 @@ final class AppServices {
             watchLink.autoPairIfNeeded()
         }
         appModel = AppModel()
+        favorites = FavoritesStore()
         bridge.start()
     }
 
