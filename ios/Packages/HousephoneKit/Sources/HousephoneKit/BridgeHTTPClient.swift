@@ -147,6 +147,99 @@ public struct BridgeHTTPClient: Sendable {
         }
     }
 
+    // MARK: - Pairing in the home network (ADR-0007)
+
+    /// Steps 1–3 of LAN pairing with the private listener at `lanURL`
+    /// (found via Bonjour, `ws://host:port/v1/ws`). Afterwards the session
+    /// holds the SAS to show; `waitForLanApproval` waits for the admin.
+    /// The new device key is deleted again on failure.
+    public func startLanPairing(lanURL: URL, deviceName: String, model: String?) async throws -> LanPairingSession {
+        guard let startURL = Self.endpoint("pair/lan", for: lanURL) else { throw BridgeHTTPError.invalidBridgeURL }
+        let tag = "device-" + UUID().uuidString.lowercased()
+        let key = try keyStore.makeKey(tag: tag)
+        do {
+            var pairing = HP2LanPairing(key: key, deviceName: deviceName, model: model, nonce: try Self.randomBytes(HP2.nonceLength))
+            let offer: LanPairOffer = try await lanPost(startURL, body: pairing.start)
+            let reveal = try pairing.accept(offer, key: key)
+            guard let revealURL = Self.endpoint("pair/lan/\(offer.pairingId)/reveal", for: lanURL) else { throw BridgeHTTPError.invalidBridgeURL }
+            let state: LanPairState = try await lanPost(revealURL, body: reveal)
+            guard state.status == .pending, let sas = pairing.sas else { throw BridgeHTTPError.invalidResponse }
+            return LanPairingSession(lanURL: lanURL, keyTag: tag, pairing: pairing, sas: sas, bridgeName: offer.bridgeName, expiresAt: state.expiresAt ?? offer.expiresAt)
+        } catch {
+            try? keyStore.deleteKey(tag: tag)
+            throw error
+        }
+    }
+
+    /// Long-polls until the admin approved or denied, or the request
+    /// expired. On approval the credentials are returned (not stored);
+    /// otherwise the key is deleted. Cancelling the task stops waiting and
+    /// deletes the key too.
+    public func waitForLanApproval(_ pending: LanPairingSession) async throws -> LanPairingOutcome {
+        guard let url = Self.endpoint("pair/lan/\(pending.pairing.offer?.pairingId ?? "")", for: pending.lanURL),
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        else { throw BridgeHTTPError.invalidBridgeURL }
+        components.queryItems = [URLQueryItem(name: "wait", value: "25")]
+        guard let pollURL = components.url else { throw BridgeHTTPError.invalidBridgeURL }
+        do {
+            while true {
+                try Task.checkCancellation()
+                var request = makeRequest(method: "GET", url: pollURL, body: nil)
+                request.timeoutInterval = 40
+                let (data, response) = try await lanData(for: request)
+                guard let http = response as? HTTPURLResponse else { throw BridgeHTTPError.invalidResponse }
+                guard (200..<300).contains(http.statusCode) else { throw Self.failure(status: http.statusCode, body: data) }
+                guard let state = try? SignalingCoding.makeDecoder().decode(LanPairState.self, from: data) else {
+                    throw BridgeHTTPError.invalidResponse
+                }
+                switch state.status {
+                case .pending:
+                    continue
+                case .approved:
+                    return .approved(try pending.pairing.credentials(from: state, discoveredURL: pending.lanURL, keyTag: pending.keyTag))
+                case .denied:
+                    try? keyStore.deleteKey(tag: pending.keyTag)
+                    return .denied
+                case .expired:
+                    try? keyStore.deleteKey(tag: pending.keyTag)
+                    return .expired
+                }
+            }
+        } catch {
+            try? keyStore.deleteKey(tag: pending.keyTag)
+            throw error
+        }
+    }
+
+    /// Gives up a pairing that was not approved: deletes its key.
+    public func cancelLanPairing(_ pending: LanPairingSession) {
+        try? keyStore.deleteKey(tag: pending.keyTag)
+    }
+
+    private func lanData(for request: URLRequest) async throws -> (Data, URLResponse) {
+        do {
+            return try await session.data(for: request)
+        } catch let error as URLError where Self.isUnreachable(error) {
+            throw BridgeHTTPError.homeNetworkRequired
+        }
+    }
+
+    private func lanPost<Body: Encodable, Answer: Decodable>(_ url: URL, body: Body) async throws -> Answer {
+        var request = makeRequest(method: "POST", url: url, body: try SignalingCoding.makeEncoder().encode(body))
+        request.timeoutInterval = Self.lanPairingTimeout
+        let (data, response) = try await lanData(for: request)
+        guard let http = response as? HTTPURLResponse else { throw BridgeHTTPError.invalidResponse }
+        if http.statusCode == 403,
+           (try? SignalingCoding.makeDecoder().decode(SignalingErrorPayload.self, from: data))?.code == .homeNetworkRequired {
+            throw BridgeHTTPError.homeNetworkRequired
+        }
+        guard (200..<300).contains(http.statusCode) else { throw Self.failure(status: http.statusCode, body: data) }
+        guard let answer = try? SignalingCoding.makeDecoder().decode(Answer.self, from: data) else {
+            throw BridgeHTTPError.invalidResponse
+        }
+        return answer
+    }
+
     /// A host in the home network answers fast or not at all.
     static let lanPairingTimeout: TimeInterval = 8
 

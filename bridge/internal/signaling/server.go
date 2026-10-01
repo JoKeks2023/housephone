@@ -82,7 +82,10 @@ type Config struct {
 	// RevalidateInterval is how often an open connection checks that its
 	// device is still paired (devices remove takes effect within it).
 	RevalidateInterval time.Duration
-	Now                func() time.Time
+	// LanPairTTL is how long a LAN pairing request waits for the admin
+	// (default DefaultLanPairTTL).
+	LanPairTTL time.Duration
+	Now        func() time.Time
 }
 
 // Limits.
@@ -114,6 +117,8 @@ type Server struct {
 	warnings *logThrottle
 	// nonces rejects replayed requests (v2).
 	nonces *nonceCache
+	// lan holds the pairing requests from the home network (ADR-0007).
+	lan *lanPairing
 
 	mu       sync.Mutex
 	sessions map[string]*session
@@ -147,6 +152,7 @@ func New(cfg Config) *Server {
 		companions: newRateLimiter(companionCodesPerHour, time.Hour, cfg.Now),
 		warnings:   newLogThrottle(time.Minute, cfg.Now),
 		nonces:     newNonceCache(),
+		lan:        newLanPairing(cfg.Now),
 		sessions:   map[string]*session{},
 	}
 }
@@ -172,6 +178,13 @@ func (s *Server) routes(private bool) http.Handler {
 	mux.HandleFunc("GET /v1/ws", func(w http.ResponseWriter, r *http.Request) { s.websocket(w, r, private) })
 	if private {
 		mux.HandleFunc("POST /v1/pair", withDeadline(s.httpPair))
+		mux.HandleFunc("POST /v1/pair/lan", withDeadline(s.httpLanStart))
+		mux.HandleFunc("POST /v1/pair/lan/{id}/reveal", withDeadline(s.httpLanReveal))
+		mux.HandleFunc("GET /v1/pair/lan/{id}", withDeadline(s.httpLanState))
+	} else {
+		mux.HandleFunc("POST /v1/pair/lan", s.homeNetworkOnly)
+		mux.HandleFunc("POST /v1/pair/lan/{id}/reveal", s.homeNetworkOnly)
+		mux.HandleFunc("GET /v1/pair/lan/{id}", s.homeNetworkOnly)
 	}
 	mux.HandleFunc("PUT /v1/device", s.authed(s.httpUpdateDevice))
 	mux.HandleFunc("DELETE /v1/device", s.authed(s.httpDeleteDevice))

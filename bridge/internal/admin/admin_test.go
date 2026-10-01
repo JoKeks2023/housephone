@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"os"
@@ -173,7 +174,22 @@ func (f *fakeService) PairingState(code string) (PairingState, error) {
 	}
 	return PairingState{}, nil
 }
-func (f *fakeService) RevokePairing(string) error       { return nil }
+func (f *fakeService) RevokePairing(string) error { return nil }
+func (f *fakeService) LanPairings() []LanPairingRequest {
+	return []LanPairingRequest{{ID: "r1", DeviceName: "iPhone", SAS: "123456"}}
+}
+func (f *fakeService) ApproveLanPairing(id string) (DeviceInfo, error) {
+	if id != "r1" {
+		return DeviceInfo{}, ErrNotFound
+	}
+	return DeviceInfo{ID: "d3", Name: "iPhone"}, nil
+}
+func (f *fakeService) DenyLanPairing(id string) error {
+	if id != "r1" {
+		return ErrNotFound
+	}
+	return nil
+}
 func (f *fakeService) Calls() CallsView                 { return CallsView{} }
 func (f *fakeService) Stats() Stats                     { return Stats{} }
 func (f *fakeService) Logs(after uint64) LogsView       { return LogsView{Next: after} }
@@ -239,6 +255,18 @@ func TestServerOverSocket(t *testing.T) {
 	}()
 	if st, err := c.WaitPairing(ctx, "ABCD"); err != nil || !st.Used || st.Device.ID != "d2" {
 		t.Fatalf("wait %+v %v", st, err)
+	}
+	if l, err := c.LanPairings(ctx); err != nil || len(l) != 1 || l[0].SAS != "123456" {
+		t.Fatalf("lan pairings %+v %v", l, err)
+	}
+	if d, err := c.ApproveLanPairing(ctx, "r1"); err != nil || d.ID != "d3" {
+		t.Fatalf("approve %+v %v", d, err)
+	}
+	if _, err := c.ApproveLanPairing(ctx, "nope"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("approve unknown: %v", err)
+	}
+	if err := c.DenyLanPairing(ctx, "r1"); err != nil {
+		t.Fatalf("deny %v", err)
 	}
 	if cfg, err := c.Config(ctx); err != nil || cfg["sip"].(map[string]any)["password"] != "••••••" {
 		t.Fatalf("config %+v %v", cfg, err)

@@ -26,6 +26,7 @@ options:
   public_url: ""
   tunnel_port: 8080
   tailscale: false
+  bonjour: true
   fritzbox_host: 192.168.178.1
   sip_username: ""
   sip_password: ""
@@ -38,6 +39,7 @@ schema:
   lan_url: match(^ws://[^\s/]+(/.*)?$)?
   tunnel_port: port
   tailscale: bool
+  bonjour: bool?
   fritzbox_host: str
   sip_username: str
   sip_password: password

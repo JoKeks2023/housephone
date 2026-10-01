@@ -197,6 +197,36 @@ func (s adminService) RevokePairing(code string) error {
 	return err
 }
 
+func (s adminService) LanPairings() []admin.LanPairingRequest {
+	var out []admin.LanPairingRequest
+	for _, p := range s.b.signaling.LanPairings() {
+		out = append(out, admin.LanPairingRequest{
+			ID: p.ID, DeviceName: p.DeviceName, Platform: p.Platform, Model: p.Model, IP: p.IP,
+			SAS: p.SAS, KeyFingerprint: p.KeyFingerprint, CreatedAt: p.CreatedAt, ExpiresAt: p.ExpiresAt,
+		})
+	}
+	return out
+}
+
+func (s adminService) ApproveLanPairing(id string) (admin.DeviceInfo, error) {
+	dev, err := s.b.signaling.ApproveLanPairing(id)
+	if errors.Is(err, signaling.ErrLanPairingNotFound) {
+		return admin.DeviceInfo{}, admin.ErrNotFound
+	}
+	if err != nil {
+		return admin.DeviceInfo{}, err
+	}
+	return deviceInfo(dev, nil, s.b.signaling.Online()), nil
+}
+
+func (s adminService) DenyLanPairing(id string) error {
+	err := s.b.signaling.DenyLanPairing(id)
+	if errors.Is(err, signaling.ErrLanPairingNotFound) {
+		return admin.ErrNotFound
+	}
+	return err
+}
+
 func (s adminService) Calls() admin.CallsView {
 	active, recent := s.b.recorder.Calls()
 	return admin.CallsView{Active: active, Recent: recent}

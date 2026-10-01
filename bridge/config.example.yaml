@@ -31,6 +31,11 @@ bridge:
   # Tailscale die Tailscale-IP des Servers, z. B. "ws://100.101.102.103:8081/v1/ws"
   # (kein MagicDNS-Name: iOS erlaubt ws:// nur zu IPs und lokalen Namen).
   lanUrl: ""
+  # Den Heimnetz-Zugang per Bonjour (_housephone._tcp) ankündigen: Die App
+  # findet die Bridge im WLAN dann ohne QR-Code; das Koppeln gibst du in der
+  # TUI, mit `devices approve` oder im Dashboard frei. Nur aktiv, wenn
+  # privateListen im Heimnetz erreichbar ist.
+  bonjour: true
   # Öffentliche WebSocket-URL für die App (landet im Kopplungs-QR-Code).
   publicUrl: "wss://phone.example.com/v1/ws"
   # Geräte (öffentliche Schlüssel), Kopplungscodes, Bridge-ID und der

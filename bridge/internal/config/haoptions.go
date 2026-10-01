@@ -32,6 +32,7 @@ type HAOptions struct {
 	LanURL           string `json:"lan_url"`
 	TunnelPort       int    `json:"tunnel_port"`
 	Tailscale        bool   `json:"tailscale"`
+	Bonjour          *bool  `json:"bonjour"`
 	FritzBoxHost     string `json:"fritzbox_host"`
 	SIPUsername      string `json:"sip_username"`
 	SIPPassword      string `json:"sip_password"`
@@ -78,6 +79,7 @@ func (o HAOptions) Config() Config {
 	c.Bridge.TrustedProxies = []string{HANetwork}
 	c.Bridge.ExcludedNetworks = []string{HANetwork}
 	c.Bridge.Tailscale = o.Tailscale
+	c.Bridge.Bonjour = o.Bonjour
 	setIf(&c.Bridge.Name, o.BridgeName)
 	c.Bridge.PublicURL = strings.TrimSpace(o.PublicURL)
 	c.Bridge.LanURL = strings.TrimSpace(o.LanURL)

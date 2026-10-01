@@ -135,6 +135,37 @@ final class BridgeConnection {
             platform: .ios,
             model: Self.hardwareModel
         )
+        try adopt(credentials)
+    }
+
+    /// Pairing in the home network without a QR code (ADR-0007), step 1:
+    /// talks to the bridge found via Bonjour and returns the confirmation
+    /// code to show.
+    func startLanPairing(lanURL: URL) async throws -> LanPairingSession {
+        try await BridgeHTTPClient(keyStore: keyStore).startLanPairing(
+            lanURL: lanURL,
+            deviceName: UIDevice.current.name,
+            model: Self.hardwareModel
+        )
+    }
+
+    /// Step 2: waits for the admin on the bridge; on approval the new
+    /// pairing replaces the old one like a QR pairing.
+    func finishLanPairing(_ session: LanPairingSession) async throws -> LanPairingOutcome {
+        let outcome = try await BridgeHTTPClient(keyStore: keyStore).waitForLanApproval(session)
+        if case .approved(let credentials) = outcome {
+            try adopt(credentials)
+        }
+        return outcome
+    }
+
+    func cancelLanPairing(_ session: LanPairingSession) {
+        BridgeHTTPClient(keyStore: keyStore).cancelLanPairing(session)
+    }
+
+    /// Saves new credentials and switches to them; the old pairing's key
+    /// is deleted only after the new one is stored.
+    private func adopt(_ credentials: BridgeCredentials) throws {
         do {
             try store.save(credentials)
         } catch {

@@ -110,6 +110,16 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /v1/pairing/{code}", func(w http.ResponseWriter, r *http.Request) {
 		s.reply(w, map[string]bool{"revoked": true}, s.svc.RevokePairing(r.PathValue("code")))
 	})
+	mux.HandleFunc("GET /v1/lan-pairings", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, s.svc.LanPairings())
+	})
+	mux.HandleFunc("POST /v1/lan-pairings/{id}/approve", func(w http.ResponseWriter, r *http.Request) {
+		dev, err := s.svc.ApproveLanPairing(r.PathValue("id"))
+		s.reply(w, dev, err)
+	})
+	mux.HandleFunc("POST /v1/lan-pairings/{id}/deny", func(w http.ResponseWriter, r *http.Request) {
+		s.reply(w, map[string]bool{"denied": true}, s.svc.DenyLanPairing(r.PathValue("id")))
+	})
 	mux.HandleFunc("GET /v1/calls", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, http.StatusOK, s.svc.Calls()) })
 	mux.HandleFunc("GET /v1/stats", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, http.StatusOK, s.svc.Stats()) })
 	mux.HandleFunc("GET /v1/logs", func(w http.ResponseWriter, r *http.Request) {

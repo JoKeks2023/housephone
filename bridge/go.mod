@@ -10,8 +10,10 @@ require (
 	github.com/emiago/diago v0.40.0
 	github.com/emiago/sipgo v1.6.0
 	github.com/google/uuid v1.6.0
+	github.com/hashicorp/mdns v1.0.7
 	github.com/icholy/digest v1.1.0
 	github.com/mdp/qrterminal/v3 v3.2.1
+	github.com/miekg/dns v1.1.72
 	github.com/pion/ice/v4 v4.4.0
 	github.com/pion/interceptor v0.1.47
 	github.com/pion/rtp v1.10.5
@@ -62,11 +64,13 @@ require (
 	github.com/wlynxg/anet v0.0.5 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/zaf/g711 v1.4.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
 	gopkg.in/hraban/opus.v2 v2.0.0-20230925203106-0188a62cb302 // indirect
 )

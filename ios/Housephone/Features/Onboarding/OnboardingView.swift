@@ -7,6 +7,10 @@ struct OnboardingView: View {
     @State private var showsScanner = false
     @State private var scannedLink: PairingLink?
     @State private var setsUpDirect = false
+    @State private var browser = BridgeBrowser()
+    @State private var lanTarget: LanPairingTarget?
+    @State private var entersAddress = false
+    @State private var typedAddress: URL?
 
     var body: some View {
         ScrollView {
@@ -39,6 +43,20 @@ struct OnboardingView: View {
         .sheet(isPresented: $setsUpDirect) {
             DirectSetupView()
         }
+        .sheet(item: $lanTarget) { target in
+            LanPairingView(target: target)
+        }
+        .sheet(isPresented: $entersAddress, onDismiss: {
+            if let typedAddress {
+                self.typedAddress = nil
+                lanTarget = .address(typedAddress)
+            }
+        }) {
+            LanAddressEntryView { url in typedAddress = url }
+        }
+        // Browse only while this screen is visible.
+        .onAppear { browser.start() }
+        .onDisappear { browser.stop() }
     }
 
     private var header: some View {
@@ -69,16 +87,32 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
-            Button {
-                showsScanner = true
-            } label: {
-                Label("QR-Code der Bridge scannen", systemImage: "qrcode.viewfinder")
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Theme.Space.s2)
+            DiscoveredBridgesView(browser: browser) { found in
+                lanTarget = .discovered(found)
             }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
+            if browser.bridges.isEmpty {
+                Button {
+                    showsScanner = true
+                } label: {
+                    Label("QR-Code der Bridge scannen", systemImage: "qrcode.viewfinder")
+                        .font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Space.s2)
+                }
+                .buttonStyle(.glassProminent)
+                .controlSize(.large)
+            } else {
+                Button {
+                    showsScanner = true
+                } label: {
+                    Label("Mit QR-Code koppeln", systemImage: "qrcode.viewfinder")
+                        .font(.body.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Space.s1)
+                }
+                .buttonStyle(.glass)
+                .controlSize(.large)
+            }
 
             PasteButton(payloadType: String.self) { strings in
                 guard let text = strings.first else { return }
@@ -89,6 +123,12 @@ struct OnboardingView: View {
                 }
             }
             .buttonBorderShape(.capsule)
+            .tint(.secondary)
+
+            Button("Adresse eingeben (Tailscale)") {
+                entersAddress = true
+            }
+            .font(.footnote)
             .tint(.secondary)
 
             Text("Den QR-Code zeigt dein Server mit `housephone-bridge pair` an – oder kopiere den Kopplungslink und tippe auf „Einsetzen“.")
@@ -176,5 +216,68 @@ struct AmbientGlow: View {
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+/// The bridges Bonjour found in the home network, each one tap away from
+/// pairing; while none is found, a quiet search hint.
+private struct DiscoveredBridgesView: View {
+    let browser: BridgeBrowser
+    var onSelect: (DiscoveredBridge) -> Void
+
+    var body: some View {
+        if browser.bridges.isEmpty {
+            switch browser.state {
+            case .searching:
+                Label {
+                    Text("Suche im Heim-WLAN nach deiner Bridge …")
+                } icon: {
+                    ProgressView()
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            case .denied:
+                VStack(alignment: .leading, spacing: Theme.Space.s1) {
+                    Text("Housephone darf das lokale Netzwerk nicht nutzen und findet deine Bridge deshalb nicht.")
+                    Link("In den Einstellungen erlauben", destination: URL(string: UIApplication.openSettingsURLString)!)
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            case .idle, .failed:
+                EmptyView()
+            }
+        } else {
+            ForEach(browser.bridges) { found in
+                Button {
+                    onSelect(found)
+                } label: {
+                    HStack(spacing: Theme.Space.s3) {
+                        Image(systemName: "house.fill")
+                            .font(.title3)
+                            .foregroundStyle(Color.accentColor)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Bridge „\(found.name)“ gefunden")
+                                .font(.body.weight(.semibold))
+                            Text("Im Heim-WLAN – tippen zum Koppeln")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, Theme.Space.s2)
+                }
+                .buttonStyle(.glassProminent)
+                .controlSize(.large)
+                .accessibilityHint(Text("Koppelt dieses iPhone mit der Bridge, nachdem du einen Code verglichen hast."))
+            }
+        }
     }
 }

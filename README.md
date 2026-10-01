@@ -249,6 +249,17 @@ Auf [developer.apple.com → Identifiers](https://developer.apple.com/account/re
 
 ### 7 · iPhone koppeln
 
+**Im Heim-WLAN ohne QR-Code:** Housephone öffnen. Die App findet die Bridge von selbst („Bridge „Zuhause“ gefunden“) → antippen → **Koppeln**. Das iPhone zeigt jetzt einen **sechsstelligen Code**. Gib ihn auf der Bridge frei, aber nur, wenn dort derselbe Code steht:
+
+```sh
+./housephone devices pending          # offene Anfragen mit Code
+./housephone devices approve <ID>     # fragt: Zeigt das iPhone genau diesen Code?
+```
+
+Oder in der TUI (`./housephone tui`, Taste **3**, dann **a**) bzw. im Home-Assistant-Dashboard. Danach **Mikrofon erlauben** → fertig ✅
+
+**Mit QR-Code** (erstes Gerät ohne Bonjour, Tailscale, Rückfall):
+
 ```sh
 ./housephone pair -name "iPhone Joris"
 ```
@@ -257,7 +268,8 @@ Im Terminal erscheint ein **QR-Code**. In der App → **QR-Code scannen** → **
 
 - **Koppeln geht nur zu Hause:** Das iPhone muss im **Heim-WLAN** sein (oder per **Tailscale** verbunden, siehe unten). Gekoppelt wird über den privaten Zugang der Bridge (Port `8081`), nicht über den Tunnel. Unterwegs zeigt die App „Zum Koppeln ins Heim-WLAN oder Tailscale“.
 - Für Port `8081` **keine Portfreigabe** in der FRITZ!Box einrichten. Er nimmt ohnehin nur Verbindungen aus dem Heimnetz an.
-- Die App prüft dabei, dass sie **deine** Bridge erreicht; der Fingerabdruck steckt im QR-Code.
+- Die App prüft dabei, dass sie **deine** Bridge erreicht: beim QR-Code über den Fingerabdruck darin, ohne QR-Code über den Code, den du vergleichst. Ein Angreifer im WLAN trifft denselben Code nur mit 1 zu 1 000 000.
+- Gefunden wird die Bridge per Bonjour (`_housephone._tcp`). Abschalten mit `bonjour: false` unter `bridge:`.
 - `pair` meldet, welches Gerät den Code benutzt hat. Warst du es nicht, reicht `./housephone devices remove <ID>`.
 - **Die Watch koppelt sich automatisch**, sobald das iPhone im Heimnetz ist. Auf der Uhr musst du nie etwas scannen.
 - Zu Hause telefoniert die App direkt über das WLAN mit der Bridge, unterwegs über den Tunnel. Sie wechselt von selbst.
@@ -301,6 +313,7 @@ Alle Befehle im Ordner `housephone/bridge`:
 |---|---|
 | 🖥 Admin-Oberfläche | `./housephone tui` |
 | ➕ Gerät koppeln | `./housephone pair -name "iPad"` |
+| ✅ Kopplung ohne QR freigeben | `./housephone devices pending`, dann `./housephone devices approve <ID>` |
 | 📋 Geräte anzeigen | `./housephone devices list` |
 | 🗑 Gerät entfernen (wirkt sofort) | `./housephone devices remove <ID>` |
 | 🔑 Fingerabdruck der Bridge | `./housephone identity` |

@@ -113,6 +113,18 @@ func (c *Client) RevokePairing(ctx context.Context, code string) error {
 	return c.do(ctx, http.MethodDelete, "/v1/pairing/"+url.PathEscape(code), nil, nil)
 }
 
+func (c *Client) LanPairings(ctx context.Context) (l []LanPairingRequest, err error) {
+	return l, c.do(ctx, http.MethodGet, "/v1/lan-pairings", nil, &l)
+}
+
+func (c *Client) ApproveLanPairing(ctx context.Context, id string) (d DeviceInfo, err error) {
+	return d, c.do(ctx, http.MethodPost, "/v1/lan-pairings/"+url.PathEscape(id)+"/approve", nil, &d)
+}
+
+func (c *Client) DenyLanPairing(ctx context.Context, id string) error {
+	return c.do(ctx, http.MethodPost, "/v1/lan-pairings/"+url.PathEscape(id)+"/deny", nil, nil)
+}
+
 func (c *Client) Calls(ctx context.Context) (v CallsView, err error) {
 	return v, c.do(ctx, http.MethodGet, "/v1/calls", nil, &v)
 }

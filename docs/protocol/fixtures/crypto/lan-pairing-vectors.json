@@ -1,0 +1,41 @@
+{
+  "description": "HP2 pairing in the home network (ADR-0007). Long-term keys as in hp2-vectors.json. base64url without padding, hex lowercase. The ECDSA proof is random: verify it, do not reproduce it. Everything else is deterministic.",
+  "ids": {
+    "bridgeId": "e7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e",
+    "deviceId": "9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+    "pairingId": "oKGio6SlpqeoqaqrrK2urw"
+  },
+  "keys": {
+    "bridgeEphemeralPrivateX25519Hex": "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb",
+    "bridgeEphemeralPublic": "3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08",
+    "bridgeNonce": "ICEiIyQlJicoKSorLC0uLw",
+    "bridgePublicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+    "deviceEphemeralPrivateX25519Hex": "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
+    "deviceEphemeralPublic": "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo",
+    "deviceNonce": "EBESExQVFhcYGRobHB0eHw",
+    "devicePublicKeyX963": "BGD-1LolWp0xyWHrdMY1bWjASbiSO2H6bOZpYi5g8p-2eQP-EAi4vJmkGunpVii8ZPLxsgwtfp9Rd6PClNRGIpk"
+  },
+  "steps": {
+    "approvalPlaintext": "{\"bridgeId\":\"e7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\",\"bridgeName\":\"Zuhause\",\"deviceId\":\"9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d\",\"lanUrl\":\"ws://192.168.178.20:8081/v1/ws\",\"publicUrl\":\"wss://housephone.example.org/v1/ws\",\"signature\":\"xr5_AxAza1B7Z2HXn2NPAx931MxPwjHets7xmztOVk0vS12UEPlDtlpE7ppo4G0jb-WTws9dC6JAHTCq7LOdAA\"}",
+    "approvalSealed": "PPzUmINosyfIqzdHw6CKcKlcGu9jQP2ng-feIIor9BOwBd1Z2smKGaBJAhGx6GUhx8jlrpfaLOOXJTKs9pP4dejSbp3m8H0xdL2p61Gz57Dnsb9aBMKXY_IAOPMM0bSFmsDQ_E9IL6UfwB3d9cE9zne7j55vxjBJK5Mf8gq2PrbpsdtfqL4LMobmTb68nHi9IaoKpb7ke-sWdQfAYRVlOR104p0HwehhMgHkZL1yKWKrM7WtDEVWXv6z_Qg_RvKm-BeHhLFbyHEEqmxNSgsx8ajs63dtVMloDoZS6kSQtSy2MWuW7bvsE2R2uHBmKt578-Inzu89UGStHBTGemiTpuc7YFJMjLxd6aU990DsYqnwB8XgiirNtTdqClBSqbY11bHcW6owVLXRwCJFcEvmnhG9WKThK0nDlBiu4bJHF0rNAaqqlgvV3jO4Mb4",
+    "approvalSealedHex": "3cfcd4988368b327c8ab3747c3a08a70a95c1aef6340fda783e7de208a2bf413b005dd59dac98a19a0490211b1e86521c7c8e5ae97da2ce3972532acf693f875e8d26e9de6f07d3174bda9eb51b3e7b0e7b1bf5a04c29763f20038f30cd1b4859ac0d0fc4f482fa51fc01dddf5c13dce77bb8f9e6fc630492b931ff20ab63eb6e9b1db5fa8be0b3286e64dbebc9c78bd21aa0aa5bee47beb167507c0611565391d74e29d07c1e8613201e464bd722962ab33b5ad0c45565efeb3fd083f46f2a6f8178784b15bc87104aa6c4d4a0b31f1a8eceb776d54c9680e8652ea4490b52cb6316b96edbbec136476b870662ade7bf3e227ceef3d5064ad1c14c67a6893a6e73b60524c8cbc5de9a53df740ec62a9f007c5e08a2acdb5376a0a5052a9b635d5b1dc5baa3054b5d1c02245704be69e11bd58a4e12b49c39418aee1b247174acd01aaaa960bd5de33b831be",
+    "approvedMessage": "HP2-LAN-APPROVED\npPiP9MQb5dHRIUfvDnLPcQVuLDjlTEWsBPp3n2ZH4w0\n9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d\ne7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\nwss://housephone.example.org/v1/ws\nws://192.168.178.20:8081/v1/ws",
+    "approvedSignature": "xr5_AxAza1B7Z2HXn2NPAx931MxPwjHets7xmztOVk0vS12UEPlDtlpE7ppo4G0jb-WTws9dC6JAHTCq7LOdAA",
+    "commitMessage": "HP2-LAN-COMMIT\nBGD-1LolWp0xyWHrdMY1bWjASbiSO2H6bOZpYi5g8p-2eQP-EAi4vJmkGunpVii8ZPLxsgwtfp9Rd6PClNRGIpk\nhSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo\nEBESExQVFhcYGRobHB0eHw",
+    "commitment": "WyNCtKao94cYLsvjIZYri4NGo0PDP7Wz91aHeJQP2nw",
+    "offerMessage": "HP2-LAN-OFFER\noKGio6SlpqeoqaqrrK2urw\ne7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\nBGD-1LolWp0xyWHrdMY1bWjASbiSO2H6bOZpYi5g8p-2eQP-EAi4vJmkGunpVii8ZPLxsgwtfp9Rd6PClNRGIpk\nWyNCtKao94cYLsvjIZYri4NGo0PDP7Wz91aHeJQP2nw\n11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo\n3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08\nICEiIyQlJicoKSorLC0uLw",
+    "offerSignature": "6SpcWIo3ZyLDoizfkD54L0ETEmUY8oC4LAAqqBJHbigIeDemYWT1uCmSA2VSj4Czlpvn1P-4kyduevNpwaAgBg",
+    "proofMessage": "HP2-LAN-PROOF\npPiP9MQb5dHRIUfvDnLPcQVuLDjlTEWsBPp3n2ZH4w0",
+    "proofSignature": "QBmsmXFMXdZ9NUCLG27pGu-mZXsfzaq3hlfg5mM-adLdLp6RFXY5mUodpkK3pwM5Xb7-fDR8iZmllJTMq-hMKQ",
+    "sas": "882671",
+    "sasOkmHex": "697e442f",
+    "sealKeyHex": "60a77421024c37d73747ada389f5ecfc679ab4621d5c201263d069b9494932ff",
+    "sharedSecretHex": "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742",
+    "transcriptHashHex": "a4f88ff4c41be5d1d12147ef0e72cf71056e2c38e54c45ac04fa779f6647e30d",
+    "transcriptMessage": "HP2-LAN-TRANSCRIPT\noKGio6SlpqeoqaqrrK2urw\ne7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\nBGD-1LolWp0xyWHrdMY1bWjASbiSO2H6bOZpYi5g8p-2eQP-EAi4vJmkGunpVii8ZPLxsgwtfp9Rd6PClNRGIpk\nWyNCtKao94cYLsvjIZYri4NGo0PDP7Wz91aHeJQP2nw\n11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo\n3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08\nICEiIyQlJicoKSorLC0uLw\nhSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo\nEBESExQVFhcYGRobHB0eHw"
+  },
+  "urls": {
+    "lanUrl": "ws://192.168.178.20:8081/v1/ws",
+    "publicUrl": "wss://housephone.example.org/v1/ws"
+  }
+}

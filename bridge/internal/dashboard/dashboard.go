@@ -38,6 +38,9 @@ type Service interface {
 	CreatePairing(name string) (admin.PairingInfo, error)
 	PairingState(code string) (admin.PairingState, error)
 	RevokePairing(code string) error
+	LanPairings() []admin.LanPairingRequest
+	ApproveLanPairing(id string) (admin.DeviceInfo, error)
+	DenyLanPairing(id string) error
 	Calls() admin.CallsView
 }
 
@@ -75,6 +78,7 @@ func New(svc Service, gate Gate, log *slog.Logger) *Dashboard {
 		"since": func(l lang, t time.Time) string { return l.since(d.now().Sub(t)) },
 		"clock": func(t time.Time) string { return t.Local().Format("15:04") },
 		"date":  func(t time.Time) string { return t.Local().Format("02.01.2006 15:04") },
+		"sas":   admin.GroupSAS,
 	}).ParseFS(templateFS, "templates/*.html"))
 	return d
 }
@@ -88,6 +92,8 @@ func (d *Dashboard) Handler() http.Handler {
 	mux.HandleFunc("POST /pair", d.post(d.pair))
 	mux.HandleFunc("GET /pair/{code}/state", d.pairState)
 	mux.HandleFunc("POST /pair/{code}/revoke", d.post(d.revoke))
+	mux.HandleFunc("POST /lan/{id}/approve", d.post(d.approveLan))
+	mux.HandleFunc("POST /lan/{id}/deny", d.post(d.denyLan))
 	mux.HandleFunc("POST /devices/{id}/rename", d.post(d.rename))
 	mux.HandleFunc("GET /devices/{id}/remove", d.confirmRemove)
 	mux.HandleFunc("POST /devices/{id}/remove", d.post(d.remove))
@@ -156,6 +162,7 @@ type msg struct {
 }
 
 type overviewData struct {
+	Lan     []admin.LanPairingRequest
 	Status  admin.Status
 	Devices []admin.DeviceInfo
 	Calls   []callRow
@@ -180,7 +187,7 @@ func (d *Dashboard) overview(w http.ResponseWriter, r *http.Request) {
 	for _, c := range d.svc.Calls().Active {
 		calls = append(calls, callRow{CallInfo: c, DeviceName: names[c.DeviceID]})
 	}
-	d.render(w, r, http.StatusOK, "overview.html", overviewData{Status: d.svc.Status(), Devices: devices, Calls: calls})
+	d.render(w, r, http.StatusOK, "overview.html", overviewData{Lan: d.svc.LanPairings(), Status: d.svc.Status(), Devices: devices, Calls: calls})
 }
 
 type pairingData struct {
@@ -242,6 +249,31 @@ func (d *Dashboard) pairState(w http.ResponseWriter, r *http.Request) {
 
 func (d *Dashboard) revoke(w http.ResponseWriter, r *http.Request) {
 	if err := d.svc.RevokePairing(r.PathValue("code")); err != nil && !errors.Is(err, admin.ErrNotFound) {
+		d.fail(w, r, err)
+		return
+	}
+	d.redirectHome(w, r)
+}
+
+// approveLan approves a pairing request from the home network. The page
+// showed its SAS next to the button.
+func (d *Dashboard) approveLan(w http.ResponseWriter, r *http.Request) {
+	dev, err := d.svc.ApproveLanPairing(r.PathValue("id"))
+	if errors.Is(err, admin.ErrNotFound) {
+		l := langFor(r)
+		d.render(w, r, http.StatusNotFound, "message.html", msg{Title: l.T("lanGone"), Detail: l.T("lanGoneDetail")})
+		return
+	}
+	if err != nil {
+		d.fail(w, r, err)
+		return
+	}
+	d.log.Info("LAN pairing approved via dashboard", "device", dev.ID)
+	d.redirectHome(w, r)
+}
+
+func (d *Dashboard) denyLan(w http.ResponseWriter, r *http.Request) {
+	if err := d.svc.DenyLanPairing(r.PathValue("id")); err != nil && !errors.Is(err, admin.ErrNotFound) {
 		d.fail(w, r, err)
 		return
 	}

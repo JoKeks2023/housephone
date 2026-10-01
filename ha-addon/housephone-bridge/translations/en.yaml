@@ -14,6 +14,9 @@ configuration:
   tailscale:
     name: Allow Tailscale
     description: Pairing and direct connections over Tailscale (100.64.0.0/10) too.
+  bonjour:
+    name: Announce in the home network (Bonjour)
+    description: The app finds the bridge on the Wi-Fi without a QR code. You approve pairing in the dashboard when the code on the iPhone matches.
   fritzbox_host:
     name: FRITZ!Box address
     description: LAN IP of the FRITZ!Box, e.g. 192.168.178.1.

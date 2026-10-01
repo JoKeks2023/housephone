@@ -89,6 +89,29 @@ type PairingState struct {
 	Device  *DeviceInfo `json:"device,omitempty"`
 }
 
+// LanPairingRequest is a device in the home network that asked to pair
+// without a QR code (ADR-0007) and waits for an admin. The admin approves
+// only if the device shows the same SAS.
+type LanPairingRequest struct {
+	ID             string    `json:"id"`
+	DeviceName     string    `json:"deviceName"`
+	Platform       string    `json:"platform"`
+	Model          string    `json:"model,omitempty"`
+	IP             string    `json:"ip"`
+	SAS            string    `json:"sas"`
+	KeyFingerprint string    `json:"keyFingerprint"`
+	CreatedAt      time.Time `json:"createdAt"`
+	ExpiresAt      time.Time `json:"expiresAt"`
+}
+
+// GroupSAS formats a confirmation code as "123 456".
+func GroupSAS(sas string) string {
+	if len(sas) != 6 {
+		return sas
+	}
+	return sas[:3] + " " + sas[3:]
+}
+
 // CallsView is the call list.
 type CallsView struct {
 	Active []CallInfo `json:"active"`
@@ -127,6 +150,10 @@ type Service interface {
 	CreatePairing(name string) (PairingInfo, error)
 	PairingState(code string) (PairingState, error)
 	RevokePairing(code string) error
+	// LanPairings lists the requests waiting for approval (ADR-0007).
+	LanPairings() []LanPairingRequest
+	ApproveLanPairing(id string) (DeviceInfo, error)
+	DenyLanPairing(id string) error
 	Calls() CallsView
 	Stats() Stats
 	Logs(after uint64) LogsView
