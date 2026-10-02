@@ -19,6 +19,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -65,7 +66,11 @@ type Dashboard struct {
 	csrf string
 	// PollInterval is how often a pairing wait checks the code.
 	PollInterval time.Duration
-	now          func() time.Time
+	// AddonSlug is the add-on's slug in Home Assistant; with it the page
+	// links straight to the add-on options. Empty hides that link.
+	AddonSlug string
+	remote    *remoteCheck
+	now       func() time.Time
 }
 
 // New creates the dashboard.
@@ -77,6 +82,7 @@ func New(svc Service, gate Gate, log *slog.Logger) *Dashboard {
 	d := &Dashboard{
 		svc: svc, gate: gate, log: log.With("component", "dashboard"),
 		csrf: hex.EncodeToString(token), PollInterval: 300 * time.Millisecond, now: time.Now,
+		remote: newRemoteCheck(),
 	}
 	d.tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		"since": func(l lang, t time.Time) string { return l.since(d.now().Sub(t)) },
@@ -185,7 +191,24 @@ type overviewData struct {
 	// on the profile choices.
 	Profiles     []admin.ProfileInfo
 	MultiProfile bool
+	Remote       remoteView
 }
+
+// remoteView is the "from anywhere" card: whether devices reach the bridge
+// through the tunnel, and the links to set it up.
+type remoteView struct {
+	remoteResult
+	// TunnelService is what the tunnel's public hostname points at.
+	TunnelService string
+	CloudflareURL string
+	// OptionsURL opens the add-on options in Home Assistant (top frame).
+	OptionsURL string
+}
+
+func (v remoteView) Missing() bool  { return v.State == remoteMissing }
+func (v remoteView) Checking() bool { return v.State == remoteChecking }
+func (v remoteView) OK() bool       { return v.State == remoteOK }
+func (v remoteView) Failed() bool   { return v.State == remoteFailed }
 
 type callRow struct {
 	admin.CallInfo
@@ -212,9 +235,18 @@ func (d *Dashboard) overview(w http.ResponseWriter, r *http.Request) {
 	for _, c := range d.svc.Calls().Active {
 		calls = append(calls, callRow{CallInfo: c, DeviceName: names[c.DeviceID], ProfileName: profileNames[c.Profile]})
 	}
+	remote := remoteView{
+		remoteResult:  d.remote.Result(status.PublicURL),
+		TunnelService: "http://" + status.Listen,
+		CloudflareURL: CloudflareTunnelsURL,
+	}
+	if d.AddonSlug != "" {
+		remote.OptionsURL = "/hassio/addon/" + url.PathEscape(d.AddonSlug) + "/config"
+	}
 	d.render(w, r, http.StatusOK, "overview.html", overviewData{
 		Lan: d.svc.LanPairings(), Status: status, Devices: devices, Calls: calls,
 		Profiles: status.Profiles, MultiProfile: len(status.Profiles) > 1,
+		Remote: remote,
 	})
 }
 

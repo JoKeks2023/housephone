@@ -25,18 +25,28 @@ dabei Ende-zu-Ende verschlüsselt; Relay und Apple sehen sie nicht.
 
 ## Cloudflare Tunnel
 
-Der Tunnel steckt nicht im Add-on. Nimm das Cloudflared-Add-on und trage
-unter `additional_hosts` die Bridge ein:
+Der Tunnel steckt nicht im Add-on; nimm das Cloudflared-Add-on. Die Karte
+**Von unterwegs** im Dashboard führt durch die zwei Schritte und prüft am
+Ende selbst, ob die Bridge von außen erreichbar ist:
 
-```yaml
-additional_hosts:
-  - hostname: phone.example.com
-    service: http://172.30.32.1:8080
-```
+1. **Cloudflare öffnen** → deinen Tunnel wählen → *Public Hostname*
+   hinzufügen, z. B. `phone.example.com`, Service `HTTP`, Adresse
+   `172.30.32.1:8080` (zum Kopieren auf der Karte).
+   Läuft Cloudflared ohne Token (lokaler Modus), stattdessen in dessen
+   Optionen:
+
+   ```yaml
+   additional_hosts:
+     - hostname: phone.example.com
+       service: http://172.30.32.1:8080
+   ```
+
+2. **Optionen öffnen** → bei *Öffentliche Adresse* nur den Hostnamen
+   eintragen (`phone.example.com`), speichern, Add-on neu starten.
+   `wss://…/v1/ws` ergänzt die Bridge.
 
 Die Bridge lauscht für den Tunnel nur auf `172.30.32.1` (dem Home-Assistant-
-Netz), nicht im LAN. *Öffentliche URL* ist dann
-`wss://phone.example.com/v1/ws`.
+Netz), nicht im LAN.
 
 Über den Tunnel läuft nur Telefonie gekoppelter Geräte. Koppeln geht nur im
 Heimnetz (oder per Tailscale), auf Port 8081. Anfragen aus dem
@@ -83,7 +93,7 @@ Und du kannst dort:
 | Option | Bedeutung |
 | --- | --- |
 | Name der Bridge | Anzeige in der App |
-| Öffentliche URL | `wss://…/v1/ws` über den Tunnel |
+| Öffentliche Adresse | Hostname des Tunnels, z. B. `phone.example.com` (oder eine volle `wss://…/v1/ws`-URL) |
 | Heimnetz-URL | leer = automatisch aus der LAN-IP; mit Tailscale die Tailscale-IP |
 | Tunnel-Port | Port auf 172.30.32.1 für Cloudflared (Standard 8080) |
 | Tailscale erlauben | Koppeln und Direktverbindung auch über Tailscale |

@@ -3,8 +3,8 @@ configuration:
     name: Name der Bridge
     description: So heißt die Bridge in der App, z. B. „Zuhause“.
   public_url:
-    name: Öffentliche URL
-    description: WebSocket-URL über den Cloudflare Tunnel, z. B. wss://phone.example.com/v1/ws.
+    name: Öffentliche Adresse
+    description: Hostname des Cloudflare Tunnels, z. B. phone.example.com. Die Bridge ergänzt wss://…/v1/ws. Das Dashboard zeigt, ob es klappt.
   lan_url:
     name: Heimnetz-URL (optional)
     description: Leer lassen, dann wird sie aus der LAN-IP abgeleitet. Mit Tailscale die Tailscale-IP, z. B. ws://100.101.102.103:8081/v1/ws.

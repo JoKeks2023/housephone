@@ -113,7 +113,7 @@ jobs:
           docker network create --subnet 172.30.32.0/23 --gateway 172.30.32.1 hassio
           mkdir -p "$RUNNER_TEMP/addon-data"
           cat > "$RUNNER_TEMP/addon-data/options.json" <<'EOF'
-          {"bridge_name": "CI", "public_url": "wss://phone.example.com/v1/ws", "tunnel_port": 8080,
+          {"bridge_name": "CI", "public_url": "phone.example.com", "tunnel_port": 8080,
            "tailscale": false, "fritzbox_host": "192.168.178.1", "sip_username": "ci",
            "sip_password": "ci-secret-value", "push_relay": "off",
            "log_level": "info"}

@@ -123,7 +123,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 			// Assistant has authenticated the user.
 			gate := dashboard.SupervisorGate{Proxy: netip.MustParseAddr(config.HAIngressProxy)}
 			listen := net.JoinHostPort(config.HAGateway, strconv.Itoa(config.HAIngressPort))
-			return serve(cfg, stderr, app.WithDashboard(listen, gate))
+			return serve(cfg, stderr, app.WithDashboard(listen, gate, addonSlug(stderr)))
 		}
 		cfg, err := config.Load(*configPath, false)
 		if err != nil {
@@ -525,4 +525,20 @@ func removeDevice(reg *store.Devices, pairing *store.Pairing, args []string, out
 	}
 	fmt.Fprintln(out, "Offene Verbindungen trennt die laufende Bridge innerhalb von 10 s; laufende Anrufe dieser Geräte werden beendet.")
 	return nil
+}
+
+// addonSlug asks the Supervisor for the add-on's slug so the dashboard can
+// link to the options. Without it the link is just missing.
+func addonSlug(stderr io.Writer) string {
+	token := os.Getenv("SUPERVISOR_TOKEN")
+	if token == "" {
+		return ""
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	slug, err := dashboard.SupervisorAddonSlug(ctx, token)
+	if err != nil {
+		fmt.Fprintln(stderr, "add-on slug unknown, dashboard without options link:", err)
+	}
+	return slug
 }

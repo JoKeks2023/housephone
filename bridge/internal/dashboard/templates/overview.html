@@ -27,6 +27,28 @@
 <div><dt>{{$L.T "version"}}</dt><dd>{{.Version}}<small>{{$L.T "running"}}: {{since $L .StartedAt}}</small></dd></div>
 </dl>
 </section>
+{{end}}{{with .Data.Remote}}
+<section class="card{{if not .OK}} attention{{end}}" id="remote">
+<h2>{{$L.T "remoteTitle"}}</h2>
+<p>{{if .OK}}<span class="dot ok"></span>{{$L.T "remoteOK"}} <code>{{.Host}}</code>{{else if .Checking}}<span class="dot warn"></span>{{$L.T "remoteChecking"}} <code>{{.Host}}</code>{{else if .Failed}}<span class="dot bad"></span>{{$L.T "remoteFailed"}} <code>{{.Host}}</code><small>{{.Error}}</small>{{else}}<span class="dot warn"></span>{{$L.T "remoteMissing"}}{{end}}</p>
+{{if not .OK}}<ol class="steps">
+<li>{{$L.T "remoteStep1"}}
+<div class="actions"><a class="button primary" href="{{.CloudflareURL}}" target="_blank" rel="noopener noreferrer">{{$L.T "remoteOpenCloudflare"}}</a></div>
+<small>{{$L.T "remoteStep1Detail"}}</small>
+<div class="copy"><input readonly value="{{.TunnelService}}" aria-label="{{$L.T "remoteService"}}"><button type="button" data-copy data-done="{{$L.T "copied"}}">{{$L.T "copy"}}</button></div>
+<details><summary>{{$L.T "remoteLocalMode"}}</summary>
+<p class="muted">{{$L.T "remoteLocalHint"}}</p>
+<pre class="copyable">additional_hosts:
+  - hostname: {{if .Host}}{{.Host}}{{else}}phone.example.com{{end}}
+    service: {{.TunnelService}}</pre>
+</details>
+</li>
+<li>{{$L.T "remoteStep2"}}
+{{with .OptionsURL}}<div class="actions"><a class="button primary" href="{{.}}" target="_top">{{$L.T "remoteOpenOptions"}}</a></div>{{end}}
+<small>{{$L.T "remoteStep2Detail"}}</small>
+</li>
+</ol>{{end}}
+</section>
 {{end}}{{if $multi}}
 <section class="card" data-refresh>
 <h2>{{$L.T "profiles"}}</h2>

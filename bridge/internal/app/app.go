@@ -44,15 +44,19 @@ type options struct {
 }
 
 type dashboardOptions struct {
-	listen string
-	gate   dashboard.Gate
+	listen    string
+	gate      dashboard.Gate
+	addonSlug string
 }
 
 // WithDashboard serves the web dashboard on its own listener behind gate.
 // Only the Home Assistant add-on uses it (ingress); plain Docker stays with
 // the shell and the TUI until HPHN-39 adds a passkey gate.
-func WithDashboard(listen string, gate dashboard.Gate) Option {
-	return func(o *options) { o.dashboard = &dashboardOptions{listen: listen, gate: gate} }
+// addonSlug, if known, lets the page link to the add-on options.
+func WithDashboard(listen string, gate dashboard.Gate, addonSlug string) Option {
+	return func(o *options) {
+		o.dashboard = &dashboardOptions{listen: listen, gate: gate, addonSlug: addonSlug}
+	}
 }
 
 // WithLogRing lets the admin API show the recent log lines of ring.
@@ -427,7 +431,9 @@ func (b *Bridge) Run(ctx context.Context) error {
 	}
 	var dashSrv *http.Server
 	if b.dashboardListener != nil {
-		dashSrv = newServer(dashboard.New(adminService{b: b}, b.dashboard.gate, b.log).Handler())
+		dash := dashboard.New(adminService{b: b}, b.dashboard.gate, b.log)
+		dash.AddonSlug = b.dashboard.addonSlug
+		dashSrv = newServer(dash.Handler())
 		go func() {
 			if err := dashSrv.Serve(b.dashboardListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				b.log.Warn("dashboard stopped", "error", err)

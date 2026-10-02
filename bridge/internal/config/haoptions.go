@@ -96,7 +96,7 @@ func (o HAOptions) Config() Config {
 	c.Bridge.Tailscale = o.Tailscale
 	c.Bridge.Bonjour = o.Bonjour
 	setIf(&c.Bridge.Name, o.BridgeName)
-	c.Bridge.PublicURL = strings.TrimSpace(o.PublicURL)
+	c.Bridge.PublicURL = NormalizePublicURL(o.PublicURL)
 	c.Bridge.LanURL = strings.TrimSpace(o.LanURL)
 	setIf(&c.SIP.Registrar, o.FritzBoxHost)
 	c.SIP.Username = strings.TrimSpace(o.SIPUsername)

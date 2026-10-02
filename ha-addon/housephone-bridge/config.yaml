@@ -1,5 +1,5 @@
 name: Housephone Bridge
-version: "0.3.1"
+version: "0.4.0"
 slug: housephone_bridge
 description: Telefonieren über die FRITZ!Box mit iPhone und Apple Watch, auch unterwegs
 url: https://github.com/JoKeks2023/housephone/tree/master/ha-addon/housephone-bridge
@@ -12,6 +12,9 @@ startup: services
 # listener 8081 and the FRITZ!Box UPnP lookup need the host network.
 host_network: true
 ingress: true
+# Only to read the add-on's own slug (GET /addons/self/info), so the
+# dashboard can link to these options.
+hassio_api: true
 # Ingress on the default port 8099 (config.HAIngressPort in the bridge).
 # panel_admin defaults to true: only Home Assistant admins see the panel.
 panel_icon: mdi:phone
@@ -29,7 +32,8 @@ options:
   log_level: info
 schema:
   bridge_name: str
-  public_url: match(^wss?://[^\s/]+(/.*)?$)
+  # The tunnel hostname is enough; the bridge completes wss://…/v1/ws.
+  public_url: match(^((wss?|https?)://)?[^\s/]+(/.*)?$)?
   lan_url: match(^ws://[^\s/]+(/.*)?$)?
   tunnel_port: port
   tailscale: bool

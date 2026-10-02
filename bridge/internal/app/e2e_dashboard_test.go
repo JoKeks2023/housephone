@@ -26,7 +26,7 @@ func TestEndToEndNoDashboardByDefault(t *testing.T) {
 // codes. The test gate admits loopback in place of the ingress proxy.
 func TestEndToEndDashboard(t *testing.T) {
 	gate := dashboard.SupervisorGate{Proxy: netip.MustParseAddr("127.0.0.1")}
-	w := startWorldWith(t, []app.Option{app.WithDashboard("127.0.0.1:0", gate)})
+	w := startWorldWith(t, []app.Option{app.WithDashboard("127.0.0.1:0", gate, "local_housephone_bridge")})
 	base := "http://" + w.bridge.DashboardAddr()
 
 	get := func(path string) string {
@@ -45,6 +45,10 @@ func TestEndToEndDashboard(t *testing.T) {
 	page := get("/")
 	if !strings.Contains(page, w.bridge.Key.Fingerprint()) || !strings.Contains(page, "Registered") {
 		t.Fatalf("overview lacks fingerprint or SIP state:\n%s", page)
+	}
+	// No public address yet: the setup steps link to the add-on options.
+	if !strings.Contains(page, `href="/hassio/addon/local_housephone_bridge/config" target="_top"`) {
+		t.Fatalf("overview lacks the options link:\n%s", page)
 	}
 	m := regexp.MustCompile(`name="csrf" value="([0-9a-f]+)"`).FindStringSubmatch(page)
 	if m == nil {

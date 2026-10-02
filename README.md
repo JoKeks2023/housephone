@@ -202,8 +202,8 @@ sudo chown -R 1000:1000 data secrets
 Die Bridge läuft auch als Add-on in deiner Home-Assistant-Instanz, mit Dashboard in der Seitenleiste (Status, Anrufe, Geräte, Koppeln per QR-Code, nur für HA-Admins).
 
 1. **Einstellungen → Add-ons → Add-on Store → ⋮ → Repositories**: `https://github.com/JoKeks2023/housephone` hinzufügen
-2. **Housephone Bridge** installieren, im Reiter **Konfiguration** FRITZ!Box, IP-Telefon und öffentliche URL eintragen, starten (kein Push-Schlüssel nötig)
-3. Den Tunnel übernimmt das Community-Add-on **Cloudflared** mit `service: http://172.30.32.1:8080`
+2. **Housephone Bridge** installieren, im Reiter **Konfiguration** FRITZ!Box und IP-Telefon eintragen, starten (kein Push-Schlüssel nötig)
+3. Für unterwegs: Die Karte **Von unterwegs** im Dashboard führt mit Buttons zu Cloudflare (Public Hostname auf `http://172.30.32.1:8080` im Tunnel des Community-Add-ons **Cloudflared**) und zurück in die Optionen; dort reicht der Hostname, z. B. `phone.deine-domain.de`. Die Karte prüft danach selbst, ob die Bridge erreichbar ist.
 4. Portfreigabe UDP 50000 auf den Home-Assistant-Rechner wie oben
 
 Schritt 4 (Compose), 5 (TUI) und 7 (Koppeln per Shell) entfallen: Status und Koppeln stehen im Dashboard. Alles Weitere steht in der [Add-on-Dokumentation](ha-addon/housephone-bridge/DOCS.md). Mit Home Assistant Container nimmst du Docker Compose wie oben.
