@@ -196,6 +196,13 @@ Die Bridge merkt sich beendete Anrufe **2 Minuten** lang. Ein Gerät, das sich d
 - `caller`/`callerName` sind leer, wenn die FRITZ!Box `anonymous`/`unknown` meldet; ein Anzeigename gleich der Nummer entfällt.
 - Das Gerät **muss** jeden VoIP-Push sofort per CallKit melden (Pflicht seit iOS 13). Auch dann, wenn der Anruf danach als `not_found` endet.
 
+### Versiegelte Pushes (v1.3, ADR-0010)
+
+- Meldet ein Gerät `pushKey` (X25519, base64url, 32 Byte) in `hello` oder `device.update`, ist die Nutzlast nur noch `{"sealed": "<base64url>"}`. Darin steckt dasselbe JSON wie oben, versiegelt nach ADR-0010; Testvektoren: `fixtures/crypto/push-vectors.json`.
+- `hello` ohne `pushKey` lässt den gespeicherten Schlüssel stehen. Ungültige Schlüssel (falsche Länge, Punkt kleiner Ordnung) ignoriert die Bridge.
+- Über das Push-Relay gehen nur versiegelte Pushes. Mit eigenem APNs-Key bekommen Geräte ohne `pushKey` weiter Klartext.
+- Kann das Gerät die Nutzlast nicht öffnen, meldet es trotzdem einen Anruf an CallKit und beendet ihn sofort.
+
 ## Medien (WebRTC)
 
 - Die Bridge ist immer der Offerer. Audio läuft als `sendrecv`, genau ein Audio-Track, kein Video, kein DataChannel.

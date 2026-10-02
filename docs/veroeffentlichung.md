@@ -6,11 +6,13 @@
 
 **Problem:** VoIP-Pushes an eine App-Store-App kann nur senden, wer den **APNs-Key des App-Anbieters** besitzt. Heute schickt jede Bridge die Pushes selbst mit diesem Key. Bei einer veröffentlichten App betreibt aber jeder Nutzer seine **eigene** Bridge, und der Anbieter kann seinen Key nicht an alle verteilen.
 
-**Vorschlag: Push-Relay des Anbieters**
-- **Ablauf:** Die Bridge schickt einen Push-Auftrag an einen kleinen Relay-Dienst des Anbieters, zum Beispiel einen Cloudflare Worker. Der Relay hält den APNs-Key und sendet an Apple weiter.
-- **Authentifizierung:** Jede Bridge hat ein eigenes Token, dazu kommen Rate-Limits pro Bridge und pro Gerät.
-- **Datenschutz:** Die Nutzlast (Nummer, Name) verschlüsselt die Bridge Ende-zu-Ende mit einem Geräteschlüssel aus der Kopplung. Der Relay sieht nur Push-Token und Zeitpunkt. Die App entschlüsselt im PushKit-Handler, bevor sie den Anruf an CallKit meldet.
-- **Noch zu prüfen:** ob Cloudflare Workers APNs (HTTP/2) direkt ansprechen können; sonst ein kleiner eigener Dienst.
+**Umgesetzt: Push-Relay des Anbieters** ([`ADR-0010`](architecture/ADR-0010-push-relay.md), HPHN-22, 2026-10-01)
+- **Ablauf:** Ohne eigenen Key schickt die Bridge den Push an `housephone-relay` (Docker Compose auf dem VPS des Anbieters, Code in einem privaten Repository). Das Relay hält den APNs-Key und sendet an Apple weiter.
+- **Datenschutz:** Die Bridge versiegelt Nummer und Name Ende-zu-Ende für den Push-Schlüssel des Geräts. Relay und Apple sehen nur Gerätetoken, Topic, Zeitpunkt und die Adresse der Bridge.
+- **Missbrauch:** nur eigene Topics, nur versiegelte Nutzlast, Rate-Limits pro Gerätetoken und Adresse. Ein Token pro Bridge gibt es nicht: Jeder kann die Bridge selbst bauen, ein Geheimnis darin wäre keins.
+- **Offen:**
+  - Relay auf dem VPS starten (Domain `housephone.relay.jorisconrad.com`, in `config.DefaultPushRelay` eingetragen). Bis dahin scheitern Pushes ohne eigenen Key; der Selbsttest zeigt das.
+  - Datenschutzangaben: Der Anbieter verarbeitet jetzt Gerätetokens (siehe Abschnitt 4).
 
 ## 2. Lizenz und Repository
 
@@ -43,7 +45,7 @@
     - **`NSPrivacyCollectedDataTypes` ist leer.** Die Apps senden Daten (Nummern, Namen, Push-Token, Ton) nur an die **eigene Bridge des Nutzers**; der Entwickler betreibt sie nicht und hat keinen Zugriff. Nach Apples Definition ist das keine Datenerhebung durch den Entwickler.
     - **Required-Reason-API:** Nur UserDefaults mit Grund **CA92.1** (nur für die App selbst lesbar). Das iPhone nutzt es über `@AppStorage` für Ansichtseinstellungen, die Watch für Kopplungsdatum und letzte Anrufe. Datei-Zeitstempel, Systemstartzeit, Speicherplatz-APIs und aktive Tastaturen verwendet der eigene Code nicht; das ist per Code-Suche geprüft.
     - **WebRTC** bringt ein eigenes Manifest mit (Systemstartzeit 35F9.1/8FFB.1, Datei-Zeitstempel C617.1).
-  - **Muss nachgezogen werden, sobald es das Push-Relay gibt:** Dann erhebt der Anbieter Push-Tokens und Gerätekennungen. Manifest (`NSPrivacyCollectedDataTypeDeviceID`, Zweck App-Funktion) und App-Datenschutzangaben anpassen.
+  - **Muss nachgezogen werden, sobald das Push-Relay läuft (ADR-0010):** Dann verarbeitet der Anbieter Push-Tokens (über die Bridge des Nutzers, nur im Speicher). Manifest (`NSPrivacyCollectedDataTypeDeviceID`, Zweck App-Funktion) und App-Datenschutzangaben anpassen.
   - Nutzungsbeschreibungen für Mikrofon, Kamera und Kontakte sind vorhanden.
 - **Verschlüsselung/Export:**
   - Die App nutzt Standardverschlüsselung (TLS, DTLS-SRTP).
@@ -56,7 +58,7 @@ Die heutige Einrichtung (Docker, Cloudflare Tunnel, APNs-Key, Portfreigabe) ist 
 
 - **Die Bridge richtet das IP-Telefon selbst in der FRITZ!Box ein** (TR-064 `X_VoIP`).
 - **Fertige Pakete:** Docker-Einzeiler, Home-Assistant-Add-on, Synology/Unraid.
-- **Kein eigener APNs-Key:** Mit dem Push-Relay aus Abschnitt 1 entfällt er.
+- ✅ **Kein eigener APNs-Key:** Mit dem Push-Relay aus Abschnitt 1 entfällt er (Bridge und Home-Assistant-Add-on).
 - **Erreichbarkeit ohne eigene Domain:** z. B. ein Tunnel-Dienst des Anbieters oder eine geführte Einrichtung.
 
 ## 6. Sonstiges
