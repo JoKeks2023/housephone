@@ -4,7 +4,7 @@
 #    cp config.example.yaml config.yaml   (anpassen)
 # 2. mkdir -p data secrets
 #    printf '%s' 'SIP-PASSWORT' > secrets/sip_password
-#    cp ~/Downloads/AuthKey_XXXXXXXXXX.p8 secrets/apns_key.p8
+#    (nur mit eigenem APNs-Key statt Push-Relay: cp ~/Downloads/AuthKey_XXXXXXXXXX.p8 secrets/apns_key.p8)
 #    printf '%s' 'FRITZBOX-KENNWORT' > secrets/fritzbox_password   (optional, Telefonbuch/Anrufliste)
 #    chmod 600 secrets/*
 #    Dateien und data/ müssen dem Benutzer aus "user:" gehören (id -u / id -g).
@@ -39,8 +39,9 @@ services:
       HOUSEPHONE_CONFIG: /config/config.yaml
       HOUSEPHONE_DATA_DIR: /data
       HOUSEPHONE_SIP_PASSWORD_FILE: /secrets/sip_password
-      HOUSEPHONE_APNS_KEY_FILE: /secrets/apns_key.p8
-      HOUSEPHONE_APNS_KEY_ID: "XXXXXXXXXX"
+      # Nur mit eigenem APNs-Key; sonst gehen Pushes über das Relay.
+      # HOUSEPHONE_APNS_KEY_FILE: /secrets/apns_key.p8
+      # HOUSEPHONE_APNS_KEY_ID: "XXXXXXXXXX"
       # Nur mit fritzbox.username in config.yaml (Telefonbuch/Anrufliste):
       HOUSEPHONE_FRITZBOX_PASSWORD_FILE: /secrets/fritzbox_password
     volumes:

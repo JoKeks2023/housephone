@@ -30,6 +30,7 @@ const (
 	EnvAPNsKeyFile     = "HOUSEPHONE_APNS_KEY_FILE"
 	EnvAPNsKeyID       = "HOUSEPHONE_APNS_KEY_ID"
 	EnvAPNsTeamID      = "HOUSEPHONE_APNS_TEAM_ID"
+	EnvPushRelay       = "HOUSEPHONE_PUSH_RELAY"
 	EnvPublicIP        = "HOUSEPHONE_PUBLIC_IP"
 	EnvLogLevel        = "HOUSEPHONE_LOG_LEVEL"
 
@@ -287,7 +288,24 @@ type Media struct {
 	IncludeLoopback bool `yaml:"includeLoopback"`
 }
 
+// DefaultPushRelay is the relay of the published app (ADR-0010): bridges
+// without their own key push through it.
+const DefaultPushRelay = "https://housephone.relay.jorisconrad.com"
+
+// PushRelayOff disables the relay.
+const PushRelayOff = "off"
+
+// Push modes.
+const (
+	PushModeAPNs  = "apns"
+	PushModeRelay = "relay"
+	PushModeOff   = "off"
+)
+
 type APNs struct {
+	// Relay is the push relay's base URL. Empty means DefaultPushRelay,
+	// "off" disables it. Ignored when the bridge has its own key.
+	Relay   string `yaml:"relay"`
 	KeyFile string `yaml:"keyFile"`
 	KeyID   string `yaml:"keyId"`
 	TeamID  string `yaml:"teamId"`
@@ -295,7 +313,30 @@ type APNs struct {
 	Topic string `yaml:"topic"`
 }
 
-// Enabled reports whether VoIP pushes can be sent.
+// Mode tells how the bridge sends VoIP pushes: with its own key, through
+// the relay, or not at all.
+func (a APNs) Mode() string {
+	switch {
+	case a.Enabled():
+		return PushModeAPNs
+	case a.RelayURL() != "":
+		return PushModeRelay
+	}
+	return PushModeOff
+}
+
+// RelayURL is the relay to use, or "" for none.
+func (a APNs) RelayURL() string {
+	switch a.Relay {
+	case PushRelayOff:
+		return ""
+	case "":
+		return DefaultPushRelay
+	}
+	return strings.TrimSuffix(a.Relay, "/")
+}
+
+// Enabled reports whether the bridge has its own APNs key.
 func (a APNs) Enabled() bool {
 	return a.KeyFile != "" && a.KeyID != "" && a.TeamID != "" && a.Topic != ""
 }
@@ -380,6 +421,7 @@ func (c *Config) applyEnv(lookup func(string) (string, bool)) error {
 	set(EnvAPNsKeyFile, &c.APNs.KeyFile)
 	set(EnvAPNsKeyID, &c.APNs.KeyID)
 	set(EnvAPNsTeamID, &c.APNs.TeamID)
+	set(EnvPushRelay, &c.APNs.Relay)
 	set(EnvPublicIP, &c.Media.PublicIP)
 	set(EnvLogLevel, &c.Log.Level)
 	set(EnvFritzBoxPassword, &c.FritzBox.Password)
@@ -498,6 +540,11 @@ func (c Config) ValidateServe() error {
 	apnsPartial := c.APNs.KeyFile != "" || c.APNs.KeyID != ""
 	if apnsPartial && !c.APNs.Enabled() {
 		errs = append(errs, errors.New("apns: keyFile, keyId, teamId and topic must all be set"))
+	}
+	if relay := c.APNs.RelayURL(); relay != "" {
+		if u, err := url.Parse(relay); err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+			errs = append(errs, fmt.Errorf("apns.relay must be an https:// URL or %q, got %q", PushRelayOff, c.APNs.Relay))
+		}
 	}
 	return errors.Join(errs...)
 }

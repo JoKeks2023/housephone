@@ -23,6 +23,9 @@ type Device struct {
 	PushEnvironment string `json:"pushEnvironment,omitempty"`
 	// PushTopic overrides the configured APNs topic (e.g. the watch app's).
 	PushTopic string `json:"pushTopic,omitempty"`
+	// PushKey is the device's X25519 push key (base64url, 32 bytes); pushes
+	// to it are sealed end to end (ADR-0010). Empty for older apps.
+	PushKey string `json:"pushKey,omitempty"`
 	// MediaCapabilities as reported by the device; empty means ["webrtc"].
 	MediaCapabilities []string `json:"mediaCapabilities,omitempty"`
 	// PairedBy is the device that requested the companion pairing code

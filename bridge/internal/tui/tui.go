@@ -734,7 +734,10 @@ func (m Model) viewOverview() string {
 		ip = "unbekannt"
 	}
 	fmt.Fprintf(&b, "  Öffentl. IP  %s %s\n", ip, mutedS.Render("("+orDash(s.PublicIPSource)+", Medien UDP "+fmt.Sprint(s.MediaPort)+")"))
-	push := yes(s.APNsConfigured, "eingerichtet", "nicht eingerichtet")
+	push := yes(s.APNsConfigured, "eigener APNs-Key", "aus")
+	if s.PushMode == "relay" {
+		push = okS.Render("● ") + "über Relay " + mutedS.Render(s.PushRelay)
+	}
 	if s.LastPush != nil {
 		if s.LastPush.OK {
 			push += mutedS.Render(" · letzter Push ok " + s.LastPush.At.Local().Format("15:04"))

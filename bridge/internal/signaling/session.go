@@ -158,6 +158,7 @@ func (srv *Server) runDevice(ctx context.Context, conn *hp2.Conn, dev store.Devi
 		pushEnvironment:   &hello.PushEnvironment,
 		mediaCapabilities: &capabilities,
 		pushTopic:         &hello.PushTopic,
+		pushKey:           &hello.PushKey,
 	}
 	helloErr := srv.validateDeviceChanges(changes)
 	if helloErr != nil {
@@ -479,10 +480,11 @@ type deviceChanges struct {
 	name              *string
 	mediaCapabilities *[]string
 	pushTopic         *string
+	pushKey           *string
 }
 
 func changesFromUpdate(u protocol.DeviceUpdate) deviceChanges {
-	ch := deviceChanges{pushToken: u.PushToken, pushEnvironment: u.PushEnvironment, name: u.DeviceName, pushTopic: u.PushTopic}
+	ch := deviceChanges{pushToken: u.PushToken, pushEnvironment: u.PushEnvironment, name: u.DeviceName, pushTopic: u.PushTopic, pushKey: u.PushKey}
 	if u.MediaCapabilities != nil {
 		ch.mediaCapabilities = &u.MediaCapabilities
 	}
@@ -540,6 +542,13 @@ func (srv *Server) applyDeviceChanges(id string, ch deviceChanges) {
 		}
 		if ch.pushTopic != nil && (*ch.pushTopic == "" || srv.validPushTopic(*ch.pushTopic)) {
 			d.PushTopic = *ch.pushTopic
+		}
+		if ch.pushKey != nil && *ch.pushKey != "" {
+			if validPushKey(*ch.pushKey) {
+				d.PushKey = *ch.pushKey
+			} else {
+				srv.log.Warn("ignoring invalid push key", "device", id)
+			}
 		}
 		d.LastSeen = srv.cfg.Now().UTC()
 	})

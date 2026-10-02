@@ -90,7 +90,7 @@ func TestRunChecks(t *testing.T) {
 	ok := CheckInput{
 		Registrar: "192.168.0.1", RegistrarIP: "192.168.0.1", SIPRegistered: true, SIPUser: "620",
 		FritzBoxConfigured: true, FritzBoxFeatures: []string{"a", "b"},
-		APNsConfigured: true, APNsKeyLoaded: true, LastPush: &PushInfo{OK: true},
+		PushMode: "apns", APNsKeyLoaded: true, LastPush: &PushInfo{OK: true},
 		PublicIP: "94.1.2.3", PublicIPSource: "fritzbox", PublicURL: "wss://phone.jokeks.de/v1/ws",
 		MediaPort: 50000, DevicesTotal: 1, DevicesWithPush: 1,
 	}
@@ -112,7 +112,7 @@ func TestRunChecks(t *testing.T) {
 
 	bad := ok
 	bad.SIPRegistered = false
-	bad.APNsConfigured = false
+	bad.PushMode = "off"
 	bad.PublicIP = ""
 	bad.PublicURL = "wss://phone.example.com/v1/ws"
 	bad.DevicesWithPush = 0
@@ -125,7 +125,7 @@ func TestRunChecks(t *testing.T) {
 			}
 		}
 	}
-	for _, name := range []string{"FRITZ!Box-Anmeldung", "Push (APNs)", "Öffentliche IP", "Öffentliche Adresse"} {
+	for _, name := range []string{"FRITZ!Box-Anmeldung", "Push", "Öffentliche IP", "Öffentliche Adresse"} {
 		if !fails[name] {
 			t.Fatalf("%s should fail: %v", name, fails)
 		}
@@ -346,5 +346,32 @@ func TestListenRejectsTooLongPath(t *testing.T) {
 	}
 	if _, err := Listen(dir, &fakeService{}, quiet()); err == nil || !strings.Contains(err.Error(), "länger als") {
 		t.Fatalf("long path: %v", err)
+	}
+}
+
+func TestRunChecksRelay(t *testing.T) {
+	in := CheckInput{PushMode: "relay", PushRelay: "https://push.example.com", DevicesTotal: 2, DevicesWithPush: 2}
+	find := func(checks []Check, name string) *Check {
+		for i := range checks {
+			if checks[i].Name == name {
+				return &checks[i]
+			}
+		}
+		return nil
+	}
+	if c := find(RunChecks(in), "Push (Relay)"); c == nil || c.State != CheckOK {
+		t.Fatalf("relay ok: %+v", c)
+	}
+	if c := find(RunChecks(in), "Push-Schlüssel"); c != nil {
+		t.Fatalf("no key warning expected: %+v", c)
+	}
+	in.DevicesWithoutPushKey = 1
+	in.LastPush = &PushInfo{Error: "relay 502: apns failed"}
+	checks := RunChecks(in)
+	if c := find(checks, "Push (Relay)"); c == nil || c.State != CheckFail || c.Hint == "" {
+		t.Fatalf("relay failed: %+v", c)
+	}
+	if c := find(checks, "Push-Schlüssel"); c == nil || c.State != CheckWarn {
+		t.Fatalf("key warning: %+v", c)
 	}
 }

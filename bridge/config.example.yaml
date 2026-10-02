@@ -108,7 +108,12 @@ media:
   interfaces: []
 
 apns:
-  # Pfad zum APNs-Auth-Key (.p8) – besser per HOUSEPHONE_APNS_KEY_FILE.
+  # Push-Relay (ADR-0010). Leer = Relay der App-Store-App: kein eigener Key
+  # nötig, Nummer und Name sind Ende-zu-Ende verschlüsselt. "off" = keine
+  # Pushes (Geräte klingeln nur bei offener App), sonst eigene Relay-URL.
+  relay: ""
+  # Eigener APNs-Auth-Key (.p8) statt Relay, nur für selbst gebaute Apps –
+  # besser per HOUSEPHONE_APNS_KEY_FILE. Hat Vorrang vor dem Relay.
   keyFile: ""
   keyId: ""
   teamId: "T9CA6D7T8N"

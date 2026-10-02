@@ -61,7 +61,9 @@ func (s adminService) Status() admin.Status {
 		PublicIP:           b.publicIP.Get(),
 		PublicIPSource:     b.publicIP.Source(),
 		MediaPort:          b.cfg.Media.UDPPort,
-		APNsConfigured:     b.cfg.APNs.Enabled(),
+		APNsConfigured:     b.cfg.APNs.Mode() != config.PushModeOff,
+		PushMode:           b.cfg.APNs.Mode(),
+		PushRelay:          b.cfg.APNs.RelayURL(),
 		APNsTopic:          b.cfg.APNs.Topic,
 		LastPush:           b.recorder.Stats().LastPush,
 		FritzBoxConfigured: b.directory != nil,
@@ -421,7 +423,7 @@ func (s adminService) SelfTest(context.Context) []admin.Check {
 		SIPRegistered: b.sip.Registered(), SIPUser: b.cfg.SIP.Username,
 		Profiles:           s.Profiles(),
 		FritzBoxConfigured: b.directory != nil,
-		APNsConfigured:     b.cfg.APNs.Enabled(), APNsKeyLoaded: b.apnsLoaded,
+		PushMode:           b.cfg.APNs.Mode(), PushRelay: b.cfg.APNs.RelayURL(), APNsKeyLoaded: b.apnsLoaded,
 		LastPush: b.recorder.Stats().LastPush,
 		PublicIP: b.publicIP.Get(), PublicIPSource: b.publicIP.Source(),
 		PublicURL: b.cfg.Bridge.PublicURL, Listen: b.Addr(), MediaPort: b.cfg.Media.UDPPort,
@@ -434,6 +436,9 @@ func (s adminService) SelfTest(context.Context) []admin.Check {
 		for _, d := range list {
 			if d.PushToken != "" {
 				in.DevicesWithPush++
+				if d.PushKey == "" {
+					in.DevicesWithoutPushKey++
+				}
 			}
 		}
 	}

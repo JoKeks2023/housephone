@@ -20,9 +20,11 @@ type CheckInput struct {
 	FritzBoxConfigured bool
 	FritzBoxFeatures   []string
 
-	APNsConfigured bool
-	APNsKeyLoaded  bool
-	LastPush       *PushInfo
+	// PushMode is config.PushMode* ("apns", "relay", "off").
+	PushMode      string
+	PushRelay     string
+	APNsKeyLoaded bool
+	LastPush      *PushInfo
 
 	PublicIP       string
 	PublicIPSource string
@@ -32,6 +34,9 @@ type CheckInput struct {
 
 	DevicesTotal    int
 	DevicesWithPush int
+	// DevicesWithoutPushKey have a push token but no push key (apps older
+	// than ADR-0010); the relay cannot wake them.
+	DevicesWithoutPushKey int
 }
 
 // RunChecks turns the input into traffic lights with a hint each.
@@ -83,8 +88,20 @@ func RunChecks(in CheckInput) []Check {
 
 	// Push.
 	switch {
-	case !in.APNsConfigured:
-		add("Push (APNs)", CheckFail, "nicht eingerichtet", "APNs-Key (.p8), Key-ID und Team-ID setzen – sonst klingeln Geräte nur bei offener App.")
+	case in.PushMode == "relay":
+		switch {
+		case in.LastPush != nil && !in.LastPush.OK:
+			add("Push (Relay)", CheckFail, "letzter Push fehlgeschlagen: "+in.LastPush.Error, "Ist "+in.PushRelay+" erreichbar? Bei 403 passt das App-Bundle nicht zum Relay; dann eigenes Relay oder eigenen APNs-Key nutzen.")
+		case in.LastPush != nil:
+			add("Push (Relay)", CheckOK, "über "+in.PushRelay+", letzter Push erfolgreich", "")
+		default:
+			add("Push (Relay)", CheckOK, "über "+in.PushRelay+" (noch kein Push gesendet)", "")
+		}
+		if in.DevicesWithoutPushKey > 0 {
+			add("Push-Schlüssel", CheckWarn, fmt.Sprintf("%d Gerät(e) ohne Push-Schlüssel", in.DevicesWithoutPushKey), "App aktualisieren und einmal öffnen; über das Relay gehen nur verschlüsselte Pushes.")
+		}
+	case in.PushMode != "apns":
+		add("Push", CheckFail, "nicht eingerichtet", "Push-Relay (apns.relay) eintragen oder einen eigenen APNs-Key – sonst klingeln Geräte nur bei offener App.")
 	case !in.APNsKeyLoaded:
 		add("Push (APNs)", CheckFail, "Key nicht lesbar", "Pfad und Rechte der .p8-Datei prüfen.")
 	case in.LastPush != nil && !in.LastPush.OK:

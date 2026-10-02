@@ -232,6 +232,9 @@ type Hello struct {
 	MediaCapabilities []string `json:"mediaCapabilities,omitempty"`
 	// PushTopic (v1.1); absent means the bridge's configured topic.
 	PushTopic string `json:"pushTopic,omitempty"`
+	// PushKey (v1.3) is the device's X25519 public key for sealed pushes
+	// (ADR-0010), base64url without padding; absent keeps the stored one.
+	PushKey string `json:"pushKey,omitempty"`
 }
 
 type DeviceUpdate struct {
@@ -242,6 +245,8 @@ type DeviceUpdate struct {
 	MediaCapabilities []string `json:"mediaCapabilities,omitempty"`
 	// PushTopic (v1.1); nil leaves the stored value unchanged.
 	PushTopic *string `json:"pushTopic,omitempty"`
+	// PushKey (v1.3); nil leaves the stored value unchanged.
+	PushKey *string `json:"pushKey,omitempty"`
 }
 
 // PairCompanionRequest asks for a pairing code for another device of the
