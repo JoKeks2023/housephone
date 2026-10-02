@@ -7,14 +7,14 @@ Architektur: [`ADR-0001`](../docs/architecture/ADR-0001-bridge-architektur.md) (
 ```
 FRITZ!Box ◄─SIP/RTP (LAN)─► Bridge ◄── WSS (Cloudflare Tunnel) ──► App
                               │  ◄════ Ton: UDP 50000 (Portfreigabe) ════►
-                              └─ VoIP-Push (APNs) ──► Apple ──► App
+                              └─ VoIP-Push (verschlüsselt) ──► Push-Relay ──► Apple ──► App
 ```
 
 ## Voraussetzungen
 
 - Ein Server im Heimnetz, der immer läuft (Linux mit Docker, oder direkt das Go-Binary).
 - FRITZ!Box mit Telefonie (getestet wird gegen FRITZ!OS 8.x).
-- Apple-Developer-Account (für den APNs-Key).
+- Für Pushes nichts: Die Bridge nutzt das Push-Relay der App (ADR-0010). Einen eigenen APNs-Key brauchst du nur für eine selbst gebaute App.
 - Für unterwegs:
   - ein Cloudflare-Account mit Domain (für den Tunnel) oder alternativ eine TCP-Portfreigabe mit eigenem TLS,
   - eine UDP-Portfreigabe für den Ton.
@@ -39,7 +39,11 @@ Mehr muss nicht offen sein. SIP (5060/5062) bleibt im LAN.
 
 Die Bridge ermittelt ihre öffentliche IPv4 automatisch: Sie fragt alle 30 s die FRITZ!Box per UPnP. Ein IP-Wechsel bei dynamischer IP fällt so sofort auf, ohne Internet-Abfrage. Antwortet die Box nicht (UPnP-Statusinformationen aus), nimmt sie STUN, höchstens alle 10 min. Alternativ kannst du `media.publicIp` (feste IP) oder `media.publicHost` (z. B. deine MyFRITZ!-Adresse) setzen.
 
-## 3. APNs-Key erstellen
+## 3. Push
+
+**Normalfall: nichts tun.** Ohne eigenen Key schickt die Bridge Pushes über das Push-Relay der App ([`ADR-0010`](../docs/architecture/ADR-0010-push-relay.md)). Nummer und Name des Anrufers verschlüsselt sie für das jeweilige Gerät; Relay und Apple sehen sie nicht. `apns.relay: "off"` schaltet das ab, eine eigene URL nimmt ein eigenes Relay mit derselben Schnittstelle (ADR-0010, Punkt 2). Das Relay der App betreibt der Anbieter; sein Code liegt nicht in diesem Repository.
+
+**Eigener APNs-Key** (nur für selbst gebaute Apps mit eigenem Team; hat Vorrang vor dem Relay):
 
 1. [developer.apple.com](https://developer.apple.com/account/resources/authkeys/list) → **Certificates, Identifiers & Profiles → Keys → +**.
 2. Namen vergeben und **Apple Push Notifications service (APNs)** ankreuzen, dann registrieren.
@@ -74,9 +78,9 @@ cp config.example.yaml config.yaml          # registrar (IP der FRITZ!Box), user
 cp docker-compose.example.yml docker-compose.yml
 mkdir -p data secrets
 printf '%s' 'SIP-KENNWORT' > secrets/sip_password
-cp ~/Downloads/AuthKey_XXXXXXXXXX.p8 secrets/apns_key.p8
 chmod 600 secrets/*
-# In docker-compose.yml: HOUSEPHONE_APNS_KEY_ID und user: "$(id -u):$(id -g)" eintragen
+# In docker-compose.yml: user: "$(id -u):$(id -g)" eintragen
+# (nur mit eigenem APNs-Key: secrets/apns_key.p8 und HOUSEPHONE_APNS_KEY_* aktivieren)
 CLOUDFLARE_TUNNEL_TOKEN=... docker compose up -d
 docker compose logs -f housephone-bridge    # erwartet: "registered at FRITZ!Box"
 curl -s http://localhost:8080/v1/health     # {"status":"ok"} (Details nur für gekoppelte Geräte)
@@ -145,7 +149,7 @@ Für die Watch musst du auf dem Server und an der FRITZ!Box nichts einrichten:
   - Die Uhr erzeugt dabei ihren eigenen Schlüssel; den Fingerabdruck der Bridge bekommt sie vom iPhone.
   - Entfernst du ein verlorenes iPhone, entfernt `devices remove` dessen Watches automatisch mit: Sie wurden über das iPhone gekoppelt und gelten deshalb als mitbetroffen.
   - watchOS erlaubt WebSocket nur während eines Anrufs. Die Uhr öffnet sie deshalb erst, wenn der VoIP-Push kommt.
-- **Push:** Die Watch-App hat ein eigenes APNs-Topic (`com.jorisconrad.housephone.watchkitapp.voip`). Derselbe APNs-Key aus Schritt 3 gilt für alle Apps deines Teams.
+- **Push:** Die Watch-App hat ein eigenes APNs-Topic (`com.jorisconrad.housephone.watchkitapp.voip`). Das Relay bedient beide Topics; ein eigener APNs-Key aus Schritt 3 gilt für alle Apps deines Teams.
   - Die Bridge akzeptiert nur Topics, die mit dem Bundle aus `apns.topic` beginnen (hier `com.jorisconrad.housephone.`) und auf `.voip` enden.
 - **Codec:** Nimmst du an der Watch ab, beantwortet die Bridge den Anruf der FRITZ!Box mit PCMA. Am iPhone nimmt sie G.722 (HD). Umgewandelt wird nie.
   - Bietet die FRITZ!Box für einen Anruf kein PCMA an (sehr unüblich), klingelt die Watch für diesen Anruf nicht.
@@ -210,7 +214,7 @@ Sichere diesen Ordner, vor allem `identity.key`. Verlierst du den Schlüssel, er
 | `registration failed … 401/403` | Benutzername/Kennwort des IP-Telefons prüfen. Das IP-Telefon muss in der FRITZ!Box existieren. |
 | `find local IP towards fritz.box` | `fritz.box` wird auf dem Server nicht aufgelöst → `sip.registrar` auf die IP der FRITZ!Box setzen (Standard `192.168.178.1`, bei manchen Anschlüssen z. B. `192.168.0.1`). |
 | `sip.registrar: fritz.box löst auf … auf – das ist keine Adresse in deinem Heimnetz` | Dein Server fragt einen fremden DNS-Server (Pi-hole ohne Weiterleitung, 1.1.1.1 …). Dort gehört `fritz.box` einem Dritten; die Bridge würde ihm ihre Anmeldedaten schicken und startet deshalb nicht. → Die IP der FRITZ!Box eintragen. Die Bridge legt die Adresse beim Start fest und fragt DNS danach nicht mehr. |
-| iPhone klingelt nicht, wenn die App geschlossen ist | APNs-Key/Key-ID prüfen. Log `push failed … 403 InvalidProviderToken` = Key/Team falsch. `BadDeviceToken` = Environment passt nicht (Debug vs. TestFlight); die App einmal öffnen, dann meldet sie das richtige Token. |
+| iPhone klingelt nicht, wenn die App geschlossen ist | Selbsttest in der TUI. Über das Relay: Ist es erreichbar? „Push-Schlüssel“-Warnung = App zu alt, aktualisieren und einmal öffnen. Mit eigenem Key: APNs-Key/Key-ID prüfen. Log `push failed … 403 InvalidProviderToken` = Key/Team falsch. `BadDeviceToken` = Environment passt nicht (Debug vs. TestFlight); die App einmal öffnen, dann meldet sie das richtige Token. |
 | Anruf wird angenommen, aber kein Ton (unterwegs) | UDP-Freigabe 50000 fehlt oder öffentliche IP falsch: Log `public IP` prüfen, ggf. `media.publicIp` setzen. |
 | Kein Ton zu Hause | Server und iPhone müssen sich im LAN erreichen (kein Gast-WLAN, keine Client-Isolation). |
 | `rejecting INVITE from unexpected source` | Die FRITZ!Box meldet sich von einer anderen IP als `sip.registrar` → dort die tatsächliche IP eintragen. |
@@ -257,7 +261,9 @@ E2E_LOG=1 go test -run EndToEnd -v ./internal/app/
 | `internal/media` | WebRTC (pion) mit einem UDP-Port, öffentliche IP |
 | `internal/signaling` | WebSocket-Server, Kopplung, Anmeldung (HP2) |
 | `internal/hp2` | Anmeldung v2: Kopplungsnachweis, Signaturen, Sitzungsschlüssel, Verschlüsselung (ADR-0004); Testvektoren in `docs/protocol/fixtures/crypto` |
-| `internal/push` | APNs-VoIP-Push |
+| `internal/push` | VoIP-Push: direkt mit eigenem Key oder über das Relay, Nutzlast versiegelt |
+| `internal/pushseal` | Ende-zu-Ende-Verschlüsselung der Push-Nutzlast (ADR-0010); Testvektoren in `docs/protocol/fixtures/crypto` |
+| `internal/apns` | APNs-Client (HTTP/2, JWT) für den eigenen Key |
 | `internal/fritzbox` | TR-064: Telefonbuch, Anrufliste, Zwischenspeicher, Namen für eingehende Anrufe; `fritzboxtest` ist die Test-FRITZ!Box |
 | `internal/store` | Dateibasierter Speicher (Geräte, Kopplungscodes, Bridge-Schlüssel) |
 

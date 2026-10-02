@@ -28,9 +28,7 @@ func TestLoadHAOptions(t *testing.T) {
 		"sip_password": "s3cret",
 		"fritzbox_username": "housephone",
 		"fritzbox_password": "fb-secret",
-		"apns_key_file": "/config/AuthKey.p8",
-		"apns_key_id": "ABC123",
-		"apns_team_id": "",
+		"push_relay": "https://push.example.com/",
 		"apns_topic": "",
 		"log_level": "debug"
 	}`)
@@ -50,8 +48,8 @@ func TestLoadHAOptions(t *testing.T) {
 	if !c.FritzBox.Enabled() || c.FritzBox.Password != "fb-secret" {
 		t.Errorf("fritzbox = %+v", c.FritzBox)
 	}
-	// Empty team/topic keep the defaults.
-	if !c.APNs.Enabled() || c.APNs.TeamID != Default().APNs.TeamID {
+	// No own key in the add-on; an empty topic keeps the default.
+	if c.APNs.Enabled() || c.APNs.Mode() != PushModeRelay || c.APNs.RelayURL() != "https://push.example.com" || c.APNs.Topic != Default().APNs.Topic {
 		t.Errorf("apns = %+v", c.APNs)
 	}
 	if !c.Bridge.Tailscale || c.Log.Level != "debug" {

@@ -16,6 +16,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/JoKeks2023/housephone/bridge/internal/apns"
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
@@ -27,7 +28,7 @@ type recorded struct {
 	body    []byte
 }
 
-func newTestAPNs(t *testing.T, status int, reason string) (*APNs, *[]recorded, *sync.Mutex) {
+func newTestAPNs(t *testing.T, status int, reason string) (*Pusher, *[]recorded, *sync.Mutex) {
 	t.Helper()
 	var (
 		mu   sync.Mutex
@@ -52,9 +53,9 @@ func newTestAPNs(t *testing.T, status int, reason string) (*APNs, *[]recorded, *
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := NewAPNsWithKey(key, Config{KeyID: "KEY123", TeamID: "T9CA6D7T8N", Topic: "com.jorisconrad.housephone.voip"})
-	a.SetEndpoints(srv.URL, srv.Client())
-	return a, &reqs, &mu
+	client := apns.New(key, "KEY123", "T9CA6D7T8N")
+	client.SetEndpoints(srv.URL, srv.Client())
+	return NewDirect(client, "com.jorisconrad.housephone.voip"), &reqs, &mu
 }
 
 func TestPushSendsVoIPNotification(t *testing.T) {

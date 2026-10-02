@@ -524,7 +524,7 @@ extension WatchCallCenter: @preconcurrency PKPushRegistryDelegate {
 
         // Every VoIP push must become a CallKit call, or the system stops
         // delivering them.
-        guard let push = try? IncomingCallPush(dictionary: payload.dictionaryPayload) else {
+        guard let push = try? IncomingCallPush(dictionary: payload.dictionaryPayload, pushKeyStore: WatchBridge.pushKeyStore) else {
             let update = CXCallUpdate()
             update.remoteHandle = CXHandle(type: .generic, value: String(localized: "Unbekannt"))
             reportAndEndImmediately(UUID(), update: update) { done.call() }

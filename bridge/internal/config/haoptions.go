@@ -43,11 +43,11 @@ type HAOptions struct {
 	Lines            []HALineOptions `json:"lines"`
 	FritzBoxUsername string          `json:"fritzbox_username"`
 	FritzBoxPassword string          `json:"fritzbox_password"`
-	APNsKeyFile      string          `json:"apns_key_file"`
-	APNsKeyID        string          `json:"apns_key_id"`
-	APNsTeamID       string          `json:"apns_team_id"`
-	APNsTopic        string          `json:"apns_topic"`
-	LogLevel         string          `json:"log_level"`
+	// PushRelay overrides the app's push relay (ADR-0010); the add-on has
+	// no APNs key of its own.
+	PushRelay string `json:"push_relay"`
+	APNsTopic string `json:"apns_topic"`
+	LogLevel  string `json:"log_level"`
 }
 
 // HALineOptions is a further profile in the add-on options (ADR-0008).
@@ -113,9 +113,7 @@ func (o HAOptions) Config() Config {
 	}
 	c.FritzBox.Username = strings.TrimSpace(o.FritzBoxUsername)
 	c.FritzBox.Password = o.FritzBoxPassword
-	c.APNs.KeyFile = strings.TrimSpace(o.APNsKeyFile)
-	c.APNs.KeyID = strings.TrimSpace(o.APNsKeyID)
-	setIf(&c.APNs.TeamID, o.APNsTeamID)
+	c.APNs.Relay = strings.TrimSpace(o.PushRelay)
 	setIf(&c.APNs.Topic, o.APNsTopic)
 	setIf(&c.Log.Level, o.LogLevel)
 	return c

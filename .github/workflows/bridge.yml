@@ -115,8 +115,8 @@ jobs:
           cat > "$RUNNER_TEMP/addon-data/options.json" <<'EOF'
           {"bridge_name": "CI", "public_url": "wss://phone.example.com/v1/ws", "tunnel_port": 8080,
            "tailscale": false, "fritzbox_host": "192.168.178.1", "sip_username": "ci",
-           "sip_password": "ci-secret-value", "apns_team_id": "T9CA6D7T8N",
-           "apns_topic": "com.jorisconrad.housephone.voip", "log_level": "info"}
+           "sip_password": "ci-secret-value", "push_relay": "off",
+           "log_level": "info"}
           EOF
           # The Supervisor creates /data owned by root.
           sudo chown -R 0:0 "$RUNNER_TEMP/addon-data"

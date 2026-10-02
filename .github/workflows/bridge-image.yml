@@ -98,3 +98,4 @@ jobs:
           subject-name: ghcr.io/jokeks2023/housephone-bridge-addon
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+

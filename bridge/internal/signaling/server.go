@@ -7,6 +7,7 @@ package signaling
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -26,6 +27,7 @@ import (
 	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
 	"github.com/JoKeks2023/housephone/bridge/internal/profile"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
+	"github.com/JoKeks2023/housephone/bridge/internal/pushseal"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
 
@@ -574,6 +576,12 @@ func truncateRunes(s string, n int) string {
 		return string(r[:n])
 	}
 	return s
+}
+
+// validPushKey accepts a base64url X25519 public key (ADR-0010).
+func validPushKey(key string) bool {
+	raw, err := base64.RawURLEncoding.DecodeString(key)
+	return err == nil && pushseal.ValidKey(raw)
 }
 
 // validPushToken accepts lower-case hex tokens.

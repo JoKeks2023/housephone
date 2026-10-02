@@ -70,9 +70,13 @@ type Status struct {
 	PublicIPSource string `json:"publicIpSource"`
 	MediaPort      int    `json:"mediaPort"`
 
-	APNsConfigured bool      `json:"apnsConfigured"`
-	APNsTopic      string    `json:"apnsTopic"`
-	LastPush       *PushInfo `json:"lastPush,omitempty"`
+	// APNsConfigured: the bridge can send pushes (own key or relay).
+	APNsConfigured bool `json:"apnsConfigured"`
+	// PushMode is "apns" (own key), "relay" or "off" (ADR-0010).
+	PushMode  string    `json:"pushMode"`
+	PushRelay string    `json:"pushRelay,omitempty"`
+	APNsTopic string    `json:"apnsTopic"`
+	LastPush  *PushInfo `json:"lastPush,omitempty"`
 
 	FritzBoxConfigured bool     `json:"fritzBoxConfigured"`
 	FritzBoxFeatures   []string `json:"fritzBoxFeatures"`

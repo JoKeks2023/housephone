@@ -580,7 +580,7 @@ extension CallCenter: @preconcurrency PKPushRegistryDelegate {
 
         let push: IncomingCallPush
         do {
-            push = try IncomingCallPush(dictionary: payload.dictionaryPayload)
+            push = try IncomingCallPush(dictionary: payload.dictionaryPayload, pushKeyStore: BridgeConnection.pushKeyStore)
         } catch {
             logger.error("Unusable VoIP push: \(String(describing: error), privacy: .public)")
             let update = CXCallUpdate()

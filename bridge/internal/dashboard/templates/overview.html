@@ -21,7 +21,7 @@
 <div><dt>{{$L.T "sip"}}</dt><dd>{{if .SIPRegistered}}<span class="dot ok"></span>{{$L.T "registered"}}{{else}}<span class="dot bad"></span>{{$L.T "notRegistered"}}{{end}}<small>{{.SIPUser}} @ {{.Registrar}}</small></dd></div>
 <div><dt>{{$L.T "publicIP"}}</dt><dd>{{if .PublicIP}}<span class="dot ok"></span>{{.PublicIP}}<small>{{$L.T "source"}}: {{.PublicIPSource}} · UDP {{.MediaPort}}</small>{{else}}<span class="dot bad"></span>{{$L.T "unknown"}}{{end}}</dd></div>
 <div><dt>{{$L.T "listeners"}}</dt><dd><span class="dot ok"></span>{{$L.T "public"}} <code>{{.Listen}}</code><small>{{if .PrivateListen}}<span class="dot ok"></span>{{$L.T "private"}} <code>{{.PrivateListen}}</code>{{with .LanURL}} · <code>{{.}}</code>{{end}}{{else}}<span class="dot bad"></span>{{$L.T "private"}}: {{$L.T "off"}}{{end}}</small></dd></div>
-<div><dt>{{$L.T "push"}}</dt><dd>{{if .APNsConfigured}}<span class="dot ok"></span>{{$L.T "configured"}}{{else}}<span class="dot warn"></span>{{$L.T "notConfigured"}}{{end}}</dd></div>
+<div><dt>{{$L.T "push"}}</dt><dd>{{if eq .PushMode "relay"}}<span class="dot ok"></span>{{$L.T "pushRelay"}}{{else if .APNsConfigured}}<span class="dot ok"></span>{{$L.T "pushOwnKey"}}{{else}}<span class="dot warn"></span>{{$L.T "notConfigured"}}{{end}}</dd></div>
 <div><dt>{{$L.T "devicesOnline"}}</dt><dd>{{.DevicesOnline}} {{$L.T "of"}} {{.DevicesTotal}}</dd></div>
 <div><dt>{{$L.T "fingerprint"}}</dt><dd><code>{{.Fingerprint}}</code></dd></div>
 <div><dt>{{$L.T "version"}}</dt><dd>{{.Version}}<small>{{$L.T "running"}}: {{since $L .StartedAt}}</small></dd></div>

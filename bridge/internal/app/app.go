@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/admin"
+	"github.com/JoKeks2023/housephone/bridge/internal/apns"
 	"github.com/JoKeks2023/housephone/bridge/internal/bonjour"
 	"github.com/JoKeks2023/housephone/bridge/internal/calls"
 	"github.com/JoKeks2023/housephone/bridge/internal/config"
@@ -208,17 +209,23 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, opts ...Optio
 	}
 
 	pusher := o.pusher
-	if pusher == nil && cfg.APNs.Enabled() {
-		apns, err := push.NewAPNs(push.Config{KeyFile: cfg.APNs.KeyFile, KeyID: cfg.APNs.KeyID, TeamID: cfg.APNs.TeamID, Topic: cfg.APNs.Topic})
-		if err != nil {
-			b.engine.Close()
-			return nil, err
-		}
-		pusher = apns
-		b.apnsLoaded = true
-	}
 	if pusher == nil {
-		log.Warn("APNs is not configured: devices only ring while the app is open")
+		switch cfg.APNs.Mode() {
+		case config.PushModeAPNs:
+			client, err := apns.Load(cfg.APNs.KeyFile, cfg.APNs.KeyID, cfg.APNs.TeamID)
+			if err != nil {
+				b.engine.Close()
+				return nil, err
+			}
+			pusher = push.NewDirect(client, cfg.APNs.Topic)
+			b.apnsLoaded = true
+			log.Info("push: own APNs key")
+		case config.PushModeRelay:
+			pusher = push.NewRelayed(push.NewRelayClient(cfg.APNs.RelayURL(), nil), cfg.APNs.Topic)
+			log.Info("push: through the relay", "relay", cfg.APNs.RelayURL())
+		default:
+			log.Warn("push is off (no relay, no APNs key): devices only ring while the app is open")
+		}
 	}
 
 	var callerNames func(profileID, number string) string
