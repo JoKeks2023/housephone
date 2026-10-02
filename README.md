@@ -123,7 +123,7 @@ Die **Bridge** meldet sich an deiner FRITZ!Box als ganz normales IP-Telefon an. 
 
 ### 2 · Push
 
-**Nichts zu tun.** Damit das iPhone auch bei geschlossener App klingelt, schickt die Bridge den Push über das **Push-Relay** der App (`housephone.relay.jorisconrad.com`). Nummer und Name des Anrufers verschlüsselt sie vorher für dein Gerät; das Relay und Apple sehen nur, *dass* ein Push kommt ([ADR-0010](docs/architecture/ADR-0010-push-relay.md)).
+**Nichts zu tun.** Damit das iPhone auch bei geschlossener App klingelt, schickt die Bridge den Push über das **Push-Relay** der App (`push.jorisconrad.com/housephone`). Nummer und Name des Anrufers verschlüsselt sie vorher für dein Gerät; das Relay und Apple sehen nur, *dass* ein Push kommt ([ADR-0010](docs/architecture/ADR-0010-push-relay.md)).
 
 <details>
 <summary><b>Eigenes Apple-Team oder anderes Bundle-ID-Präfix?</b></summary>
@@ -225,7 +225,7 @@ In `docker-compose.yml` `image:` auskommentieren und `build: .` aktivieren. Das 
 
 ```
   ● FRITZ!Box-Anmeldung      angemeldet an 192.168.0.1
-  ● Push (Relay)             über https://housephone.relay.jorisconrad.com
+  ● Push (Relay)             über https://push.jorisconrad.com/housephone
   ● Öffentliche IP           94.x.x.x (von der FRITZ!Box)
   ● Medienport               UDP 50000 lokal offen
   ● Öffentliche Adresse      wss://phone.deine-domain.de/v1/ws

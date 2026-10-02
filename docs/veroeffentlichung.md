@@ -11,7 +11,7 @@
 - **Datenschutz:** Die Bridge versiegelt Nummer und Name Ende-zu-Ende für den Push-Schlüssel des Geräts. Relay und Apple sehen nur Gerätetoken, Topic, Zeitpunkt und die Adresse der Bridge.
 - **Missbrauch:** nur eigene Topics, nur versiegelte Nutzlast, Rate-Limits pro Gerätetoken und Adresse. Ein Token pro Bridge gibt es nicht: Jeder kann die Bridge selbst bauen, ein Geheimnis darin wäre keins.
 - **Offen:**
-  - Relay auf dem VPS starten (Domain `housephone.relay.jorisconrad.com`, in `config.DefaultPushRelay` eingetragen). Bis dahin scheitern Pushes ohne eigenen Key; der Selbsttest zeigt das.
+  - Relay läuft auf dem VPS hinter einem Cloudflare Tunnel (`https://push.jorisconrad.com/housephone`, `config.DefaultPushRelay`). Echter Push auf iPhone und Watch steht noch aus.
   - Datenschutzangaben: Der Anbieter verarbeitet jetzt Gerätetokens (siehe Abschnitt 4).
 
 ## 2. Lizenz und Repository
