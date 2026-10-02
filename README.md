@@ -55,7 +55,7 @@ Kontakte und Anrufliste deines **ganzen Anschlusses**, auch was am Schnurlostele
 <td valign="top">
 
 ### 🔐 Ende-zu-Ende gesichert
-Schlüssel im **Secure Enclave**, gepinnte Bridge, verschlüsselte Steuerung, auch gegenüber Cloudflare.
+Schlüssel im **Secure Enclave**, gepinnte Bridge, verschlüsselte Steuerung und verschlüsselte Pushes, auch gegenüber Cloudflare und Apple.
 
 </td>
 <td valign="top">
@@ -72,13 +72,14 @@ Die Bridge läuft als gehärteter **Docker-Container** mit Admin-Oberfläche im 
 ```mermaid
 flowchart LR
     FB["📠 FRITZ!Box"] <-- "SIP · Heimnetz" --> BR["🐳 Bridge<br/>(dein Server)"]
-    BR -- "VoIP-Push" --> APNS["☁️ Apple Push"]
+    BR -- "VoIP-Push · verschlüsselt" --> RL["📮 Push-Relay"]
+    RL --> APNS["☁️ Apple Push"]
     APNS -- "weckt" --> DEV["📱 iPhone · ⌚ Watch"]
     BR <-- "Steuerung · Cloudflare Tunnel<br/>Ende-zu-Ende verschlüsselt" --> DEV
     BR <-- "Ton · UDP 50000" --> DEV
 ```
 
-Die **Bridge** meldet sich an deiner FRITZ!Box als ganz normales IP-Telefon an. Klingelt dein Festnetz, weckt sie iPhone und Watch per Push, und wer zuerst annimmt, bekommt das Gespräch. Es wird **kein TCP-Port** geöffnet, nur ein UDP-Port für den Ton.
+Die **Bridge** meldet sich an deiner FRITZ!Box als ganz normales IP-Telefon an. Klingelt dein Festnetz, weckt sie iPhone und Watch per Push, und wer zuerst annimmt, bekommt das Gespräch. Den Push schickt sie über das **Push-Relay** der App; Nummer und Name sind dabei so verschlüsselt, dass nur dein Gerät sie lesen kann. Es wird **kein TCP-Port** geöffnet, nur ein UDP-Port für den Ton.
 
 ---
 
@@ -87,7 +88,7 @@ Die **Bridge** meldet sich an deiner FRITZ!Box als ganz normales IP-Telefon an. 
 | # | Schritt | Wo | ⏱ |
 |:-:|---|---|:-:|
 | 1 | [FRITZ!Box vorbereiten](#1--fritzbox-vorbereiten) | FRITZ!Box | 10 min |
-| 2 | [Push-Schlüssel](#2--push-schlüssel-bei-apple) | developer.apple.com | 5 min |
+| 2 | [Push](#2--push) | – | 0 min |
 | 3 | [Cloudflare Tunnel](#3--cloudflare-tunnel) | Cloudflare | 10 min |
 | 4 | [Bridge starten](#4--bridge-auf-dem-server-starten) | Server | 10 min |
 | 5 | [Selbsttest](#5--selbsttest) | Server | 2 min |
@@ -97,7 +98,7 @@ Die **Bridge** meldet sich an deiner FRITZ!Box als ganz normales IP-Telefon an. 
 | 9 | [Ausprobieren](#9--ausprobieren) | Telefon | 5 min |
 
 > [!NOTE]
-> **Du brauchst:** eine FRITZ!Box mit Telefonie, einen Server im Heimnetz, der immer läuft (Linux mit Docker, z. B. Mini-PC, NAS, Raspberry Pi 4/5), einen **bezahlten Apple-Developer-Account**, einen **kostenlosen Cloudflare-Account mit eigener Domain** und einen Mac mit Xcode.
+> **Du brauchst:** eine FRITZ!Box mit Telefonie, einen Server im Heimnetz, der immer läuft (Linux mit Docker, z. B. Mini-PC, NAS, Raspberry Pi 4/5), einen **bezahlten Apple-Developer-Account** (für die App aus Xcode), einen **kostenlosen Cloudflare-Account mit eigener Domain** und einen Mac mit Xcode.
 
 ### 1 · FRITZ!Box vorbereiten
 
@@ -120,15 +121,21 @@ Die **Bridge** meldet sich an deiner FRITZ!Box als ganz normales IP-Telefon an. 
 > [!TIP]
 > Mehr muss nicht offen sein. **„Anmeldung aus dem Internet erlauben“** beim IP-Telefon bleibt **aus**, weil die Bridge im Heimnetz steht.
 
-### 2 · Push-Schlüssel bei Apple
+### 2 · Push
 
-Damit das iPhone klingelt, auch wenn die App geschlossen ist:
+**Nichts zu tun.** Damit das iPhone auch bei geschlossener App klingelt, schickt die Bridge den Push über das **Push-Relay** der App (`housephone.relay.jorisconrad.com`). Nummer und Name des Anrufers verschlüsselt sie vorher für dein Gerät; das Relay und Apple sehen nur, *dass* ein Push kommt ([ADR-0010](docs/architecture/ADR-0010-push-relay.md)).
+
+<details>
+<summary><b>Eigenes Apple-Team oder anderes Bundle-ID-Präfix?</b></summary>
+
+Das Relay bedient nur die App mit dem Präfix `com.jorisconrad`. Baust du die App mit eigenem Team und Präfix (Schritt 6), braucht die Bridge einen eigenen Push-Schlüssel:
 
 1. [developer.apple.com → **Keys**](https://developer.apple.com/account/resources/authkeys/list) → **＋** → Name `Housephone Push` → ☑️ **Apple Push Notifications service (APNs)** → Register
-2. **`AuthKey_XXXXXXXXXX.p8` herunterladen** und die **Key ID** notieren
+2. **`AuthKey_XXXXXXXXXX.p8` herunterladen** (geht **nur einmal**) und die **Key ID** notieren
+3. In Schritt 4 zusätzlich `cp ~/Downloads/AuthKey_XXXXXXXXXX.p8 secrets/apns_key.p8` und in `docker-compose.yml` die Zeilen `HOUSEPHONE_APNS_KEY_FILE`/`HOUSEPHONE_APNS_KEY_ID` aktivieren; in `config.yaml` unter `apns:` `teamId` und `topic` (zeigt das Einrichtungsskript) setzen
 
-> [!IMPORTANT]
-> Die `.p8`-Datei lässt sich **nur einmal** herunterladen. Bewahr sie gut auf.
+Mit eigenem Schlüssel schickt die Bridge direkt an Apple, verschlüsselt aber trotzdem für jedes Gerät.
+</details>
 
 ### 3 · Cloudflare Tunnel
 
@@ -167,12 +174,9 @@ sip:
 
 ```sh
 printf '%s' 'KENNWORT-DES-IP-TELEFONS' > secrets/sip_password
-cp ~/Downloads/AuthKey_XXXXXXXXXX.p8 secrets/apns_key.p8
 echo 'CLOUDFLARE_TUNNEL_TOKEN=DEIN-TOKEN' > .env
 chmod 600 secrets/* .env
 ```
-
-In **`docker-compose.yml`** die Key ID eintragen: `HOUSEPHONE_APNS_KEY_ID: "ABCDE12345"`
 
 ```sh
 docker compose up -d
@@ -198,7 +202,7 @@ sudo chown -R 1000:1000 data secrets
 Die Bridge läuft auch als Add-on in deiner Home-Assistant-Instanz, mit Dashboard in der Seitenleiste (Status, Anrufe, Geräte, Koppeln per QR-Code, nur für HA-Admins).
 
 1. **Einstellungen → Add-ons → Add-on Store → ⋮ → Repositories**: `https://github.com/JoKeks2023/housephone` hinzufügen
-2. **Housephone Bridge** installieren, im Reiter **Konfiguration** FRITZ!Box, IP-Telefon, öffentliche URL und APNs eintragen, starten
+2. **Housephone Bridge** installieren, im Reiter **Konfiguration** FRITZ!Box, IP-Telefon und öffentliche URL eintragen, starten (kein Push-Schlüssel nötig)
 3. Den Tunnel übernimmt das Community-Add-on **Cloudflared** mit `service: http://172.30.32.1:8080`
 4. Portfreigabe UDP 50000 auf den Home-Assistant-Rechner wie oben
 
@@ -221,7 +225,7 @@ In `docker-compose.yml` `image:` auskommentieren und `build: .` aktivieren. Das 
 
 ```
   ● FRITZ!Box-Anmeldung      angemeldet an 192.168.0.1
-  ● Push (APNs)              eingerichtet
+  ● Push (Relay)             über https://housephone.relay.jorisconrad.com
   ● Öffentliche IP           94.x.x.x (von der FRITZ!Box)
   ● Medienport               UDP 50000 lokal offen
   ● Öffentliche Adresse      wss://phone.deine-domain.de/v1/ws
@@ -384,7 +388,7 @@ Alle Befehle im Ordner `housephone/bridge`:
 |---|---|
 | Bridge startet nicht: „… nicht im Heimnetz“ | `sip.registrar` auf die **IP** der FRITZ!Box setzen |
 | `registration failed … 401/403` | Benutzername/Kennwort des IP-Telefons prüfen (1b) |
-| Klingelt nur bei offener App | APNs-Key und Key-ID prüfen; im Log steht dann `push failed` |
+| Klingelt nur bei offener App | Selbsttest, Zeile **Push**: Relay erreichbar? „Push-Schlüssel“ gelb = App aktualisieren und einmal öffnen. Mit eigenem Schlüssel: Key ID und Team prüfen |
 | Klingelt, aber kein Ton unterwegs | UDP-Freigabe 50000 fehlt (1c) |
 | Kein Ton zu Hause | iPhone im Gast-WLAN? Server und iPhone müssen im selben Netz sein |
 | „Bridge nicht erreichbar“ | Tunnel läuft? (`docker compose ps`) `publicUrl` = Hostname aus Schritt 3? |
@@ -407,9 +411,10 @@ Alle Befehle im Ordner `housephone/bridge`:
 | 🔒 **Ende-zu-Ende** | Steuerung, Telefonbuch, Anrufliste und Watch-Ton sind verschlüsselt, auch gegenüber Cloudflare; iPhone-Ton per DTLS-SRTP |
 | 🎟 **Kopplung** | Codes nur auf dem Server: 80 Bit, einmalig, 10 min. Jede Kopplung sehen alle Geräte |
 | 🧱 **Container** | Schreibgeschützt, kein Root, keine Linux-Capabilities |
-| 🕵️ **Datenschutz** | Kein Tracking, keine Daten beim Entwickler, Nummern im Log gekürzt |
+| 📮 **Push** | Nummer und Name sind für dein Gerät verschlüsselt; Push-Relay und Apple sehen nur Gerätetoken und Zeitpunkt. Das Relay speichert nichts |
+| 🕵️ **Datenschutz** | Kein Tracking, Nummern im Log gekürzt; beim Entwickler landet nur der verschlüsselte Push auf dem Weg zu Apple |
 
-Details: [ADR-0004](docs/architecture/ADR-0004-anmeldung-v2.md) · [Sicherheits-Review](docs/reviews/)
+Details: [ADR-0004](docs/architecture/ADR-0004-anmeldung-v2.md) · [ADR-0010](docs/architecture/ADR-0010-push-relay.md) · [Sicherheits-Review](docs/reviews/)
 
 ---
 
@@ -417,7 +422,7 @@ Details: [ADR-0004](docs/architecture/ADR-0004-anmeldung-v2.md) · [Sicherheits-
 
 | | |
 |---|---|
-| 🏛 Architektur | [Bridge](docs/architecture/ADR-0001-bridge-architektur.md) · [Watch](docs/architecture/ADR-0002-watch.md) · [Telefonbuch](docs/architecture/ADR-0003-fritzbox-telefonbuch-anrufliste.md) · [Anmeldung v2](docs/architecture/ADR-0004-anmeldung-v2.md) |
+| 🏛 Architektur | [Bridge](docs/architecture/ADR-0001-bridge-architektur.md) · [Watch](docs/architecture/ADR-0002-watch.md) · [Telefonbuch](docs/architecture/ADR-0003-fritzbox-telefonbuch-anrufliste.md) · [Anmeldung v2](docs/architecture/ADR-0004-anmeldung-v2.md) · [Ohne Bridge](docs/architecture/ADR-0005-modus-ohne-bridge.md) · [Home Assistant](docs/architecture/ADR-0006-home-assistant-addon.md) · [Koppeln im Heimnetz](docs/architecture/ADR-0007-koppeln-im-heimnetz.md) · [Profile](docs/architecture/ADR-0008-profile.md) · [Verwaltung](docs/architecture/ADR-0009-verwaltung-in-der-app.md) · [Push-Relay](docs/architecture/ADR-0010-push-relay.md) |
 | 📡 Protokoll | [v1](docs/protocol/signaling-v1.md) · [v2](docs/protocol/signaling-v2.md) · [Fixtures](docs/protocol/fixtures/) |
 | 🐳 Bridge | [`bridge/README.md`](bridge/README.md) |
 | 📱 Apps | [`ios/README.md`](ios/README.md) |
