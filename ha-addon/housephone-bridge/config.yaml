@@ -1,5 +1,5 @@
 name: Housephone Bridge
-version: "0.3.0"
+version: "0.3.1"
 slug: housephone_bridge
 description: Telefonieren über die FRITZ!Box mit iPhone und Apple Watch, auch unterwegs
 url: https://github.com/JoKeks2023/housephone/tree/master/ha-addon/housephone-bridge

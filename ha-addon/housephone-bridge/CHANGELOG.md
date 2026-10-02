@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- Push-Relay unter neuer Adresse `https://push.jorisconrad.com/housephone`.
+  Die alte Adresse hatte kein gültiges Zertifikat, Pushes kamen nicht an.
+
 ## 0.3.0
 
 - Push ohne eigenen APNs-Schlüssel (HPHN-22): Die Bridge weckt die Geräte
