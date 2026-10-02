@@ -48,5 +48,5 @@
 ## Folgen
 
 - Die Bridge braucht keinen APNs-Key mehr; das Add-on verliert die APNs-Felder und bekommt optional `push_relay`.
-- `docs/veroeffentlichung.md`: Datenschutzangaben anpassen (Anbieter verarbeitet Push-Tokens; Cloudflare als Auftragsverarbeiter des Tunnels sieht Token, Topic und Adresse der Bridge, nicht Nummer oder Name), Relay-Domain `housephone.relay.jorisconrad.com` (`config.DefaultPushRelay`).
+- `docs/veroeffentlichung.md`: Datenschutzangaben anpassen (Anbieter verarbeitet Push-Tokens; Cloudflare als Auftragsverarbeiter des Tunnels sieht Token, Topic und Adresse der Bridge, nicht Nummer oder Name), Relay-Adresse `https://push.jorisconrad.com/housephone` (einstufige Subdomain wegen des Cloudflare-Zertifikats, Pfad für weitere Dienste) (`config.DefaultPushRelay`).
 - Selbst gebaute Apps mit anderem Bundle: eigener APNs-Key (oder ein eigenes Relay mit der Schnittstelle aus Punkt 2).

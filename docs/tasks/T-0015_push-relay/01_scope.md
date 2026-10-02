@@ -7,4 +7,4 @@
 - App und Watch: Push-Schlüssel im Schlüsselbund, versiegelte Pushes öffnen.
 - Home-Assistant-Add-on 0.3.0: APNs-Felder raus, optional `push_relay`.
 
-Nicht im Umfang: Relay deployen (kein Zugang zum VPS), Datenschutzangaben im App Store. Domain: `housephone.relay.jorisconrad.com` (Vorgabe 2026-10-02).
+Nicht im Umfang: Relay deployen (kein Zugang zum VPS), Datenschutzangaben im App Store. Domain: zuerst `housephone.relay.jorisconrad.com` (Vorgabe 2026-10-02), dann `https://push.jorisconrad.com/housephone`, weil das kostenlose Cloudflare-Zertifikat nur eine Ebene abdeckt.

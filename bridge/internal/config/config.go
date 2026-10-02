@@ -290,7 +290,7 @@ type Media struct {
 
 // DefaultPushRelay is the relay of the published app (ADR-0010): bridges
 // without their own key push through it.
-const DefaultPushRelay = "https://housephone.relay.jorisconrad.com"
+const DefaultPushRelay = "https://push.jorisconrad.com/housephone"
 
 // PushRelayOff disables the relay.
 const PushRelayOff = "off"
