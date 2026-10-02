@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- Ton auch ohne Portfreigabe: Kommt unterwegs keine direkte Verbindung
+  zustande (UDP 50000 nicht freigegeben), läuft der Ton über den Cloudflare
+  Tunnel. Braucht die App ab dieser Version. Mit Portfreigabe bleibt der
+  direkte Weg (besserer Ton, weniger Verzögerung).
+
 ## 0.4.0
 
 - Von unterwegs einfacher einrichten: Bei „Öffentliche Adresse“ reicht der

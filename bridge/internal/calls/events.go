@@ -14,6 +14,9 @@ const (
 	EventPushOK      EventKind = "push_ok"
 	EventPushFailed  EventKind = "push_failed"
 	EventMediaFailed EventKind = "media_failed"
+	// EventMediaFallback: a device's audio moved from WebRTC to the
+	// WebSocket because the direct path did not connect (v1.4).
+	EventMediaFallback EventKind = "media_fallback"
 )
 
 // Event is one call event. Fields not relevant for a kind are empty.

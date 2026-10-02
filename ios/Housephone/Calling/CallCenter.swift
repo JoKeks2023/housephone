@@ -71,6 +71,14 @@ final class CallCenter: NSObject {
     @ObservationIgnored private var lastSend: Task<Void, Never>?
     @ObservationIgnored private var clearTask: Task<Void, Never>?
     @ObservationIgnored private var mediaRecoveryTask: Task<Void, Never>?
+    /// Audio over the bridge's WebSocket, when the direct WebRTC path did
+    /// not connect (signaling v1.4).
+    @ObservationIgnored private let socketAudio = CallAudio(logSubsystem: "com.jorisconrad.housephone")
+    /// The call whose audio runs over the WebSocket, if any.
+    @ObservationIgnored private var socketAudioCall: CallID?
+    @ObservationIgnored private var socketAudioOutput: AsyncStream<Data>.Continuation?
+    /// Between CallKit's `didActivate` and `didDeactivate`.
+    @ObservationIgnored private var audioSessionActive = false
 
     /// How long the bridge may take to confirm a call before it fails.
     static let attachTimeout: Duration = .seconds(10)
@@ -194,6 +202,8 @@ final class CallCenter: NSObject {
             }
         case .callOffer(let offer):
             apply(.offer(offer), to: offer.callId)
+        case .callMedia(let callMedia):
+            apply(.webSocketMedia(callMedia), to: callMedia.callId)
         case .callState(let change):
             apply(.remoteState(change.state), to: change.callId)
         case .callEnded(let ended):
@@ -249,10 +259,8 @@ final class CallCenter: NSObject {
                 if isDirect { directHangUp(callId, reason: reason) } else { send(.callHangup(Hangup(callId: callId, reason: reason))) }
             case .negotiate(let offer):
                 negotiate(offer)
-            case .startWebSocketMedia:
-                // The iPhone announces only WebRTC and never feeds
-                // `call.media` into the session; this is the watch's path.
-                logger.error("Unexpected WebSocket media on the iPhone")
+            case .startWebSocketMedia(let callMedia):
+                startSocketAudio(callMedia, for: callId)
             case .updateRemoteParty(let number, let name):
                 provider.reportCall(with: callId.uuid, updated: callUpdate(number: number, name: name))
             case .reportOutgoingConnected:
@@ -260,14 +268,26 @@ final class CallCenter: NSObject {
             case .reportEnded(let reason):
                 provider.reportCall(with: callId.uuid, endedAt: nil, reason: reason.cxReason)
             case .startRingback:
-                if isDirect { direct.media.audio.setRingback(true) } else { ringback.start() }
+                if isDirect {
+                    direct.media.audio.setRingback(true)
+                } else if socketAudioCall == callId {
+                    socketAudio.setRingback(true)
+                } else {
+                    ringback.start()
+                }
             case .stopRingback:
-                if isDirect { direct.media.audio.setRingback(false) } else { ringback.stop() }
+                if isDirect {
+                    direct.media.audio.setRingback(false)
+                } else {
+                    ringback.stop()
+                    socketAudio.setRingback(false)
+                }
             case .closeMedia:
                 if isDirect {
                     direct.media.close()
                 } else {
                     media.close(callId: callId)
+                    stopSocketAudio(callId)
                 }
             }
         }
@@ -374,7 +394,8 @@ final class CallCenter: NSObject {
     }
 
     private func mediaStateChanged(_ state: MediaEngine.ConnectionState, for callId: CallID) {
-        guard activeCall?.id == callId else { return }
+        // After a fallback the closed WebRTC peer no longer matters.
+        guard activeCall?.id == callId, socketAudioCall != callId else { return }
         mediaState = state
         switch state {
         case .interrupted, .failed:
@@ -388,6 +409,63 @@ final class CallCenter: NSObject {
         case .connecting:
             break
         }
+    }
+
+    // MARK: - WebSocket audio (signaling v1.4)
+
+    /// Moves the call's audio from WebRTC to the WebSocket: the bridge sent
+    /// `call.media` because the direct path did not connect, e.g. away from
+    /// home without a port forwarding. The audio then runs through the
+    /// tunnel.
+    private func startSocketAudio(_ callMedia: CallMedia, for callId: CallID) {
+        guard callMedia.isSupported else {
+            logger.error("Unsupported media format \(callMedia.codec, privacy: .public)")
+            send(.callHangup(Hangup(callId: callId, reason: .failed)))
+            apply(.bridgeEnded(.failed), to: callId)
+            return
+        }
+        if socketAudioCall == callId {
+            // Re-attach on a new connection: drop stale audio.
+            socketAudio.resetPlayout()
+            return
+        }
+        logger.info("Direct media path failed; audio runs over the WebSocket")
+        media.close(callId: callId)
+        mediaRecoveryTask?.cancel()
+        mediaRecoveryTask = nil
+        mediaState = .connected
+        socketAudioCall = callId
+        socketAudio.setMuted(isMuted)
+
+        let (frames, output) = AsyncStream.makeStream(of: Data.self, bufferingPolicy: .bufferingNewest(25))
+        socketAudioOutput = output
+        socketAudio.onFrame = { frame in output.yield(frame) }
+        bridge.audio.setHandler { [socketAudio] message in socketAudio.receive(message) }
+        let client = bridge.audioClient
+        Task.detached {
+            for await frame in frames {
+                try? await client?.sendAudio(frame)
+            }
+        }
+        if activeCall?.isRingbackPlaying == true {
+            ringback.stop()
+            socketAudio.setRingback(true)
+        }
+        if audioSessionActive {
+            media.suspendAudio()
+            socketAudio.start()
+        }
+    }
+
+    private func stopSocketAudio(_ callId: CallID) {
+        guard socketAudioCall == callId else { return }
+        socketAudioCall = nil
+        bridge.audio.setHandler(nil)
+        socketAudio.onFrame = nil
+        socketAudioOutput?.finish()
+        socketAudioOutput = nil
+        socketAudio.setRingback(false)
+        socketAudio.stop()
     }
 
     private func scheduleMediaRecoveryTimeout(for callId: CallID) {
@@ -687,7 +765,12 @@ extension CallCenter: @preconcurrency CXProviderDelegate {
     }
 
     func provider(_ provider: CXProvider, perform action: CXSetMutedCallAction) {
-        if isDirect { direct.media.audio.setMuted(action.isMuted) } else { media.setMuted(action.isMuted) }
+        if isDirect {
+            direct.media.audio.setMuted(action.isMuted)
+        } else {
+            media.setMuted(action.isMuted)
+            socketAudio.setMuted(action.isMuted)
+        }
         isMuted = action.isMuted
         action.fulfill()
     }
@@ -711,8 +794,13 @@ extension CallCenter: @preconcurrency CXProviderDelegate {
     }
 
     func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
+        audioSessionActive = true
         if isDirect {
             direct.media.audio.start()
+            return
+        }
+        if socketAudioCall != nil {
+            socketAudio.start()
             return
         }
         media.audioSessionDidActivate(audioSession)
@@ -720,10 +808,12 @@ extension CallCenter: @preconcurrency CXProviderDelegate {
     }
 
     func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
+        audioSessionActive = false
         if isDirect {
             direct.media.audio.stop()
             return
         }
+        socketAudio.stop()
         media.audioSessionDidDeactivate(audioSession)
         ringback.audioSessionDidDeactivate()
     }

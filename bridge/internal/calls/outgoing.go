@@ -15,8 +15,9 @@ import (
 // right away, because there is no answer to wait for (v1.1).
 func (c *call) startOutgoing(conn DeviceConn) {
 	l := &leg{deviceID: conn.DeviceID(), conn: conn, ws: c.m.usesWebSocketAudio(conn.DeviceID())}
+	l.fallback = !l.ws && c.m.canFallBack(l.deviceID)
 	c.legs[l.deviceID] = l
-	c.log.Info("outgoing call", "device", l.deviceID, "number", logsafe.Number(c.number), "websocketAudio", l.ws)
+	c.log.Info("outgoing call", "device", l.deviceID, "number", logsafe.Number(c.number), "websocketAudio", l.ws, "fallback", l.fallback)
 	ev := c.event(EventStarted)
 	ev.DeviceID = l.deviceID
 	c.m.emit(ev)
@@ -26,7 +27,13 @@ func (c *call) startOutgoing(conn DeviceConn) {
 		c.startDial()
 		return
 	}
-	c.offer(l, c.peerCodecs(), false)
+	codecs := c.peerCodecs()
+	if l.fallback && isRemote(conn) {
+		// Away from home the direct path may not connect. Offer only what
+		// the WebSocket carries, so the fallback needs no transcoding.
+		codecs = []codec.Codec{codec.PCMA}
+	}
+	c.offer(l, codecs, false)
 	c.offerTimer = time.AfterFunc(c.m.opts.OfferAnswerTimeout, func() { c.do(c.onOfferAnswerTimeout) })
 }
 

@@ -23,8 +23,10 @@ const waitTimeout = 2 * time.Second
 type fakeConn struct {
 	id      string
 	profile string
-	out     chan protocol.Envelope
-	audio   chan []byte
+	// remote: connected through the tunnel instead of the home network.
+	remote bool
+	out    chan protocol.Envelope
+	audio  chan []byte
 
 	mu   sync.Mutex
 	sink AudioSink
@@ -37,6 +39,8 @@ func newFakeConn(id string) *fakeConn {
 func (f *fakeConn) DeviceID() string { return f.id }
 
 func (f *fakeConn) ProfileID() string { return f.profile }
+
+func (f *fakeConn) Private() bool { return !f.remote }
 
 func (f *fakeConn) SendAudio(frame []byte) {
 	select {

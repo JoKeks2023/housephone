@@ -86,6 +86,22 @@ func (d Device) UsesWebSocketAudio() bool {
 	return ws && !webrtc
 }
 
+// CanFallBackToWebSocketAudio reports a WebRTC device that also speaks
+// websocket-pcma: when its direct media path does not connect, the call
+// can move to the WebSocket (signaling v1.4).
+func (d Device) CanFallBackToWebSocketAudio() bool {
+	ws, webrtc := false, false
+	for _, c := range d.MediaCapabilities {
+		switch c {
+		case MediaWebSocketPCMA:
+			ws = true
+		case mediaWebRTC:
+			webrtc = true
+		}
+	}
+	return ws && webrtc
+}
+
 type devicesFile struct {
 	Devices []Device `json:"devices"`
 }

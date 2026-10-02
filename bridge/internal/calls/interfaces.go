@@ -176,6 +176,18 @@ type DeviceConn interface {
 	RemoveAudioSink(sink AudioSink)
 }
 
+// privateConn is implemented by connections that know whether they came
+// over the private listener (home network). Others count as private.
+type privateConn interface {
+	Private() bool
+}
+
+// isRemote reports a connection from outside the home network (tunnel).
+func isRemote(conn DeviceConn) bool {
+	p, ok := conn.(privateConn)
+	return ok && !p.Private()
+}
+
 // ErrInvalidPushToken means the device's push token must be discarded.
 var ErrInvalidPushToken = errors.New("push token invalid")
 
