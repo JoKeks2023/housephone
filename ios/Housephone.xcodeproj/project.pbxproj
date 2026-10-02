@@ -29,8 +29,8 @@
 		5917E0E9EFBA369D326A6D2C /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
 			files = (
 				7B39C94DBE190E651E56E0FA /* HousephoneWatch.app in Embed Watch Content */,
 			);

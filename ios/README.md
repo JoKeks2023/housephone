@@ -15,7 +15,7 @@ open ios/Housephone.xcodeproj
 - Bundle-IDs: `<präfix>.housephone` (iPhone), `<präfix>.housephone.watchkitapp` (Watch), `<präfix>.housephone.localpush` (Local-Push-Extension). Die App leitet ihr VoIP-Topic aus der eigenen Bundle-ID ab (`<bundle-id>.voip`); in der Bridge muss deshalb `apns.topic` = `<präfix>.housephone.voip` sein.
 - Signing in Xcode bleibt automatisch. Team oder Präfix nicht im Xcode-Reiter „Signing & Capabilities“ ändern: Das schreibt in die `project.pbxproj` und überdeckt die xcconfig. Stattdessen das Skript erneut starten.
 - Die Capability „Push Notifications“ muss im Developer-Account für beide App-IDs aktiv sein. `aps-environment` steht in den Entitlements.
-- Die Watch-App wird mit dem Scheme **Housephone** gebaut und in die iPhone-App eingebettet (`PlugIns/`).
+- Die Watch-App wird mit dem Scheme **Housephone** gebaut und in die iPhone-App eingebettet (`Watch/`; unter `PlugIns/` lehnt App Store Connect den Upload ab, ITMS-90680).
 - Das Xcode-Projekt ist eingecheckt und nutzt synchronisierte Ordner: Neue Dateien in `Housephone/`, `HousephoneWatch/` und `HousephoneLocalPush/` erscheinen automatisch in Xcode, ohne Generator. Einstellungen, Info.plist und Entitlements änderst du direkt in Xcode.
 
 ## Aufbau
@@ -48,4 +48,4 @@ Details: `docs/architecture/ADR-0002-watch.md`.
 cd ios/Packages/HousephoneKit && swift test
 ```
 
-Die CI (`.github/workflows/ios.yml`) führt die Kit-Tests aus, baut die App unsigniert für `generic/platform=iOS` und prüft, dass die Watch-App kompiliert und unter `PlugIns/` eingebettet ist.
+Die CI (`.github/workflows/ios.yml`) führt die Kit-Tests aus, baut die App unsigniert für `generic/platform=iOS` und prüft, dass die Watch-App kompiliert und unter `Watch/` eingebettet ist.
