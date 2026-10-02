@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0
+
+- Von unterwegs einfacher einrichten: Bei „Öffentliche Adresse“ reicht der
+  Hostname des Tunnels (z. B. `phone.example.com`), `wss://…/v1/ws` ergänzt die
+  Bridge.
+- Neue Karte „Von unterwegs“ im Dashboard: prüft, ob die Bridge über den
+  Tunnel erreichbar ist, und führt mit Buttons zu Cloudflare und zu den
+  Add-on-Optionen. Die Ziel-Adresse für den Tunnel lässt sich kopieren.
+- Das Add-on liest per Supervisor-API nur seinen eigenen Slug (für den Link
+  zu den Optionen).
+
 ## 0.3.1
 
 - Push-Relay unter neuer Adresse `https://push.jorisconrad.com/housephone`.

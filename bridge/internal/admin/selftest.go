@@ -128,7 +128,7 @@ func RunChecks(in CheckInput) []Check {
 	u, err := url.Parse(in.PublicURL)
 	switch {
 	case in.PublicURL == "" || err != nil:
-		add("Öffentliche Adresse", CheckFail, "bridge.publicUrl fehlt", "wss://<dein-host>/v1/ws eintragen (Cloudflare Tunnel).")
+		add("Öffentliche Adresse", CheckFail, "bridge.publicUrl fehlt", "Hostnamen des Cloudflare Tunnels eintragen, z. B. phone.example.com.")
 	case u.Scheme != "wss":
 		add("Öffentliche Adresse", CheckWarn, in.PublicURL+" ist unverschlüsselt", "Für unterwegs wss:// über den Cloudflare Tunnel verwenden.")
 	case strings.Contains(u.Host, "example"):

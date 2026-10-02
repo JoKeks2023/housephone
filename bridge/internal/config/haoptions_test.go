@@ -19,7 +19,7 @@ func writeOptions(t *testing.T, body string) string {
 func TestLoadHAOptions(t *testing.T) {
 	path := writeOptions(t, `{
 		"bridge_name": "Zuhause",
-		"public_url": "wss://phone.example.com/v1/ws",
+		"public_url": "phone.example.com",
 		"lan_url": "",
 		"tunnel_port": 8080,
 		"tailscale": true,
@@ -38,6 +38,10 @@ func TestLoadHAOptions(t *testing.T) {
 	}
 	if c.Bridge.Listen != "172.30.32.1:8080" {
 		t.Errorf("listen = %q", c.Bridge.Listen)
+	}
+	// The hostname of the tunnel is enough.
+	if c.Bridge.PublicURL != "wss://phone.example.com/v1/ws" {
+		t.Errorf("publicUrl = %q", c.Bridge.PublicURL)
 	}
 	if c.Bridge.PrivateListen != ":8081" || c.Bridge.DataDir != "/data" {
 		t.Errorf("privateListen/dataDir = %q/%q", c.Bridge.PrivateListen, c.Bridge.DataDir)

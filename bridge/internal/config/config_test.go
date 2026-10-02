@@ -169,3 +169,22 @@ func TestIsIPv4(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizePublicURL(t *testing.T) {
+	for in, want := range map[string]string{
+		"":                                 "",
+		"  phone.example.com ":             "wss://phone.example.com/v1/ws",
+		"phone.example.com/":               "wss://phone.example.com/v1/ws",
+		"https://phone.example.com":        "wss://phone.example.com/v1/ws",
+		"https://phone.example.com/":       "wss://phone.example.com/v1/ws",
+		"http://192.168.178.20:8080":       "ws://192.168.178.20:8080/v1/ws",
+		"wss://phone.example.com":          "wss://phone.example.com/v1/ws",
+		"wss://phone.example.com/v1/ws":    "wss://phone.example.com/v1/ws",
+		"wss://phone.example.com/house/ws": "wss://phone.example.com/house/ws",
+		"ftp://phone.example.com":          "ftp://phone.example.com",
+	} {
+		if got := NormalizePublicURL(in); got != want {
+			t.Errorf("NormalizePublicURL(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

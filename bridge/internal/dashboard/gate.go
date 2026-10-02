@@ -1,6 +1,10 @@
 package dashboard
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/netip"
@@ -58,3 +62,36 @@ func (g SupervisorGate) BasePath(r *http.Request) string {
 	}
 	return ""
 }
+
+// SupervisorAddonSlug asks the Supervisor for this add-on's slug (needs
+// hassio_api in the add-on config). The page links to the add-on options
+// with it.
+func SupervisorAddonSlug(ctx context.Context, token string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://supervisor/addons/self/info", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("supervisor: HTTP %d", res.StatusCode)
+	}
+	var body struct {
+		Data struct {
+			Slug string `json:"slug"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(io.LimitReader(res.Body, 1<<20)).Decode(&body); err != nil {
+		return "", fmt.Errorf("supervisor: %w", err)
+	}
+	if !addonSlug.MatchString(body.Data.Slug) {
+		return "", fmt.Errorf("supervisor: unexpected slug %q", body.Data.Slug)
+	}
+	return body.Data.Slug, nil
+}
+
+var addonSlug = regexp.MustCompile(`^[a-z0-9_]{1,64}$`)

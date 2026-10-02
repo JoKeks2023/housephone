@@ -292,6 +292,9 @@ type Media struct {
 // without their own key push through it.
 const DefaultPushRelay = "https://push.jorisconrad.com/housephone"
 
+// SignalingPath is the device WebSocket on the bridge.
+const SignalingPath = "/v1/ws"
+
 // PushRelayOff disables the relay.
 const PushRelayOff = "off"
 
@@ -405,6 +408,7 @@ func Load(path string, allowMissing bool) (Config, error) {
 	if err := cfg.applyEnv(os.LookupEnv); err != nil {
 		return Config{}, err
 	}
+	cfg.Bridge.PublicURL = NormalizePublicURL(cfg.Bridge.PublicURL)
 	return cfg, nil
 }
 
@@ -637,6 +641,37 @@ func (c Config) ValidatePair() error {
 		return validateWSURL("bridge.lanUrl", c.Bridge.LanURL)
 	}
 	return nil
+}
+
+// NormalizePublicURL completes a short public address: a bare hostname
+// ("phone.example.com") or an https:// URL becomes wss://<host>/v1/ws,
+// http:// becomes ws://. Full ws:// and wss:// URLs with a path stay as
+// they are; anything unparsable is left for validation to reject.
+func NormalizePublicURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if !strings.Contains(raw, "://") {
+		raw = "wss://" + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return raw
+	}
+	switch u.Scheme {
+	case "https":
+		u.Scheme = "wss"
+	case "http":
+		u.Scheme = "ws"
+	case "wss", "ws":
+	default:
+		return raw
+	}
+	if u.Path == "" || u.Path == "/" {
+		u.Path = SignalingPath
+	}
+	return u.String()
 }
 
 // ValidatePublicURL requires a ws:// or wss:// URL with a host.
