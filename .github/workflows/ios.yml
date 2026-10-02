@@ -108,8 +108,10 @@ jobs:
         working-directory: ios
         run: |
           app="DerivedData/Build/Products/Debug-iphoneos/Housephone.app"
-          watch="$app/PlugIns/HousephoneWatch.app"
-          test -x "$watch/HousephoneWatch" || { echo "::error::Watch app is not embedded in PlugIns/"; ls -R "$app" | head -50; exit 1; }
+          # App Store Connect rejects a watch app outside Watch/ (ITMS-90680).
+          watch="$app/Watch/HousephoneWatch.app"
+          test -x "$watch/HousephoneWatch" || { echo "::error::Watch app is not embedded in Watch/"; ls -R "$app" | head -50; exit 1; }
+          test ! -e "$app/PlugIns/HousephoneWatch.app" || { echo "::error::Watch app must not be in PlugIns/"; exit 1; }
           plutil -p "$watch/Info.plist" | grep -E '"(CFBundleIdentifier|WKApplication|WKCompanionAppBundleIdentifier|UIBackgroundModes)"' -A2
           # Built with the prefix from the setup script step.
           test "$(plutil -extract CFBundleIdentifier raw "$app/Info.plist")" = org.example.housephone
@@ -122,7 +124,7 @@ jobs:
         working-directory: ios
         run: |
           app="DerivedData/Build/Products/Debug-iphoneos/Housephone.app"
-          watch="$app/PlugIns/HousephoneWatch.app"
+          watch="$app/Watch/HousephoneWatch.app"
           for bundle in "$app" "$watch"; do
             manifest="$bundle/PrivacyInfo.xcprivacy"
             test -f "$manifest" || { echo "::error::Missing $manifest"; exit 1; }
