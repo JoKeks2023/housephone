@@ -58,6 +58,10 @@ func (s *session) DeviceID() string { return s.deviceID }
 
 func (s *session) ProfileID() string { return s.profileID }
 
+// Private reports a connection over the private listener (home network or
+// Tailscale); the calls manager uses it to pick codecs a fallback can carry.
+func (s *session) Private() bool { return s.private }
+
 // Send queues a message. A device that cannot keep up is disconnected.
 func (s *session) Send(env protocol.Envelope) {
 	s.mu.Lock()

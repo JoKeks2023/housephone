@@ -55,6 +55,12 @@ type leg struct {
 	lastOffer     string
 	answered      bool
 	iceRestarts   int
+	// fallback: the device also takes websocket-pcma audio, so a WebRTC
+	// path that does not connect moves to the WebSocket (v1.4).
+	fallback bool
+	// mediaUp: the WebRTC peer reported connected since the last failure.
+	mediaUp       bool
+	fallbackTimer *time.Timer
 }
 
 // call is an actor: all fields below ops are only touched by run().
@@ -190,6 +196,7 @@ func (c *call) cleanup() {
 		c.relay.stop()
 	}
 	for _, l := range c.legs {
+		c.stopFallbackTimer(l)
 		if l.peer != nil {
 			_ = l.peer.Close()
 		}
@@ -283,6 +290,7 @@ func (c *call) incomingEnvelope() protocol.Envelope {
 
 // dropLeg removes a leg and closes its peer.
 func (c *call) dropLeg(l *leg) {
+	c.stopFallbackTimer(l)
 	if l.peer != nil {
 		_ = l.peer.Close()
 		l.peer = nil
@@ -415,6 +423,7 @@ func (c *call) onAnswer(conn DeviceConn, sdp string) {
 		}
 		c.ensureRelay()
 	}
+	c.armFallback(l)
 }
 
 // ensureRelay starts forwarding media once SIP media and an answered peer of
@@ -471,6 +480,66 @@ func (c *call) markConnectedMedia() {
 	}
 }
 
+// canFallBack reports whether l may still move to WebSocket audio: the
+// device takes it and the call's codec is PCMA, which the WebSocket
+// carries without transcoding (v1.4).
+func (c *call) canFallBack(l *leg) bool {
+	return l.fallback && !l.ws && c.codec == codec.PCMA && c.phase != phaseEnded
+}
+
+// armFallback starts the timer after an answer: if the WebRTC path is not
+// connected by then, the call falls back to the WebSocket.
+func (c *call) armFallback(l *leg) {
+	if !c.canFallBack(l) || l.mediaUp || l.fallbackTimer != nil {
+		return
+	}
+	gen := l.peerGen
+	l.fallbackTimer = time.AfterFunc(c.m.opts.MediaFallbackTimeout, func() {
+		c.do(func() { c.onFallbackTimeout(l, gen) })
+	})
+}
+
+func (c *call) stopFallbackTimer(l *leg) {
+	if l.fallbackTimer != nil {
+		l.fallbackTimer.Stop()
+		l.fallbackTimer = nil
+	}
+}
+
+func (c *call) onFallbackTimeout(l *leg, peerGen int) {
+	l.fallbackTimer = nil
+	if c.legs[l.deviceID] != l || l.peerGen != peerGen || l.mediaUp || !c.canFallBack(l) {
+		return
+	}
+	c.fallBackToWebSocket(l, "not connected in time")
+}
+
+// fallBackToWebSocket replaces the leg's WebRTC peer with WebSocket audio:
+// the device gets call.media and the audio runs over its signaling
+// connection, through the tunnel when it is away from home (v1.4).
+func (c *call) fallBackToWebSocket(l *leg, why string) {
+	c.log.Info("direct media path failed, audio falls back to the WebSocket", "device", l.deviceID, "reason", why)
+	c.stopFallbackTimer(l)
+	if l.peer != nil {
+		_ = l.peer.Close()
+		l.peer = nil
+	}
+	// Late offers and state callbacks of the old peer are stale now.
+	l.offerGen++
+	c.peerSeq++
+	l.peerGen = c.peerSeq
+	l.offerInFlight, l.lastOffer, l.mediaUp = false, "", false
+	l.ws = true
+	e := c.event(EventMediaFallback)
+	e.DeviceID = l.deviceID
+	c.m.emit(e)
+	c.attachWSMedia(l)
+	if c.dir == directionOutgoing || l.deviceID == c.acceptedBy {
+		c.stopReattachTimer()
+		c.ensureRelay()
+	}
+}
+
 func (c *call) onDTMF(conn DeviceConn, digits string) {
 	owner := c.dir == directionOutgoing && c.legs[conn.DeviceID()] != nil || conn.DeviceID() == c.acceptedBy
 	if !owner || c.sipMedia == nil || c.phase != phaseConnected {
@@ -508,6 +577,17 @@ func (c *call) onPeerState(l *leg, peerGen int, s PeerState) {
 		return
 	}
 	c.log.Debug("peer state", "device", l.deviceID, "state", s.String())
+	switch s {
+	case PeerConnected:
+		l.mediaUp = true
+		c.stopFallbackTimer(l)
+	case PeerFailed:
+		l.mediaUp = false
+		if c.canFallBack(l) {
+			c.fallBackToWebSocket(l, "ICE failed")
+			return
+		}
+	}
 	active := c.dir == directionOutgoing || l.deviceID == c.acceptedBy
 	if !active {
 		if s == PeerFailed {

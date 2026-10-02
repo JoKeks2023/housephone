@@ -36,7 +36,7 @@ func (c *call) onAttach(conn DeviceConn) {
 				c.checkAllDeclined()
 				return
 			}
-			l = &leg{deviceID: id, ws: ws}
+			l = &leg{deviceID: id, ws: ws, fallback: !ws && c.m.canFallBack(id)}
 			c.legs[id] = l
 		}
 		l.conn = conn
@@ -49,7 +49,7 @@ func (c *call) onAttach(conn DeviceConn) {
 		}
 		l := c.legs[id]
 		if l == nil {
-			l = &leg{deviceID: id}
+			l = &leg{deviceID: id, fallback: c.m.canFallBack(id)}
 			c.legs[id] = l
 		}
 		c.log.Info("active device re-attached", "device", id)

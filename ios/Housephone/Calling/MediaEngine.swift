@@ -68,6 +68,12 @@ final class MediaEngine {
         audioSession.isAudioEnabled = true
     }
 
+    /// Stops WebRTC's audio unit while the session stays active, so the
+    /// WebSocket fallback can take the microphone (v1.4).
+    func suspendAudio() {
+        audioSession.isAudioEnabled = false
+    }
+
     func audioSessionDidDeactivate(_ session: AVAudioSession) {
         audioSession.audioSessionDidDeactivate(session)
         audioSession.isAudioEnabled = false

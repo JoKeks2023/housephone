@@ -13,8 +13,10 @@ Apple Watch. Anrufe klingeln per Push, auch unterwegs und ohne VPN.
 1. **IP-Telefon in der FRITZ!Box**: Telefonie → Telefoniegeräte → Neues
    Gerät einrichten → Telefon (mit und ohne Schnurlos) → LAN/WLAN (IP-Telefon).
    Benutzername und Kennwort kommen in die Add-on-Optionen.
-2. **Portfreigabe UDP 50000** in der FRITZ!Box auf deinen Home-Assistant-Rechner
-   (Internet → Freigaben → Portfreigaben). Darüber läuft der Ton.
+2. **Portfreigabe UDP 50000** (empfohlen) in der FRITZ!Box auf deinen
+   Home-Assistant-Rechner (Internet → Freigaben → Portfreigaben), mit IPv4- und
+   IPv6-Haken. Darüber läuft der Ton unterwegs direkt. Ohne Freigabe läuft er
+   durch den Tunnel (etwas mehr Verzögerung, nur A-law).
    Keine Freigabe für 8080, 8081 oder 8099!
 3. **Cloudflare Tunnel** über das Community-Add-on „Cloudflared“, damit die
    App die Bridge unterwegs erreicht (siehe unten).

@@ -97,6 +97,12 @@ final class BridgeConnection {
                 self?.handle(event)
             }
         }
+        // Audio stays off the main actor; the stream ends with the client.
+        Task.detached { [audio] in
+            for await message in client.audio {
+                audio.deliver(message)
+            }
+        }
         let path = lastPath
         Task {
             // The first attempt already knows the network.
@@ -125,6 +131,15 @@ final class BridgeConnection {
         guard let client else { throw SignalingClientError.notConnected }
         try await client.send(message)
     }
+
+    /// The signaling client for sending WebSocket audio (v1.4 fallback);
+    /// `sendAudio` runs off the main actor.
+    var audioClient: SignalingClient? { client }
+
+    /// Receives the bridge's binary audio. The client's audio stream has a
+    /// single reader for its whole life; calls set a handler while their
+    /// audio runs over the WebSocket.
+    nonisolated let audio = AudioRouter()
 
     // MARK: - Pairing
 
@@ -392,7 +407,9 @@ final class BridgeConnection {
             platform: .ios,
             pushToken: pushToken,
             pushEnvironment: pushToken == nil ? nil : Self.pushEnvironment,
-            mediaCapabilities: [.webRTC],
+            // WebSocket audio is the fallback when the direct WebRTC path
+            // does not connect away from home (signaling v1.4).
+            mediaCapabilities: [.webRTC, .webSocketPCMA],
             pushTopic: Self.voipPushTopic,
             pushKey: Self.pushKeyStore.wirePublicKey()
         )
@@ -429,5 +446,21 @@ final class BridgeConnection {
         return withUnsafeBytes(of: &systemInfo.machine) { buffer in
             String(decoding: buffer.prefix { $0 != 0 }, as: UTF8.self)
         }
+    }
+}
+
+/// Hands binary audio messages to whoever plays them right now. Thread
+/// safe: the network delivers on a background task.
+final class AudioRouter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var handler: (@Sendable (Data) -> Void)?
+
+    func setHandler(_ handler: (@Sendable (Data) -> Void)?) {
+        lock.withLock { self.handler = handler }
+    }
+
+    func deliver(_ message: Data) {
+        let handler = lock.withLock { self.handler }
+        handler?(message)
     }
 }

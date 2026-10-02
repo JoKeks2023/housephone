@@ -366,3 +366,15 @@ Rückwärtskompatibel. Beide Endpunkte brauchen Bearer-Auth wie `/v1/device` und
 - **`startedAt`:** Die Ortszeit `TT.MM.JJ HH:MM` der FRITZ!Box wird mit `fritzbox.timezone` nach UTC umgerechnet (RFC 3339, ohne Sekundenbruchteile).
 - **`durationSeconds`:** aus `h:mm` (die FRITZ!Box rundet auf volle Minuten auf) mal 60. `0`, wenn nicht verbunden.
 
+
+## Erweiterung v1.4: Rückfall auf WebSocket-Audio
+
+Rückwärtskompatibel. Gilt für Geräte mit `mediaCapabilities: ["webrtc", "websocket-pcma"]` (iPhone ab dieser Version). Ohne `websocket-pcma` bleibt alles wie in v1.0.
+
+- **Wozu:** Ist die Bridge unterwegs nur über den Tunnel erreichbar und UDP 50000 nicht freigegeben, findet WebRTC keinen Weg. Der Ton läuft dann wie bei der Watch (v1.1) über die WebSocket-Verbindung.
+- **Codec:** Der WebSocket trägt nur PCMA; die Bridge wandelt nicht um.
+  - Ausgehend von einem solchen Gerät, das über den öffentlichen Zugang (Tunnel) verbunden ist, enthält das Offer nur PCMA. Im Heimnetz bleibt G.722.
+  - Eingehend gilt der Codec der FRITZ!Box. Nur bei PCMA ist ein Rückfall möglich, sonst bleibt es bei ICE-Restarts.
+- **Auslöser:** Die Bridge wechselt, wenn der WebRTC-Peer **5 s nach dem `call.answer`** noch nicht verbunden ist oder **ICE fehlschlägt**, im Klingeln wie im Gespräch.
+- **Ablauf:** Die Bridge schließt ihren Peer und sendet `call.media` (wie v1.1), bei laufendem Anruf gefolgt von `call.state`. Das Gerät schließt seine PeerConnection und schickt Ton als Binärnachrichten wie in v1.1. Weitere Offers gibt es für diesen Anruf nicht. Nach einem Wiederverbinden kommt erneut `call.media`.
+- Ein `call.answer`, das sich mit dem Wechsel kreuzt, beantwortet die Bridge mit `error{bad_request}`; das Gerät ignoriert es.

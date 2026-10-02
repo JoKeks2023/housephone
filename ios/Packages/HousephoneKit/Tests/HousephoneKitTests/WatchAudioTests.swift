@@ -222,6 +222,32 @@ struct CallSessionWebSocketMediaTests {
         #expect(call.handle(.remoteState(.connected), now: start + 3) == [.stopRingback, .reportOutgoingConnected])
     }
 
+    /// v1.4: an iPhone in a WebRTC call gets call.media when the direct
+    /// path does not connect; the call goes on over the WebSocket.
+    @Test func webRTCCallFallsBackMidCall() {
+        var (call, _) = CallSession.incoming(push: IncomingCallPush(callId: callId, caller: "+4930123456", callerName: nil, bridgeId: "b"), now: start)
+        let offer = SessionOffer(callId: callId, sdp: "v=0", iceServers: [])
+        #expect(call.handle(.offer(offer)) == [.negotiate(offer)])
+        #expect(call.handle(.localAnswerSent) == [])
+        #expect(call.handle(.userAnswered) == [.sendAccept])
+        #expect(call.handle(.remoteState(.connected), now: start + 1) == [])
+        #expect(call.mediaMode == .webRTC)
+
+        #expect(call.handle(.webSocketMedia(media)) == [.startWebSocketMedia(media)])
+        #expect(call.mediaMode == .webSocket)
+        #expect(call.phase == .connected)
+    }
+
+    @Test func outgoingFallsBackWhileRinging() {
+        var call = CallSession.outgoing(id: callId, number: "+4930123456", name: nil, now: start)
+        let offer = SessionOffer(callId: callId, sdp: "v=0", iceServers: [])
+        #expect(call.handle(.offer(offer)) == [.negotiate(offer)])
+        #expect(call.handle(.remoteState(.ringing)) == [.startRingback])
+        #expect(call.handle(.webSocketMedia(media)) == [.startWebSocketMedia(media)])
+        #expect(call.isRingbackPlaying)
+        #expect(call.handle(.remoteState(.connected), now: start + 3) == [.stopRingback, .reportOutgoingConnected])
+    }
+
     @Test func formatSupport() {
         #expect(media.isSupported)
         #expect(!CallMedia(callId: callId, codec: "G722", sampleRate: 16000).isSupported)

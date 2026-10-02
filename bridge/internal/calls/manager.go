@@ -28,6 +28,9 @@ const (
 	// DefaultOfferAnswerTimeout ends an outgoing call whose device never
 	// answers the offer.
 	DefaultOfferAnswerTimeout = 15 * time.Second
+	// DefaultMediaFallbackTimeout is how long a device's WebRTC path may
+	// take to connect before the call falls back to WebSocket audio.
+	DefaultMediaFallbackTimeout = 5 * time.Second
 	// DefaultMaxCalls bounds concurrent calls when dialing out.
 	DefaultMaxCalls = 8
 	// MaxOutgoingPerDevice bounds concurrent outgoing calls per device.
@@ -63,6 +66,10 @@ type Options struct {
 	// OfferAnswerTimeout ends an outgoing call if the device does not
 	// answer the offer in time.
 	OfferAnswerTimeout time.Duration
+	// MediaFallbackTimeout: a device that can fall back to WebSocket audio
+	// gets it when its WebRTC path is not connected this long after the
+	// answer (signaling v1.4).
+	MediaFallbackTimeout time.Duration
 	// MaxCalls bounds the concurrent calls; call.dial beyond it is refused.
 	MaxCalls int
 	// OnEvent receives call events (statistics, admin TUI). It must not
@@ -115,6 +122,9 @@ func NewManager(opts Options) *Manager {
 	}
 	if opts.PushTimeout == 0 {
 		opts.PushTimeout = DefaultPushTimeout
+	}
+	if opts.MediaFallbackTimeout == 0 {
+		opts.MediaFallbackTimeout = DefaultMediaFallbackTimeout
 	}
 	if opts.OfferAnswerTimeout == 0 {
 		opts.OfferAnswerTimeout = DefaultOfferAnswerTimeout
@@ -236,6 +246,13 @@ func (m *Manager) DeviceRevoked(conn DeviceConn) {
 func (m *Manager) usesWebSocketAudio(deviceID string) bool {
 	dev, err := m.opts.Devices.Get(deviceID)
 	return err == nil && dev.UsesWebSocketAudio()
+}
+
+// canFallBack reports a WebRTC device that also takes websocket-pcma
+// audio (v1.4).
+func (m *Manager) canFallBack(deviceID string) bool {
+	dev, err := m.opts.Devices.Get(deviceID)
+	return err == nil && dev.CanFallBackToWebSocketAudio()
 }
 
 func (m *Manager) conn(deviceID string) DeviceConn {
