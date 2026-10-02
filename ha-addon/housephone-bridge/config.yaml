@@ -1,5 +1,5 @@
 name: Housephone Bridge
-version: "0.2.0"
+version: "0.3.0"
 slug: housephone_bridge
 description: Telefonieren über die FRITZ!Box mit iPhone und Apple Watch, auch unterwegs
 url: https://github.com/JoKeks2023/housephone/tree/master/ha-addon/housephone-bridge
@@ -16,11 +16,6 @@ ingress: true
 # panel_admin defaults to true: only Home Assistant admins see the panel.
 panel_icon: mdi:phone
 panel_title: Housephone
-# The APNs key (.p8) goes into the add-on's config folder
-# (/addon_configs/<slug>/ on the host, /config in the container).
-map:
-  - type: addon_config
-    read_only: true
 options:
   bridge_name: Zuhause
   public_url: ""
@@ -31,8 +26,6 @@ options:
   sip_username: ""
   sip_password: ""
   lines: []
-  apns_team_id: T9CA6D7T8N
-  apns_topic: com.jorisconrad.housephone.voip
   log_level: info
 schema:
   bridge_name: str
@@ -56,8 +49,8 @@ schema:
       numbers: str?
   fritzbox_username: str?
   fritzbox_password: password?
-  apns_key_file: match(^/config/[^\s]+\.p8$)?
-  apns_key_id: str?
-  apns_team_id: str?
+  # Pushes go through the push relay of the app (ADR-0010); no APNs key in
+  # Home Assistant. push_relay and apns_topic only for self-built apps.
+  push_relay: match(^(off|https?://[^\s/]+(/.*)?)$)?
   apns_topic: str?
   log_level: list(debug|info|warn|error)

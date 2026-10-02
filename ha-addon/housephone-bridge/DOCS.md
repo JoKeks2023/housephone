@@ -18,10 +18,10 @@ Apple Watch. Anrufe klingeln per Push, auch unterwegs und ohne VPN.
    Keine Freigabe für 8080, 8081 oder 8099!
 3. **Cloudflare Tunnel** über das Community-Add-on „Cloudflared“, damit die
    App die Bridge unterwegs erreicht (siehe unten).
-4. **APNs-Schlüssel** (.p8) aus deinem Apple-Developer-Konto für die
-   VoIP-Pushes. Lege ihn in den Konfigurationsordner des Add-ons
-   (`/addon_configs/<id>_housephone_bridge/` über Samba oder den
-   File-Editor) und trage `/config/AuthKey_XXXX.p8` als *APNs-Schlüssel* ein.
+
+Einen APNs-Schlüssel brauchst du nicht: Die Bridge weckt iPhone und Watch
+über das Push-Relay der App (ADR-0010). Nummer und Name des Anrufers sind
+dabei Ende-zu-Ende verschlüsselt; Relay und Apple sehen sie nicht.
 
 ## Cloudflare Tunnel
 
@@ -93,7 +93,8 @@ Und du kannst dort:
 | Name / Nummern des Hauptprofils | optional, nur bei mehreren Profilen wichtig (siehe unten) |
 | Weitere Profile | optional, je Person ein eigenes IP-Telefon (siehe unten) |
 | FRITZ!Box-Benutzer | optional, für Telefonbuch und Anrufliste |
-| APNs | Schlüsseldatei, Key ID, Team ID, Topic |
+| Push-Relay | leer lassen; nur für selbst gebaute Apps ein eigenes Relay, `off` schaltet Pushes ab |
+| APNs Topic | leer lassen; nur für selbst gebaute Apps (`<präfix>.housephone.voip`) |
 | Log-Level | `info` reicht; Nummern stehen immer gekürzt im Log |
 
 Kennwörter stehen nur in den Add-on-Optionen und nie im Log.

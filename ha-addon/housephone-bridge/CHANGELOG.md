@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+
+- Push ohne eigenen APNs-Schlüssel (HPHN-22): Die Bridge weckt die Geräte
+  über das Push-Relay der App. Nummer und Name des Anrufers sind
+  Ende-zu-Ende verschlüsselt. Die Optionen für Schlüsseldatei, Key ID und
+  Team ID fallen weg, ebenso der Konfigurationsordner.
+- Neu und optional: „Push-Relay“ für selbst gebaute Apps.
+- Braucht die App ab dieser Version; ältere Apps bekommen über das Relay
+  keine Pushes (der Selbsttest zeigt das an).
+
 ## 0.2.0
 
 - Mehrere Profile (HPHN-42): jede Person mit eigener Festnetznummer als

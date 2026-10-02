@@ -41,18 +41,12 @@ configuration:
   fritzbox_password:
     name: FRITZ!Box user password
     description: Only needed with a FRITZ!Box user.
-  apns_key_file:
-    name: APNs key
-    description: Path to the .p8 file in the add-on's config folder, e.g. /config/AuthKey.p8.
-  apns_key_id:
-    name: APNs key ID
-    description: The key's ID from the Apple Developer account.
-  apns_team_id:
-    name: Apple team ID
-    description: Team ID of the Apple Developer account.
+  push_relay:
+    name: Push relay (optional)
+    description: Leave empty to send pushes end-to-end encrypted through the app's relay. Only enter your own relay URL for a self-built app; "off" disables pushes.
   apns_topic:
-    name: APNs topic
-    description: The app's bundle ID plus ".voip", i.e. <prefix>.housephone.voip. The "Housephone einrichten" script shows it at the end.
+    name: APNs topic (optional)
+    description: Leave empty. Only for self-built apps with their own relay, the bundle ID plus ".voip", i.e. <prefix>.housephone.voip.
   log_level:
     name: Log level
     description: Phone numbers are always masked in the log.
