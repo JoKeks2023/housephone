@@ -1,5 +1,5 @@
 name: Housephone Bridge
-version: "0.1.0"
+version: "0.2.0"
 slug: housephone_bridge
 description: Telefonieren über die FRITZ!Box mit iPhone und Apple Watch, auch unterwegs
 url: https://github.com/JoKeks2023/housephone/tree/master/ha-addon/housephone-bridge
@@ -30,6 +30,7 @@ options:
   fritzbox_host: 192.168.178.1
   sip_username: ""
   sip_password: ""
+  lines: []
   apns_team_id: T9CA6D7T8N
   apns_topic: com.jorisconrad.housephone.voip
   log_level: info
@@ -43,6 +44,16 @@ schema:
   fritzbox_host: str
   sip_username: str
   sip_password: password
+  # Profiles (ADR-0008): the sip_* phone is the default profile, every
+  # entry in lines is a further IP phone with its own number.
+  profile_name: str?
+  profile_numbers: str?
+  lines:
+    - id: "match(^[a-z0-9][a-z0-9-]{0,31}$)"
+      name: str
+      sip_username: str
+      sip_password: password
+      numbers: str?
   fritzbox_username: str?
   fritzbox_password: password?
   apns_key_file: match(^/config/[^\s]+\.p8$)?

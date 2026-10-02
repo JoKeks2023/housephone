@@ -27,17 +27,26 @@ type fakeAPI struct {
 	lan       []admin.LanPairingRequest
 	approved  []string
 	denied    []string
+	// profiles, if set, makes the household multi-profile (ADR-0008).
+	profiles []admin.ProfileInfo
+	paired   []string // "name/profile" of created codes
+	moved    []string // "id/profile"
 }
 
 func (f *fakeAPI) Status(context.Context) (admin.Status, error) {
 	return admin.Status{BridgeName: "Zuhause", Version: "0.5.0", SIPRegistered: true, SIPUser: "620", Registrar: "192.168.0.1",
 		PublicIP: "94.1.2.3", PublicIPSource: "fritzbox", MediaPort: 50000, APNsConfigured: true,
-		DevicesTotal: 2, DevicesOnline: 1, StartedAt: t0.Add(-90 * time.Minute), Fingerprint: "AEbIfOzLcNeN", PublicURL: "wss://phone.x.de/v1/ws"}, nil
+		DevicesTotal: 2, DevicesOnline: 1, StartedAt: t0.Add(-90 * time.Minute), Fingerprint: "AEbIfOzLcNeN", PublicURL: "wss://phone.x.de/v1/ws",
+		Profiles: f.profiles}, nil
+}
+func (f *fakeAPI) MoveDevice(_ context.Context, id, profile string) (admin.MoveResult, error) {
+	f.moved = append(f.moved, id+"/"+profile)
+	return admin.MoveResult{Moved: []admin.DeviceInfo{{ID: id, Profile: profile}}}, nil
 }
 func (f *fakeAPI) Devices(context.Context) ([]admin.DeviceInfo, error) {
 	return []admin.DeviceInfo{
 		{ID: "i1", Name: "iPhone von Joris", Platform: "ios", Media: "webrtc", Push: "production", Online: true},
-		{ID: "w1", Name: "Apple Watch", Platform: "watchos", Media: "websocket-pcma", PairedByName: "iPhone von Joris", LastSeen: t0},
+		{ID: "w1", Name: "Apple Watch", Platform: "watchos", Media: "websocket-pcma", PairedBy: "i1", PairedByName: "iPhone von Joris", LastSeen: t0},
 	}, nil
 }
 func (f *fakeAPI) RenameDevice(_ context.Context, id, name string) (admin.DeviceInfo, error) {
@@ -48,8 +57,9 @@ func (f *fakeAPI) RemoveDevice(_ context.Context, id string, _ bool) (admin.Remo
 	f.removed = append(f.removed, id)
 	return admin.RemoveResult{Removed: []admin.DeviceInfo{{ID: id}}}, nil
 }
-func (f *fakeAPI) CreatePairing(context.Context, string) (admin.PairingInfo, error) {
-	return admin.PairingInfo{Code: "K7P2XH9QRMW4DZT8", Grouped: "K7P2-XH9Q-RMW4-DZT8", Link: "housephone://pair?v=2&code=K7P2XH9QRMW4DZT8", Fingerprint: "AEbIfOzLcNeN", ExpiresAt: t0.Add(10 * time.Minute)}, nil
+func (f *fakeAPI) CreatePairing(_ context.Context, name, profile string) (admin.PairingInfo, error) {
+	f.paired = append(f.paired, name+"/"+profile)
+	return admin.PairingInfo{Profile: profile, ProfileName: profile, Code: "K7P2XH9QRMW4DZT8", Grouped: "K7P2-XH9Q-RMW4-DZT8", Link: "housephone://pair?v=2&code=K7P2XH9QRMW4DZT8", Fingerprint: "AEbIfOzLcNeN", ExpiresAt: t0.Add(10 * time.Minute)}, nil
 }
 func (f *fakeAPI) WaitPairing(context.Context, string) (admin.PairingState, error) {
 	return f.pairState, nil
@@ -59,7 +69,10 @@ func (f *fakeAPI) RevokePairing(_ context.Context, code string) error {
 	return nil
 }
 func (f *fakeAPI) LanPairings(context.Context) ([]admin.LanPairingRequest, error) { return f.lan, nil }
-func (f *fakeAPI) ApproveLanPairing(_ context.Context, id string) (admin.DeviceInfo, error) {
+func (f *fakeAPI) ApproveLanPairing(_ context.Context, id, profile string) (admin.DeviceInfo, error) {
+	if profile != "" {
+		id += "/" + profile
+	}
 	f.approved = append(f.approved, id)
 	return admin.DeviceInfo{ID: "i3", Name: "iPhone Test"}, nil
 }
@@ -68,7 +81,7 @@ func (f *fakeAPI) DenyLanPairing(_ context.Context, id string) error {
 	return nil
 }
 func (f *fakeAPI) Calls(context.Context) (admin.CallsView, error) {
-	return admin.CallsView{Recent: []admin.CallInfo{{Direction: "incoming", Number: "…563", Codec: "PCMA", StartedAt: t0, ConnectedAt: t0, EndedAt: t0.Add(42 * time.Second), Reason: "remote_hangup"}}}, nil
+	return admin.CallsView{Recent: []admin.CallInfo{{Direction: "incoming", Number: "…567", Codec: "PCMA", StartedAt: t0, ConnectedAt: t0, EndedAt: t0.Add(42 * time.Second), Reason: "remote_hangup"}}}, nil
 }
 func (f *fakeAPI) Stats(context.Context) (admin.Stats, error) {
 	c := admin.Counters{Incoming: 3, Answered: 2, Missed: 1, Outgoing: 1, Codecs: map[string]int{"PCMA": 2}}
@@ -198,7 +211,7 @@ func TestPairingShowsQRAndResult(t *testing.T) {
 	m = press(t, m, "3", "n")
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = next.(Model)
-	p, _ := api.CreatePairing(context.Background(), "")
+	p, _ := api.CreatePairing(context.Background(), "", "")
 	next, _ = m.Update(pairingMsg(p))
 	m = next.(Model)
 	v = plain(m.View())
@@ -249,7 +262,7 @@ func TestLanPairingRequests(t *testing.T) {
 func TestCallsLogsAndSelfTest(t *testing.T) {
 	m := press(t, newTest(t, &fakeAPI{}), "4")
 	v := plain(m.View())
-	if !strings.Contains(v, "eingehend 3 · angenommen 2 · verpasst 1") || !strings.Contains(v, "…563") || !strings.Contains(v, "42s") {
+	if !strings.Contains(v, "eingehend 3 · angenommen 2 · verpasst 1") || !strings.Contains(v, "…567") || !strings.Contains(v, "42s") {
 		t.Fatalf("calls:\n%s", v)
 	}
 	m = press(t, m, "5")

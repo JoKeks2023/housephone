@@ -1,5 +1,5 @@
 {{template "head" .}}
-{{$L := .L}}{{$csrf := .CSRF}}{{if .Data.Lan}}
+{{$L := .L}}{{$csrf := .CSRF}}{{$profiles := .Data.Profiles}}{{$multi := .Data.MultiProfile}}{{if .Data.Lan}}
 <section class="card attention" data-refresh>
 <h2>{{$L.T "lanTitle"}}</h2>
 <p class="muted">{{$L.T "lanHint"}}</p>
@@ -8,7 +8,7 @@
 <div><code class="big sas">{{sas .SAS}}</code> <strong>{{.DeviceName}}</strong>
 <small>{{.Platform}}{{with .Model}} · {{.}}{{end}} · {{.IP}} · <code>{{.KeyFingerprint}}</code> · {{$L.T "lanUntil"}} {{clock .ExpiresAt}}</small></div>
 <div class="actions">
-<form method="post" action="lan/{{.ID}}/approve" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}"><button class="primary">{{$L.T "lanApprove"}}</button></form>
+<form method="post" action="lan/{{.ID}}/approve" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}">{{if $multi}}<select name="profile" aria-label="{{$L.T "profile"}}">{{range $profiles}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select>{{end}}<button class="primary">{{$L.T "lanApprove"}}</button></form>
 <form method="post" action="lan/{{.ID}}/deny" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}"><button class="danger">{{$L.T "lanDeny"}}</button></form>
 </div>
 </li>
@@ -27,12 +27,21 @@
 <div><dt>{{$L.T "version"}}</dt><dd>{{.Version}}<small>{{$L.T "running"}}: {{since $L .StartedAt}}</small></dd></div>
 </dl>
 </section>
+{{end}}{{if $multi}}
+<section class="card" data-refresh>
+<h2>{{$L.T "profiles"}}</h2>
+<p class="muted">{{$L.T "profileHint"}}</p>
+<ul class="list">{{range $profiles}}
+<li><div><span class="dot {{if .Registered}}ok{{else}}bad{{end}}"></span><strong>{{.Name}}</strong>
+<small>{{if .Registered}}{{$L.T "registered"}}{{else}}{{$L.T "notRegistered"}}{{end}} · {{.SIPUser}}{{range .Numbers}} · {{.}}{{end}}{{if not .HistoryAllowed}} · {{$L.T "noNumbers"}}{{end}} · {{if .Phonebooks}}{{$L.T "phonebooks"}} {{range $i, $b := .Phonebooks}}{{if $i}}, {{end}}{{$b}}{{end}}{{else}}{{$L.T "allPhonebooks"}}{{end}} · {{$L.T "devicesOnline"}}: {{.DevicesOnline}} {{$L.T "of"}} {{.Devices}}</small></div></li>
+{{end}}</ul>
+</section>
 {{end}}
 <section class="card">
 <h2>{{.L.T "calls"}}</h2>
 {{if .Data.Calls}}<ul class="list">{{range .Data.Calls}}
 <li><div><strong>{{if eq .Direction "incoming"}}{{$L.T "incoming"}}{{else}}{{$L.T "outgoing"}}{{end}}</strong> {{.Number}}{{if .Name}} · {{.Name}}{{end}}
-<small>{{with .DeviceName}}{{.}} · {{end}}{{if .ConnectedAt.IsZero}}{{$L.T "ringing"}}{{else}}{{$L.T "connected"}} · {{since $L .ConnectedAt}}{{end}}{{with .Codec}} · {{.}}{{end}}</small></div></li>
+<small>{{if $multi}}{{with .ProfileName}}{{.}} · {{end}}{{end}}{{with .DeviceName}}{{.}} · {{end}}{{if .ConnectedAt.IsZero}}{{$L.T "ringing"}}{{else}}{{$L.T "connected"}} · {{since $L .ConnectedAt}}{{end}}{{with .Codec}} · {{.}}{{end}}</small></div></li>
 {{end}}</ul>{{else}}<p class="muted">{{.L.T "noCalls"}}</p>{{end}}
 </section>
 <section class="card">
@@ -40,11 +49,14 @@
 {{if .Data.Devices}}<ul class="list">{{range .Data.Devices}}
 <li>
 <div><span class="dot {{if .Online}}ok{{else}}off{{end}}"></span><strong>{{.Name}}</strong>
-<small>{{.Platform}}{{with .Model}} · {{.}}{{end}} · {{if .Online}}{{$L.T "online"}}{{else}}{{$L.T "lastSeen"}}: {{if .LastSeen.IsZero}}{{$L.T "never"}}{{else}}{{date .LastSeen}}{{end}}{{end}}{{with .PairedByName}} · {{$L.T "via"}} {{.}}{{end}} · <code>{{.KeyFingerprint}}</code></small></div>
+<small>{{if $multi}}{{$L.T "profile"}}: {{.ProfileName}} · {{end}}{{.Platform}}{{with .Model}} · {{.}}{{end}} · {{if .Online}}{{$L.T "online"}}{{else}}{{$L.T "lastSeen"}}: {{if .LastSeen.IsZero}}{{$L.T "never"}}{{else}}{{date .LastSeen}}{{end}}{{end}}{{with .PairedByName}} · {{$L.T "via"}} {{.}}{{end}} · <code>{{.KeyFingerprint}}</code></small></div>
 <div class="actions">
 <details><summary>{{$L.T "rename"}}</summary>
 <form method="post" action="devices/{{.ID}}/rename" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}"><input name="name" value="{{.Name}}" maxlength="64" required aria-label="{{$L.T "rename"}}"><button>{{$L.T "save"}}</button></form>
 </details>
+{{if and $multi (not .PairedBy)}}<details><summary>{{$L.T "move"}}</summary>
+<form method="post" action="devices/{{.ID}}/move" class="inline"><input type="hidden" name="csrf" value="{{$csrf}}">{{$current := .Profile}}<select name="profile" aria-label="{{$L.T "moveTo"}}">{{range $profiles}}<option value="{{.ID}}"{{if eq .ID $current}} selected{{end}}>{{.Name}}</option>{{end}}</select><button>{{$L.T "move"}}</button></form>
+</details>{{end}}
 <a class="button danger" href="devices/{{.ID}}/remove">{{$L.T "remove"}}</a>
 </div>
 </li>
@@ -53,6 +65,6 @@
 <section class="card">
 <h2>{{.L.T "pairNew"}}</h2>
 <p class="muted">{{.L.T "pairHint"}}</p>
-<form method="post" action="pair" class="inline"><input type="hidden" name="csrf" value="{{.CSRF}}"><input name="name" maxlength="64" placeholder="{{.L.T "deviceName"}}" aria-label="{{.L.T "deviceName"}}"><button class="primary">{{.L.T "createCode"}}</button></form>
+<form method="post" action="pair" class="inline"><input type="hidden" name="csrf" value="{{.CSRF}}">{{if $multi}}<select name="profile" aria-label="{{$L.T "profile"}}">{{range $profiles}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select>{{end}}<input name="name" maxlength="64" placeholder="{{.L.T "deviceName"}}" aria-label="{{.L.T "deviceName"}}"><button class="primary">{{.L.T "createCode"}}</button></form>
 </section>
 {{template "foot" .}}

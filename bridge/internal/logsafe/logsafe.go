@@ -17,7 +17,7 @@ func SetShowNumbers(show bool) { showNumbers.Store(show) }
 // ShowNumbers reports whether numbers and names are shown in full.
 func ShowNumbers() bool { return showNumbers.Load() }
 
-// Number masks a phone number to its last three digits, e.g. "…563". Short
+// Number masks a phone number to its last three digits, e.g. "…567". Short
 // numbers (internal ones like **9) are masked completely; "" stays "".
 func Number(n string) string {
 	if n == "" || showNumbers.Load() {

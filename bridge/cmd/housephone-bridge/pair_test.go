@@ -47,7 +47,7 @@ func startPair(t *testing.T, ctx context.Context, cfg config.Config) (string, *s
 	t.Helper()
 	out := &syncBuffer{}
 	done := make(chan error, 1)
-	go func() { done <- pair(ctx, cfg, "", out, 10*time.Millisecond) }()
+	go func() { done <- pair(ctx, cfg, "", "", out, 10*time.Millisecond) }()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		for _, line := range strings.Split(out.String(), "\n") {

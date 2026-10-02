@@ -79,6 +79,18 @@ func (s *Server) Close(ctx context.Context) {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/status", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, http.StatusOK, s.svc.Status()) })
+	mux.HandleFunc("GET /v1/profiles", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, http.StatusOK, s.svc.Profiles()) })
+	mux.HandleFunc("POST /v1/devices/{id}/move", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Profile string `json:"profile"`
+		}
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&req); err != nil || strings.TrimSpace(req.Profile) == "" {
+			writeError(w, http.StatusBadRequest, "Profil fehlt")
+			return
+		}
+		res, err := s.svc.MoveDevice(r.PathValue("id"), strings.TrimSpace(req.Profile))
+		s.reply(w, res, err)
+	})
 	mux.HandleFunc("GET /v1/devices", func(w http.ResponseWriter, r *http.Request) {
 		list, err := s.svc.Devices()
 		s.reply(w, list, err)
@@ -100,10 +112,11 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.HandleFunc("POST /v1/pairing", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Name string `json:"name"`
+			Name    string `json:"name"`
+			Profile string `json:"profile"`
 		}
 		_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&req)
-		info, err := s.svc.CreatePairing(req.Name)
+		info, err := s.svc.CreatePairing(req.Name, strings.TrimSpace(req.Profile))
 		s.reply(w, info, err)
 	})
 	mux.HandleFunc("GET /v1/pairing/{code}", s.waitPairing)
@@ -114,7 +127,11 @@ func (s *Server) Handler() http.Handler {
 		writeJSON(w, http.StatusOK, s.svc.LanPairings())
 	})
 	mux.HandleFunc("POST /v1/lan-pairings/{id}/approve", func(w http.ResponseWriter, r *http.Request) {
-		dev, err := s.svc.ApproveLanPairing(r.PathValue("id"))
+		var req struct {
+			Profile string `json:"profile"`
+		}
+		_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&req)
+		dev, err := s.svc.ApproveLanPairing(r.PathValue("id"), strings.TrimSpace(req.Profile))
 		s.reply(w, dev, err)
 	})
 	mux.HandleFunc("POST /v1/lan-pairings/{id}/deny", func(w http.ResponseWriter, r *http.Request) {
@@ -166,6 +183,8 @@ func (s *Server) reply(w http.ResponseWriter, v any, err error) {
 		writeJSON(w, http.StatusOK, v)
 	case errors.Is(err, ErrNotFound):
 		writeError(w, http.StatusNotFound, "nicht gefunden")
+	case errors.Is(err, ErrUnknownProfile):
+		writeError(w, http.StatusBadRequest, ErrUnknownProfile.Error())
 	default:
 		s.log.Error("admin request failed", "error", err)
 		writeError(w, http.StatusInternalServerError, err.Error())

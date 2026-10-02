@@ -21,9 +21,10 @@ const waitTimeout = 2 * time.Second
 
 // fakeConn records messages sent to a device.
 type fakeConn struct {
-	id    string
-	out   chan protocol.Envelope
-	audio chan []byte
+	id      string
+	profile string
+	out     chan protocol.Envelope
+	audio   chan []byte
 
 	mu   sync.Mutex
 	sink AudioSink
@@ -34,6 +35,8 @@ func newFakeConn(id string) *fakeConn {
 }
 
 func (f *fakeConn) DeviceID() string { return f.id }
+
+func (f *fakeConn) ProfileID() string { return f.profile }
 
 func (f *fakeConn) SendAudio(frame []byte) {
 	select {

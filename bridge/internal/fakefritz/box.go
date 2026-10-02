@@ -32,8 +32,11 @@ type Box struct {
 	dg     *diago.Diago
 	digest *diago.DigestAuthServer
 
-	mu        sync.Mutex
-	contact   *sip.Uri
+	mu sync.Mutex
+	// users are further IP phones (AddUser), username → password.
+	users map[string]string
+	// contacts are the registered contacts per username.
+	contacts  map[string]sip.Uri
 	registers int
 	// Registered is closed on the first successful REGISTER.
 	Registered chan struct{}
@@ -71,6 +74,8 @@ func Start(ctx context.Context, username, password string, codecs []media.Codec,
 	b := &Box{
 		Host: "127.0.0.1", Port: port, Username: username, Password: password,
 		digest:     diago.NewDigestServer(),
+		users:      map[string]string{},
+		contacts:   map[string]sip.Uri{},
 		Registered: make(chan struct{}),
 		Invites:    make(chan *sip.Request, 10),
 	}
@@ -90,20 +95,39 @@ func Start(ctx context.Context, username, password string, codecs []media.Codec,
 	return b, nil
 }
 
-func (b *Box) auth() diago.DigestAuth {
-	return diago.DigestAuth{Username: b.Username, Password: b.Password, Realm: "fritz.box"}
+// AddUser adds a further IP phone (a second profile, ADR-0008).
+func (b *Box) AddUser(username, password string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.users[username] = password
+}
+
+// auth returns the credentials of the IP phone named in the request's From
+// header (the main phone if unknown).
+func (b *Box) auth(req *sip.Request) diago.DigestAuth {
+	user := b.Username
+	if from := req.From(); from != nil && from.Address.User != "" {
+		user = from.Address.User
+	}
+	b.mu.Lock()
+	password, ok := b.users[user]
+	b.mu.Unlock()
+	if !ok {
+		user, password = b.Username, b.Password
+	}
+	return diago.DigestAuth{Username: user, Password: password, Realm: "fritz.box"}
 }
 
 func (b *Box) handleRegister(req *sip.Request, tx sip.ServerTransaction) {
 	b.mu.Lock()
 	b.registers++
 	b.mu.Unlock()
-	res, err := b.digest.AuthorizeRequest(req, b.auth())
+	creds := b.auth(req)
+	res, err := b.digest.AuthorizeRequest(req, creds)
 	if err == nil && res.StatusCode == sip.StatusOK {
 		if c := req.Contact(); c != nil {
-			addr := c.Address
 			b.mu.Lock()
-			b.contact = &addr
+			b.contacts[creds.Username] = c.Address
 			b.mu.Unlock()
 			res.AppendHeader(c.Clone())
 		}
@@ -115,7 +139,7 @@ func (b *Box) handleRegister(req *sip.Request, tx sip.ServerTransaction) {
 }
 
 func (b *Box) handleInvite(d *diago.DialogServerSession) {
-	if err := b.digest.AuthorizeDialog(d, b.auth()); err != nil {
+	if err := b.digest.AuthorizeDialog(d, b.auth(d.InviteRequest)); err != nil {
 		return // 401 sent; the phone retries with credentials
 	}
 	b.Invites <- d.InviteRequest
@@ -144,20 +168,29 @@ func (b *Box) RegisterCount() int {
 	return b.registers
 }
 
-// Contact returns the registered contact of the phone.
-func (b *Box) Contact() (sip.Uri, error) {
+// Contact returns the registered contact of the main phone.
+func (b *Box) Contact() (sip.Uri, error) { return b.ContactOf(b.Username) }
+
+// ContactOf returns the registered contact of an IP phone.
+func (b *Box) ContactOf(username string) (sip.Uri, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if b.contact == nil {
+	c, ok := b.contacts[username]
+	if !ok {
 		return sip.Uri{}, errors.New("nothing registered")
 	}
-	return *b.contact, nil
+	return c, nil
 }
 
-// Call rings the registered phone. It returns once the call is answered
-// (or fails); cancelling ctx before that sends CANCEL.
+// Call rings the main phone. It returns once the call is answered (or
+// fails); cancelling ctx before that sends CANCEL.
 func (b *Box) Call(ctx context.Context, fromUser, displayName string) (*diago.DialogClientSession, *diago.DialogMedia, error) {
-	contact, err := b.Contact()
+	return b.CallPhone(ctx, b.Username, fromUser, displayName)
+}
+
+// CallPhone rings the IP phone username.
+func (b *Box) CallPhone(ctx context.Context, username, fromUser, displayName string) (*diago.DialogClientSession, *diago.DialogMedia, error) {
+	contact, err := b.ContactOf(username)
 	if err != nil {
 		return nil, nil, err
 	}

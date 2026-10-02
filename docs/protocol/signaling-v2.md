@@ -22,6 +22,7 @@
 | Neue Nachricht Bridge → Gerät | `device.paired {deviceName, platform, pairedAt}` an alle verbundenen Geräte, wenn ein neues Gerät gekoppelt wurde |
 | `401`-Antworten | Body `{"code":"unauthorized"}` bzw. `{"code":"clock_skew"}`, wenn Zeitstempel falsch, Signatur sonst gültig |
 | `welcome`, `pair.companion` | zusätzlich `lanUrl` (optional): URL des privaten Zugangs, siehe „Zugänge“ |
+| `welcome` (v2.2) | zusätzlich `profile {id, name, number?}`: das Profil des Geräts, siehe „Profile“. Ältere Apps ignorieren es. |
 
 ## Zugänge
 
@@ -52,6 +53,18 @@ Die Bridge lauscht auf zwei Adressen. Beide sprechen dasselbe Protokoll mit ders
 | 4001 | ersetzt durch neue Verbindung desselben Geräts |
 | 4002 | Integritätsfehler: Tag falsch, Zähler falsch, Textframe |
 | 4003 | Gerät widerrufen (`devices remove`) |
+| 4004 | Gerät in ein anderes Profil verschoben (v2.2); die App verbindet sich neu und bekommt das neue `welcome` |
+
+## Profile (v2.2)
+
+Mehrere Personen im Haushalt mit eigener Festnetznummer (ADR-0008). Ein Profil ist ein eigenes IP-Telefon an der FRITZ!Box; jedes Gerät gehört genau einem Profil. Ohne weitere Profile ändert sich nichts: alle Geräte gehören zum Standardprofil (`id` `default`).
+
+- **`welcome.profile`:** `{"id":"b","name":"Profil B","number":"030 1234568"}`. `number` ist die erste eigene Nummer und fehlt, wenn keine eingetragen ist. Die App zeigt Name und Nummer in den Einstellungen. `sipRegistered` in `welcome` und `status` meint die Leitung des eigenen Profils.
+- **Anrufe:** Ein INVITE auf der Leitung eines Profils erzeugt `call.incoming` und VoIP-Push nur bei dessen Geräten. `call.attach`, `call.accept`, `call.answer`, `call.hangup`, `call.dtmf` und `GET /v1/calls/{id}` auf einen Anruf eines anderen Profils verhalten sich wie bei einer unbekannten Anruf-ID (`call.ended` `not_found` bzw. `error` `call_not_found`, `404`). `call.dial` wählt über die Leitung des eigenen Profils.
+- **`GET /v1/history`:** Gibt es mehrere Profile, enthält die Liste nur Anrufe, deren eigene Seite (bei eingehenden `Called`, bei ausgehenden `Caller` in der FRITZ!Box-Anrufliste) eine der Nummern des Profils ist. Verglichen werden die Ziffern ohne führende Nullen; eine Nummer darf Endstück der anderen sein, wenn das kürzere Stück mindestens 5 Ziffern hat. Ein Profil ohne eigene Nummern bekommt dann `503` `fritzbox_unavailable` und `welcome.features` ohne `fritzbox.history`.
+- **`GET /v1/phonebook`:** Telefonbücher sind gemeinsam, außer das Profil nennt eigene (`phonebooks`); dann enthält die Antwort nur deren Kontakte (eigenes `ETag`). Der Anrufername bei eingehenden Anrufen kommt ebenfalls nur aus diesen Telefonbüchern.
+- **Kopplung:** Der Code bzw. die Freigabe legt das Profil fest. Eine Watch gehört immer zum Profil des iPhones, das ihren Companion-Code angefordert hat. `device.paired` geht nur an die anderen Geräte desselben Profils.
+- **Gerät eines entfernten Profils:** Steht das Profil eines Geräts nicht mehr in der Konfiguration, bekommt es keine Anrufe, `403` auf `/v1/phonebook` und `/v1/history`, und `call.dial` scheitert mit `sip_unavailable`, bis der Admin es verschiebt.
 
 ## Kopplungscode
 

@@ -20,10 +20,15 @@ type lanService struct {
 	requests []admin.LanPairingRequest
 	approved []string
 	denied   []string
+	profiles []admin.ProfileInfo
 }
 
 func (s *lanService) LanPairings() []admin.LanPairingRequest { return s.requests }
-func (s *lanService) ApproveLanPairing(id string) (admin.DeviceInfo, error) {
+func (s *lanService) Profiles() []admin.ProfileInfo          { return s.profiles }
+func (s *lanService) ApproveLanPairing(id, profile string) (admin.DeviceInfo, error) {
+	if profile != "" {
+		id += "/" + profile
+	}
 	s.approved = append(s.approved, id)
 	return admin.DeviceInfo{ID: "dev-1", Name: "iPhone Test", Platform: "ios"}, nil
 }

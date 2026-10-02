@@ -56,7 +56,7 @@ func (c *call) startDial() {
 	ctx, cancel := context.WithCancel(context.Background())
 	c.dialCancel = cancel
 	c.dialing = true
-	sip := c.m.sip()
+	sip := c.m.sipFor(c.profile)
 	number, chosen := c.number, c.codec
 	c.log.Info("dialing", "codec", chosen)
 	go func() {

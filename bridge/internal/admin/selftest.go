@@ -14,6 +14,8 @@ type CheckInput struct {
 	RegistrarIP   string // resolved at start
 	SIPRegistered bool
 	SIPUser       string
+	// Profiles beyond the default one get a check each (ADR-0008).
+	Profiles []ProfileInfo
 
 	FritzBoxConfigured bool
 	FritzBoxFeatures   []string
@@ -49,6 +51,24 @@ func RunChecks(in CheckInput) []Check {
 		}
 		add("FRITZ!Box-Anmeldung", CheckFail, "nicht angemeldet an "+target,
 			"IP-Telefon in der FRITZ!Box prüfen: Benutzername/Kennwort, und dass „sip.registrar“ die IP der FRITZ!Box ist.")
+	}
+
+	// Further profiles: their own IP phones, and own numbers for the call
+	// list.
+	for i, p := range in.Profiles {
+		name := "Profil „" + p.Name + "“"
+		if i > 0 {
+			if p.Registered {
+				add(name, CheckOK, "angemeldet als "+p.SIPUser, "")
+			} else {
+				add(name, CheckFail, "nicht angemeldet als "+p.SIPUser,
+					"Eigenes IP-Telefon für dieses Profil in der FRITZ!Box anlegen und Benutzer/Kennwort in lines[] prüfen.")
+			}
+		}
+		if len(in.Profiles) > 1 && in.FritzBoxConfigured && !p.HistoryAllowed {
+			add(name+": Anrufliste", CheckWarn, "keine eigenen Nummern eingetragen",
+				"numbers für dieses Profil setzen, sonst sehen seine Geräte keine Anrufliste.")
+		}
 	}
 
 	// Telephone book / call list.

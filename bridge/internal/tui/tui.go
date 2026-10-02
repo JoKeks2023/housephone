@@ -23,11 +23,12 @@ type API interface {
 	Devices(ctx context.Context) ([]admin.DeviceInfo, error)
 	RenameDevice(ctx context.Context, id, name string) (admin.DeviceInfo, error)
 	RemoveDevice(ctx context.Context, id string, keepCompanions bool) (admin.RemoveResult, error)
-	CreatePairing(ctx context.Context, name string) (admin.PairingInfo, error)
+	MoveDevice(ctx context.Context, id, profile string) (admin.MoveResult, error)
+	CreatePairing(ctx context.Context, name, profile string) (admin.PairingInfo, error)
 	WaitPairing(ctx context.Context, code string) (admin.PairingState, error)
 	RevokePairing(ctx context.Context, code string) error
 	LanPairings(ctx context.Context) ([]admin.LanPairingRequest, error)
-	ApproveLanPairing(ctx context.Context, id string) (admin.DeviceInfo, error)
+	ApproveLanPairing(ctx context.Context, id, profile string) (admin.DeviceInfo, error)
 	DenyLanPairing(ctx context.Context, id string) error
 	Calls(ctx context.Context) (admin.CallsView, error)
 	Stats(ctx context.Context) (admin.Stats, error)
@@ -102,6 +103,26 @@ type Model struct {
 
 	input     textinput.Model
 	inputMode inputMode
+
+	// picker asks which profile a device belongs to (ADR-0008); nil
+	// unless the household has several profiles and a choice is pending.
+	picker *profilePicker
+}
+
+// pickPurpose is what a profile choice is for.
+type pickPurpose int
+
+const (
+	pickPair    pickPurpose = iota // new pairing code
+	pickApprove                    // LAN pairing request
+	pickMove                       // move a device
+)
+
+type profilePicker struct {
+	purpose pickPurpose
+	// target is the LAN request or device ID; name the new code's name.
+	target, name string
+	cursor       int
 }
 
 // New creates the model.
@@ -277,12 +298,18 @@ func (m Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.inputMode != inputNone {
 		return m.inputKey(k)
 	}
+	if m.picker != nil {
+		return m.pickerKey(k)
+	}
 	if m.lanConfirm != "" {
 		id := m.lanConfirm
 		m.lanConfirm = ""
 		if k.String() == "j" || k.String() == "y" {
-			return m, call(func(ctx context.Context) (admin.DeviceInfo, error) { return m.api.ApproveLanPairing(ctx, id) },
-				func(d admin.DeviceInfo) tea.Msg { return flashMsg("Gekoppelt: „" + d.Name + "“.") })
+			if m.multiProfile() {
+				m.picker = &profilePicker{purpose: pickApprove, target: id}
+				return m, nil
+			}
+			return m, m.approveLan(id, "")
 		}
 		m.flash = "Nicht freigegeben – die Anfrage wartet weiter (d lehnt sie ab)."
 		return m, nil
@@ -345,6 +372,16 @@ func (m Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if len(m.devices) > 0 {
 				m.confirm = m.devices[m.cursor].ID
 			}
+		case "p":
+			if len(m.devices) == 0 || !m.multiProfile() {
+				break
+			}
+			d := m.devices[m.cursor]
+			if d.PairedBy != "" {
+				m.flash = "Eine Uhr gehört immer zum Profil ihres iPhones – verschiebe das iPhone."
+				break
+			}
+			m.picker = &profilePicker{purpose: pickMove, target: d.ID, cursor: m.profileIndex(d.Profile)}
 		}
 	case tabPairing:
 		switch k.String() {
@@ -422,14 +459,111 @@ func (m Model) inputKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case inputSearch:
 			m.search = value
 		case inputPairName:
-			return m, call(func(ctx context.Context) (admin.PairingInfo, error) { return m.api.CreatePairing(ctx, value) },
-				func(p admin.PairingInfo) tea.Msg { return pairingMsg(p) })
+			if m.multiProfile() {
+				m.picker = &profilePicker{purpose: pickPair, name: value}
+				return m, nil
+			}
+			return m, m.createPairing(value, "")
 		}
 		return m, nil
 	}
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(k)
 	return m, cmd
+}
+
+// multiProfile reports whether the household has several profiles; only
+// then is there something to choose.
+func (m Model) multiProfile() bool { return len(m.status.Profiles) > 1 }
+
+func (m Model) profileIndex(id string) int {
+	for i, p := range m.status.Profiles {
+		if p.ID == id {
+			return i
+		}
+	}
+	return 0
+}
+
+func (m Model) profileName(id string) string {
+	for _, p := range m.status.Profiles {
+		if p.ID == id {
+			return p.Name
+		}
+	}
+	return id
+}
+
+func (m Model) createPairing(name, profile string) tea.Cmd {
+	return call(func(ctx context.Context) (admin.PairingInfo, error) { return m.api.CreatePairing(ctx, name, profile) },
+		func(p admin.PairingInfo) tea.Msg { return pairingMsg(p) })
+}
+
+func (m Model) approveLan(id, profile string) tea.Cmd {
+	return call(func(ctx context.Context) (admin.DeviceInfo, error) { return m.api.ApproveLanPairing(ctx, id, profile) },
+		func(d admin.DeviceInfo) tea.Msg {
+			return flashMsg("Gekoppelt: „" + d.Name + "“ · Profil " + d.ProfileName + ".")
+		})
+}
+
+// pickerKey handles the profile choice.
+func (m Model) pickerKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
+	p := *m.picker
+	switch k.String() {
+	case "up", "k":
+		p.cursor = max(0, p.cursor-1)
+	case "down", "j":
+		p.cursor = min(len(m.status.Profiles)-1, p.cursor+1)
+	case "esc":
+		m.picker = nil
+		m.flash = map[pickPurpose]string{
+			pickPair:    "Kein Code erzeugt.",
+			pickApprove: "Nicht freigegeben – die Anfrage wartet weiter (d lehnt sie ab).",
+			pickMove:    "Nicht verschoben.",
+		}[p.purpose]
+		return m, nil
+	case "enter":
+		m.picker = nil
+		if p.cursor >= len(m.status.Profiles) {
+			return m, nil
+		}
+		profile := m.status.Profiles[p.cursor].ID
+		switch p.purpose {
+		case pickPair:
+			return m, m.createPairing(p.name, profile)
+		case pickApprove:
+			return m, m.approveLan(p.target, profile)
+		case pickMove:
+			return m, call(func(ctx context.Context) (admin.MoveResult, error) { return m.api.MoveDevice(ctx, p.target, profile) },
+				func(r admin.MoveResult) tea.Msg {
+					return flashMsg(fmt.Sprintf("%d Gerät(e) nach „%s“ verschoben und neu verbunden.", len(r.Moved), m.profileName(profile)))
+				})
+		}
+		return m, nil
+	}
+	m.picker = &p
+	return m, nil
+}
+
+// viewPicker renders the profile choice.
+func (m Model) viewPicker() string {
+	p := m.picker
+	question := map[pickPurpose]string{
+		pickPair:    "Für welches Profil ist das neue Gerät?",
+		pickApprove: "Zu welchem Profil gehört das Gerät?",
+		pickMove:    "In welches Profil verschieben? (Uhren des Geräts wandern mit)",
+	}[p.purpose]
+	var b strings.Builder
+	b.WriteString("\n" + boldS.Render(question) + "\n")
+	for i, pr := range m.status.Profiles {
+		marker := "  "
+		if i == p.cursor {
+			marker = selS.Render("› ")
+		}
+		fmt.Fprintf(&b, "%s%s %s\n", marker, pr.Name, mutedS.Render(strings.Join(pr.Numbers, ", ")))
+	}
+	b.WriteString(mutedS.Render("  ↑↓ auswählen · Enter bestätigen · Esc abbrechen") + "\n")
+	return b.String()
 }
 
 func renderQR(link string) string {
@@ -512,6 +646,9 @@ func (m Model) View() string {
 			b.WriteString(m.viewSelfTest())
 		}
 	}
+	if m.picker != nil {
+		b.WriteString(m.viewPicker())
+	}
 	if m.inputMode != inputNone {
 		prompt := map[inputMode]string{inputRename: "Neuer Name: ", inputSearch: "Suche: ", inputPairName: "Gerätename: "}[m.inputMode]
 		b.WriteString("\n" + prompt + m.input.View() + mutedS.Render("  (Enter bestätigt, Esc bricht ab)"))
@@ -530,6 +667,7 @@ const helpText = `Tasten
   1–6 / Tab     Ansicht wechseln          q    Beenden
   Übersicht     k  Konfiguration ein/aus
   Geräte        ↑↓ auswählen · r umbenennen · x entfernen (sofort getrennt)
+                p  in ein anderes Profil verschieben (bei mehreren Profilen)
   Kopplung      n  neuer Code mit QR · Esc Code widerrufen
                 a  Anfrage aus dem Heimnetz freigeben · d ablehnen
   Logs          l  Level (alle/info/warn/error) · /  suchen · Esc Suche löschen
@@ -545,7 +683,23 @@ func (m Model) viewOverview() string {
 	if !s.StartedAt.IsZero() {
 		up = m.now().Sub(s.StartedAt).Round(time.Second).String()
 	}
-	fmt.Fprintf(&b, "  FRITZ!Box    %s\n", yes(s.SIPRegistered, "angemeldet als "+s.SIPUser+" an "+s.Registrar, "nicht angemeldet an "+s.Registrar))
+	if len(s.Profiles) > 1 {
+		for i, p := range s.Profiles {
+			label := "             "
+			if i == 0 {
+				label = "  Profile    "
+			}
+			numbers := "keine eigene Nummer"
+			if len(p.Numbers) > 0 {
+				numbers = strings.Join(p.Numbers, ", ")
+			}
+			fmt.Fprintf(&b, "%s%s %s\n", label, yes(p.Registered, boldS.Render(p.Name)+" · "+p.SIPUser, boldS.Render(p.Name)+" · "+p.SIPUser+" nicht angemeldet"),
+				mutedS.Render(fmt.Sprintf("· %s · %d Gerät(e), %d online", numbers, p.Devices, p.DevicesOnline)))
+		}
+		fmt.Fprintf(&b, "  FRITZ!Box    %s\n", s.Registrar)
+	} else {
+		fmt.Fprintf(&b, "  FRITZ!Box    %s\n", yes(s.SIPRegistered, "angemeldet als "+s.SIPUser+" an "+s.Registrar, "nicht angemeldet an "+s.Registrar))
+	}
 	ip := s.PublicIP
 	if ip == "" {
 		ip = "unbekannt"
@@ -600,7 +754,12 @@ func (m Model) viewDevices() string {
 		return "  Noch kein Gerät gekoppelt. Taste 3 → n erzeugt einen Kopplungscode.\n"
 	}
 	var b strings.Builder
-	b.WriteString(mutedS.Render(fmt.Sprintf("   %-20s %-8s %-14s %-11s %s", "NAME", "PLATTF.", "MEDIEN", "PUSH", "ZULETZT")) + "\n")
+	multi := m.multiProfile()
+	header := fmt.Sprintf("   %-20s %-8s %-14s %-11s %s", "NAME", "PLATTF.", "MEDIEN", "PUSH", "ZULETZT")
+	if multi {
+		header = fmt.Sprintf("   %-20s %-12s %-8s %-14s %-11s %s", "NAME", "PROFIL", "PLATTF.", "MEDIEN", "PUSH", "ZULETZT")
+	}
+	b.WriteString(mutedS.Render(header) + "\n")
 	for i, d := range m.devices {
 		state := failS.Render("○")
 		if d.Online {
@@ -613,6 +772,9 @@ func (m Model) viewDevices() string {
 			seen = d.LastSeen.Local().Format("02.01. 15:04")
 		}
 		line := fmt.Sprintf("%s %-20s %-8s %-14s %-11s %s", state, trunc(d.Name, 20), trunc(d.Platform, 8), trunc(d.Media, 14), trunc(orDash(d.Push), 11), seen)
+		if multi {
+			line = fmt.Sprintf("%s %-20s %-12s %-8s %-14s %-11s %s", state, trunc(d.Name, 20), trunc(d.ProfileName, 12), trunc(d.Platform, 8), trunc(d.Media, 14), trunc(orDash(d.Push), 11), seen)
+		}
 		if i == m.cursor {
 			line = selS.Render("›") + line
 		} else {
@@ -707,6 +869,9 @@ func (m Model) viewPairing() string {
 		b.WriteString(warnS.Render(fmt.Sprintf("  Fenster zu klein für den QR-Code (%d Zeilen nötig) – Terminal vergrößern oder Link verwenden.", qrLines+8)) + "\n")
 	}
 	fmt.Fprintf(&b, "  Code %s · gültig bis %s · Bridge %s\n", boldS.Render(p.Grouped), p.ExpiresAt.Local().Format("15:04"), trunc(p.Fingerprint, 12)+"…")
+	if m.multiProfile() {
+		fmt.Fprintf(&b, "  Profil %s\n", boldS.Render(p.ProfileName))
+	}
 	b.WriteString(mutedS.Render("  "+p.Link) + "\n")
 	b.WriteString(selS.Render("  Warte auf das Gerät …") + mutedS.Render(" Esc widerruft den Code") + "\n")
 	return b.String()
@@ -718,6 +883,12 @@ func (m Model) viewCalls() string {
 	fmt.Fprintf(&b, "  %s eingehend %d · angenommen %d · verpasst %d · ausgehend %d\n", boldS.Render("Heute "), d.Incoming, d.Answered, d.Missed, d.Outgoing)
 	fmt.Fprintf(&b, "  %s eingehend %d · angenommen %d · verpasst %d · ausgehend %d\n", boldS.Render("Gesamt"), t.Incoming, t.Answered, t.Missed, t.Outgoing)
 	fmt.Fprintf(&b, "  %s Push %d · Medien %d · Codecs %s\n", boldS.Render("Fehler"), t.PushFailures, t.MediaFailures, codecs(t.Codecs))
+	if m.multiProfile() {
+		for _, p := range m.status.Profiles {
+			c := m.stats.ByProfile[p.ID]
+			fmt.Fprintf(&b, "  %s eingehend %d · angenommen %d · verpasst %d · ausgehend %d\n", boldS.Render(fmt.Sprintf("%-6s", trunc(p.Name, 6))), c.Incoming, c.Answered, c.Missed, c.Outgoing)
+		}
+	}
 	b.WriteString("\n" + boldS.Render("Aktiv") + "\n")
 	if len(m.calls.Active) == 0 {
 		b.WriteString(mutedS.Render("  keine") + "\n")
@@ -727,7 +898,7 @@ func (m Model) viewCalls() string {
 		if !c.ConnectedAt.IsZero() {
 			state = "verbunden " + m.now().Sub(c.ConnectedAt).Round(time.Second).String()
 		}
-		fmt.Fprintf(&b, "  %s %s %-8s %s %s\n", okS.Render("●"), arrow(c.Direction), c.Number, orDash(c.Codec), state)
+		fmt.Fprintf(&b, "  %s %s %-8s %s %s%s\n", okS.Render("●"), arrow(c.Direction), c.Number, orDash(c.Codec), state, m.callProfile(c))
 	}
 	b.WriteString("\n" + boldS.Render("Zuletzt") + "\n")
 	if len(m.calls.Recent) == 0 {
@@ -746,9 +917,17 @@ func (m Model) viewCalls() string {
 		if c.SIPCode != 0 {
 			reason += fmt.Sprintf(" (SIP %d)", c.SIPCode)
 		}
-		fmt.Fprintf(&b, "  %s %s %-8s %-6s %-6s %s\n", mutedS.Render(c.StartedAt.Local().Format("02.01. 15:04")), arrow(c.Direction), c.Number, orDash(c.Codec), dur, reason)
+		fmt.Fprintf(&b, "  %s %s %-8s %-6s %-6s %s%s\n", mutedS.Render(c.StartedAt.Local().Format("02.01. 15:04")), arrow(c.Direction), c.Number, orDash(c.Codec), dur, reason, m.callProfile(c))
 	}
 	return b.String()
+}
+
+// callProfile names the profile of a call when there are several.
+func (m Model) callProfile(c admin.CallInfo) string {
+	if !m.multiProfile() || c.Profile == "" {
+		return ""
+	}
+	return mutedS.Render(" · " + m.profileName(c.Profile))
 }
 
 func (m Model) viewLogs() string {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/JoKeks2023/housephone/bridge/internal/codec"
 	"github.com/JoKeks2023/housephone/bridge/internal/logsafe"
+	"github.com/JoKeks2023/housephone/bridge/internal/profile"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
@@ -49,9 +50,10 @@ type Options struct {
 	Devices DeviceDirectory
 	Logger  *slog.Logger
 	// CallerNames looks up a caller number in the FRITZ!Box phonebook when
-	// the INVITE carries no display name (v1.2). It must not block; nil
-	// disables the lookup.
-	CallerNames func(number string) string
+	// the INVITE carries no display name (v1.2), in the phonebooks of the
+	// profile whose line rings (ADR-0008). It must not block; nil disables
+	// the lookup.
+	CallerNames func(profileID, number string) string
 
 	ReattachTimeout time.Duration
 	TombstoneTTL    time.Duration
@@ -73,6 +75,7 @@ type Options struct {
 }
 
 type tombstone struct {
+	profile string
 	reason  string
 	sipCode int
 	at      time.Time
@@ -85,7 +88,10 @@ type Manager struct {
 	opts Options
 	log  *slog.Logger
 
-	mu     sync.Mutex
+	mu sync.Mutex
+	// lines are the SIP legs of the profiles beyond the default one
+	// (opts.SIP).
+	lines  map[string]SIPLeg
 	conns  map[string]DeviceConn
 	calls  map[string]*call
 	tombs  map[string]tombstone
@@ -134,25 +140,63 @@ func NewManager(opts Options) *Manager {
 	}
 }
 
-// SetSIP sets the SIP leg (it needs the manager as its call handler, so it is
-// created afterwards).
+// SetSIP sets the SIP leg of the default profile (it needs the manager as
+// its call handler, so it is created afterwards).
 func (m *Manager) SetSIP(sip SIPLeg) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.opts.SIP = sip
+	m.SetLine(profile.DefaultID, sip)
 }
 
-func (m *Manager) sip() SIPLeg {
+// SetLine sets the SIP leg of a profile (ADR-0008).
+func (m *Manager) SetLine(profileID string, sip SIPLeg) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.opts.SIP
+	profileID = profile.Normalize(profileID)
+	if profileID == profile.DefaultID {
+		m.opts.SIP = sip
+		return
+	}
+	if m.lines == nil {
+		m.lines = map[string]SIPLeg{}
+	}
+	m.lines[profileID] = sip
 }
 
-// SIPRegistered reports the registration state for welcome/health.
+// sipFor returns the SIP leg of a profile, nil if it has none.
+func (m *Manager) sipFor(profileID string) SIPLeg {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	profileID = profile.Normalize(profileID)
+	if profileID == profile.DefaultID {
+		return m.opts.SIP
+	}
+	return m.lines[profileID]
+}
+
+// SIPRegistered reports whether every line is registered (health).
 func (m *Manager) SIPRegistered() bool {
-	sip := m.sip()
+	m.mu.Lock()
+	legs := []SIPLeg{m.opts.SIP}
+	for _, l := range m.lines {
+		legs = append(legs, l)
+	}
+	m.mu.Unlock()
+	for _, l := range legs {
+		if l == nil || !l.Registered() {
+			return false
+		}
+	}
+	return true
+}
+
+// SIPRegisteredFor reports the registration of one profile's line, for its
+// devices' welcome.
+func (m *Manager) SIPRegisteredFor(profileID string) bool {
+	sip := m.sipFor(profileID)
 	return sip != nil && sip.Registered()
 }
+
+// profileOf is the profile of a connected device.
+func profileOf(conn DeviceConn) string { return profile.Normalize(conn.ProfileID()) }
 
 // DeviceConnected registers an authenticated connection after hello. The
 // signaling server guarantees one connection per device.
@@ -200,13 +244,23 @@ func (m *Manager) conn(deviceID string) DeviceConn {
 	return m.conns[deviceID]
 }
 
-// BroadcastStatus sends the SIP registration state to all devices.
+// BroadcastStatus sends the default line's registration state to the
+// default profile's devices.
 func (m *Manager) BroadcastStatus(registered bool) {
+	m.BroadcastProfileStatus(profile.DefaultID, registered)
+}
+
+// BroadcastProfileStatus sends a line's registration state to the devices
+// of its profile.
+func (m *Manager) BroadcastProfileStatus(profileID string, registered bool) {
+	profileID = profile.Normalize(profileID)
 	env := protocol.MustEnvelope(protocol.TypeStatus, protocol.Status{SIPRegistered: registered})
 	m.mu.Lock()
 	conns := make([]DeviceConn, 0, len(m.conns))
 	for _, c := range m.conns {
-		conns = append(conns, c)
+		if profileOf(c) == profileID {
+			conns = append(conns, c)
+		}
 	}
 	m.mu.Unlock()
 	for _, c := range conns {
@@ -291,6 +345,15 @@ func (m *Manager) withCall(conn DeviceConn, id string, endedIfMissing bool, fn f
 	tomb, hasTomb := m.tombs[id]
 	m.mu.Unlock()
 
+	// A call of another profile does not exist for this device (ADR-0008):
+	// it could otherwise attach to a ringing call it was never offered.
+	own := profileOf(conn)
+	if c != nil && c.profile != own {
+		c = nil
+	}
+	if hasTomb && tomb.profile != own {
+		hasTomb = false
+	}
 	if c != nil && c.do(func() { fn(c) }) {
 		return
 	}
@@ -409,7 +472,7 @@ func (m *Manager) removeCall(c *call) {
 			statuses[id] = st
 		}
 	}
-	m.tombs[c.id] = tombstone{reason: c.endReason, sipCode: c.endSIPCode, at: now, statuses: statuses}
+	m.tombs[c.id] = tombstone{profile: c.profile, reason: c.endReason, sipCode: c.endSIPCode, at: now, statuses: statuses}
 	m.wg.Done()
 }
 
@@ -428,20 +491,38 @@ func (m *Manager) ActiveCalls() int {
 	return len(m.calls)
 }
 
-// HandleIncoming runs an incoming call until its SIP dialog ends. It is
-// called by the SIP leg for every INVITE.
+// HandleIncoming runs an incoming call on the default profile's line.
 func (m *Manager) HandleIncoming(ctx context.Context, sip IncomingSIPCall) {
-	c := newCall(m, uuid.NewString(), directionIncoming)
+	m.HandleIncomingOn(ctx, profile.DefaultID, sip)
+}
+
+// HandleIncomingFor returns the INVITE handler of a profile's SIP leg.
+func (m *Manager) HandleIncomingFor(profileID string) func(context.Context, IncomingSIPCall) {
+	return func(ctx context.Context, sip IncomingSIPCall) { m.HandleIncomingOn(ctx, profileID, sip) }
+}
+
+// HandleIncomingOn runs an incoming call until its SIP dialog ends. It is
+// called by the SIP leg of profileID for every INVITE; only that profile's
+// devices ring and get a push (ADR-0008).
+func (m *Manager) HandleIncomingOn(ctx context.Context, profileID string, sip IncomingSIPCall) {
+	profileID = profile.Normalize(profileID)
+	c := newCall(m, uuid.NewString(), directionIncoming, profileID)
 	c.caller, c.callerName, c.codec = sip.Caller(), sip.CallerName(), sip.Codec()
 	if c.callerName == "" && c.caller != "" && m.opts.CallerNames != nil {
-		c.callerName = m.opts.CallerNames(c.caller)
+		c.callerName = m.opts.CallerNames(profileID, c.caller)
 	}
 	c.sipIn = sip
 	log := c.log.With("caller", logsafe.Number(c.caller), logsafe.CallerName(c.callerName), "codec", c.codec)
 
-	devices, err := m.opts.Devices.List()
+	all, err := m.opts.Devices.List()
 	if err != nil {
 		log.Error("listing devices failed", "error", err)
+	}
+	devices := make([]store.Device, 0, len(all))
+	for _, dev := range all {
+		if dev.ProfileID() == profileID {
+			devices = append(devices, dev)
+		}
 	}
 	if !m.addCall(c) {
 		_ = sip.Reject(503, "Service Unavailable")
@@ -529,12 +610,14 @@ func (m *Manager) startOutgoing(conn DeviceConn, id, number string) {
 		conn.Send(protocol.MustEnvelope(protocol.TypeCallEnded, protocol.CallEnded{CallID: id, Reason: protocol.EndReasonFailed}))
 		return
 	}
-	if !m.SIPRegistered() {
+	// Out over the device's own line, so the callee sees its number.
+	own := profileOf(conn)
+	if !m.SIPRegisteredFor(own) {
 		sendError(conn, protocol.ErrorSIPUnavailable, "Bridge ist nicht an der FRITZ!Box registriert", id)
 		conn.Send(protocol.MustEnvelope(protocol.TypeCallEnded, protocol.CallEnded{CallID: id, Reason: protocol.EndReasonFailed}))
 		return
 	}
-	c := newCall(m, id, directionOutgoing)
+	c := newCall(m, id, directionOutgoing, own)
 	c.number, c.caller = number, number
 	c.participants[conn.DeviceID()] = true
 	c.dialer = conn.DeviceID()

@@ -26,6 +26,9 @@ type fakeService struct {
 	lan      []admin.LanPairingRequest
 	approved []string
 	denied   []string
+	// profiles, if set, makes the household multi-profile (ADR-0008).
+	profiles []admin.ProfileInfo
+	moved    []string
 }
 
 func (f *fakeService) Status() admin.Status {
@@ -34,7 +37,16 @@ func (f *fakeService) Status() admin.Status {
 		PublicIP: "203.0.113.7", PublicIPSource: "upnp", MediaPort: 50000,
 		Listen: "172.30.32.1:8080", PrivateListen: "[::]:8081", LanURL: "ws://192.168.178.20:8081/v1/ws",
 		APNsConfigured: true, DevicesTotal: 2, DevicesOnline: 1, StartedAt: time.Now().Add(-2 * time.Hour),
+		Profiles: f.profiles,
 	}
+}
+func (f *fakeService) Profiles() []admin.ProfileInfo { return f.profiles }
+func (f *fakeService) MoveDevice(id, profile string) (admin.MoveResult, error) {
+	if profile != "default" && profile != "b" {
+		return admin.MoveResult{}, admin.ErrUnknownProfile
+	}
+	f.moved = append(f.moved, id+"/"+profile)
+	return admin.MoveResult{Moved: []admin.DeviceInfo{{ID: id}}}, nil
 }
 func (f *fakeService) Devices() ([]admin.DeviceInfo, error) { return f.devices, nil }
 func (f *fakeService) RenameDevice(id, name string) (admin.DeviceInfo, error) {
@@ -50,7 +62,10 @@ func (f *fakeService) RemoveDevice(id string, keep bool) (admin.RemoveResult, er
 	f.removed, f.keep = append(f.removed, id), keep
 	return admin.RemoveResult{}, nil
 }
-func (f *fakeService) CreatePairing(name string) (admin.PairingInfo, error) {
+func (f *fakeService) CreatePairing(name, profile string) (admin.PairingInfo, error) {
+	if profile != "" {
+		name += "/" + profile
+	}
 	f.pairings = append(f.pairings, name)
 	return admin.PairingInfo{Code: "ABCDEFGHJKMNPQRS", Grouped: "ABCD-EFGH-JKMN-PQRS", Link: "housephone://pair?c=x", Fingerprint: "hp2:fingerprint", ExpiresAt: time.Now().Add(10 * time.Minute)}, nil
 }
@@ -60,9 +75,12 @@ func (f *fakeService) RevokePairing(code string) error {
 	return nil
 }
 func (f *fakeService) LanPairings() []admin.LanPairingRequest { return f.lan }
-func (f *fakeService) ApproveLanPairing(id string) (admin.DeviceInfo, error) {
+func (f *fakeService) ApproveLanPairing(id, profile string) (admin.DeviceInfo, error) {
 	for _, r := range f.lan {
 		if r.ID == id {
+			if profile != "" {
+				id += "/" + profile
+			}
 			f.approved = append(f.approved, id)
 			return admin.DeviceInfo{ID: "new", Name: r.DeviceName}, nil
 		}

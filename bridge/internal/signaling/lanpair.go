@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/JoKeks2023/housephone/bridge/internal/hp2"
+	"github.com/JoKeks2023/housephone/bridge/internal/profile"
 	"github.com/JoKeks2023/housephone/bridge/internal/protocol"
 	"github.com/JoKeks2023/housephone/bridge/internal/store"
 )
@@ -43,6 +44,10 @@ const (
 
 // ErrLanPairingNotFound: no such request waiting for approval.
 var ErrLanPairingNotFound = errors.New("lan pairing request not found or expired")
+
+// ErrUnknownProfile is returned when a device should join a profile that
+// is not configured (ADR-0008).
+var ErrUnknownProfile = errors.New("unknown profile")
 
 type lanStatus int
 
@@ -372,15 +377,27 @@ func (s *Server) LanPairings() []LanPairingRequest {
 // ApproveLanPairing pairs the device of a waiting request. The caller has
 // shown the admin the SAS; ApproveLanPairing does not check it again.
 func (s *Server) ApproveLanPairing(id string) (store.Device, error) {
+	return s.ApproveLanPairingFor(id, "")
+}
+
+// ApproveLanPairingFor pairs the device into profileID ("" is the default
+// profile, ADR-0008).
+func (s *Server) ApproveLanPairingFor(id, profileID string) (store.Device, error) {
+	if !s.ValidProfile(profileID) {
+		return store.Device{}, ErrUnknownProfile
+	}
+	if profileID == profile.DefaultID {
+		profileID = ""
+	}
 	now := s.cfg.Now()
-	dev, err := s.approveLan(id, now)
+	dev, err := s.approveLan(id, profileID, now)
 	if err == nil {
 		s.broadcastDevicePaired(dev, now)
 	}
 	return dev, err
 }
 
-func (s *Server) approveLan(id string, now time.Time) (store.Device, error) {
+func (s *Server) approveLan(id, profileID string, now time.Time) (store.Device, error) {
 	s.lan.mu.Lock()
 	defer s.lan.mu.Unlock()
 	s.sweepLanLocked(now)
@@ -394,6 +411,7 @@ func (s *Server) approveLan(id string, now time.Time) (store.Device, error) {
 		Platform:  e.start.Platform,
 		Model:     sanitizeName(e.start.Model),
 		PublicKey: e.start.PublicKey,
+		Profile:   profileID,
 		CreatedAt: now.UTC(),
 	}
 	hash := e.hash

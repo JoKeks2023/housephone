@@ -32,14 +32,16 @@ import (
 // service implements it.
 type Service interface {
 	Status() admin.Status
+	Profiles() []admin.ProfileInfo
 	Devices() ([]admin.DeviceInfo, error)
 	RenameDevice(id, name string) (admin.DeviceInfo, error)
 	RemoveDevice(id string, keepCompanions bool) (admin.RemoveResult, error)
-	CreatePairing(name string) (admin.PairingInfo, error)
+	MoveDevice(id, profile string) (admin.MoveResult, error)
+	CreatePairing(name, profile string) (admin.PairingInfo, error)
 	PairingState(code string) (admin.PairingState, error)
 	RevokePairing(code string) error
 	LanPairings() []admin.LanPairingRequest
-	ApproveLanPairing(id string) (admin.DeviceInfo, error)
+	ApproveLanPairing(id, profile string) (admin.DeviceInfo, error)
 	DenyLanPairing(id string) error
 	Calls() admin.CallsView
 }
@@ -95,6 +97,7 @@ func (d *Dashboard) Handler() http.Handler {
 	mux.HandleFunc("POST /lan/{id}/approve", d.post(d.approveLan))
 	mux.HandleFunc("POST /lan/{id}/deny", d.post(d.denyLan))
 	mux.HandleFunc("POST /devices/{id}/rename", d.post(d.rename))
+	mux.HandleFunc("POST /devices/{id}/move", d.post(d.move))
 	mux.HandleFunc("GET /devices/{id}/remove", d.confirmRemove)
 	mux.HandleFunc("POST /devices/{id}/remove", d.post(d.remove))
 	return d.gate.Guard(secureHeaders(mux))
@@ -133,6 +136,10 @@ func (d *Dashboard) fail(w http.ResponseWriter, r *http.Request, err error) {
 		d.render(w, r, http.StatusNotFound, "message.html", msg{Title: langFor(r).T("notFound")})
 		return
 	}
+	if errors.Is(err, admin.ErrUnknownProfile) {
+		d.render(w, r, http.StatusBadRequest, "message.html", msg{Title: langFor(r).T("unknownProfile")})
+		return
+	}
 	d.log.Error("request failed", "path", r.URL.Path, "error", err)
 	d.render(w, r, http.StatusInternalServerError, "message.html", msg{Title: langFor(r).T("failed")})
 }
@@ -166,11 +173,16 @@ type overviewData struct {
 	Status  admin.Status
 	Devices []admin.DeviceInfo
 	Calls   []callRow
+	// Profiles are the household profiles (ADR-0008); MultiProfile turns
+	// on the profile choices.
+	Profiles     []admin.ProfileInfo
+	MultiProfile bool
 }
 
 type callRow struct {
 	admin.CallInfo
-	DeviceName string
+	DeviceName  string
+	ProfileName string
 }
 
 func (d *Dashboard) overview(w http.ResponseWriter, r *http.Request) {
@@ -183,11 +195,19 @@ func (d *Dashboard) overview(w http.ResponseWriter, r *http.Request) {
 	for _, dev := range devices {
 		names[dev.ID] = dev.Name
 	}
+	status := d.svc.Status()
+	profileNames := make(map[string]string, len(status.Profiles))
+	for _, p := range status.Profiles {
+		profileNames[p.ID] = p.Name
+	}
 	var calls []callRow
 	for _, c := range d.svc.Calls().Active {
-		calls = append(calls, callRow{CallInfo: c, DeviceName: names[c.DeviceID]})
+		calls = append(calls, callRow{CallInfo: c, DeviceName: names[c.DeviceID], ProfileName: profileNames[c.Profile]})
 	}
-	d.render(w, r, http.StatusOK, "overview.html", overviewData{Lan: d.svc.LanPairings(), Status: d.svc.Status(), Devices: devices, Calls: calls})
+	d.render(w, r, http.StatusOK, "overview.html", overviewData{
+		Lan: d.svc.LanPairings(), Status: status, Devices: devices, Calls: calls,
+		Profiles: status.Profiles, MultiProfile: len(status.Profiles) > 1,
+	})
 }
 
 type pairingData struct {
@@ -196,7 +216,7 @@ type pairingData struct {
 }
 
 func (d *Dashboard) pair(w http.ResponseWriter, r *http.Request) {
-	info, err := d.svc.CreatePairing(strings.TrimSpace(r.PostFormValue("name")))
+	info, err := d.svc.CreatePairing(strings.TrimSpace(r.PostFormValue("name")), strings.TrimSpace(r.PostFormValue("profile")))
 	if err != nil {
 		d.fail(w, r, err)
 		return
@@ -258,7 +278,7 @@ func (d *Dashboard) revoke(w http.ResponseWriter, r *http.Request) {
 // approveLan approves a pairing request from the home network. The page
 // showed its SAS next to the button.
 func (d *Dashboard) approveLan(w http.ResponseWriter, r *http.Request) {
-	dev, err := d.svc.ApproveLanPairing(r.PathValue("id"))
+	dev, err := d.svc.ApproveLanPairing(r.PathValue("id"), strings.TrimSpace(r.PostFormValue("profile")))
 	if errors.Is(err, admin.ErrNotFound) {
 		l := langFor(r)
 		d.render(w, r, http.StatusNotFound, "message.html", msg{Title: l.T("lanGone"), Detail: l.T("lanGoneDetail")})
@@ -290,6 +310,17 @@ func (d *Dashboard) rename(w http.ResponseWriter, r *http.Request) {
 		d.fail(w, r, err)
 		return
 	}
+	d.redirectHome(w, r)
+}
+
+// move moves a device (and its watches) to another profile.
+func (d *Dashboard) move(w http.ResponseWriter, r *http.Request) {
+	res, err := d.svc.MoveDevice(r.PathValue("id"), strings.TrimSpace(r.PostFormValue("profile")))
+	if err != nil {
+		d.fail(w, r, err)
+		return
+	}
+	d.log.Info("devices moved via dashboard", "count", len(res.Moved))
 	d.redirectHome(w, r)
 }
 

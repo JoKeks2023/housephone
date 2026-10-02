@@ -140,6 +140,9 @@ const (
 	// CloseRevoked is used when the device was removed at the bridge
 	// (devices remove) while it was connected.
 	CloseRevoked = 4003
+	// CloseProfileChanged is used when the device was moved to another
+	// profile (ADR-0008); it reconnects and gets the new welcome.
+	CloseProfileChanged = 4004
 )
 
 // Envelope is a single WebSocket text message.
@@ -282,6 +285,18 @@ type Welcome struct {
 	// LanURL is the private listener (home network / Tailscale). Devices
 	// prefer it when reachable; pairing works only there.
 	LanURL string `json:"lanUrl,omitempty"`
+	// Profile is the household profile of the device (ADR-0008). Older
+	// apps ignore it.
+	Profile *ProfileInfo `json:"profile,omitempty"`
+}
+
+// ProfileInfo names the device's profile in welcome: whose line it rings
+// on and with which number it calls out.
+type ProfileInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// Number is the profile's first own number; omitted if none is set.
+	Number string `json:"number,omitempty"`
 }
 
 // Features announced in welcome (v1.2).
@@ -458,6 +473,10 @@ type HistoryCall struct {
 	AnsweredBy      string    `json:"answeredBy,omitempty"`
 	StartedAt       time.Time `json:"startedAt"`
 	DurationSeconds int       `json:"durationSeconds"`
+	// OwnNumber is the household's side of the call as the FRITZ!Box
+	// writes it. The bridge filters the list per profile with it and
+	// never sends it (ADR-0008).
+	OwnNumber string `json:"-"`
 }
 
 // Values of HistoryCall fields.

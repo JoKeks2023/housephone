@@ -23,10 +23,13 @@ func newCounters() Counters { return Counters{Codecs: map[string]int{}} }
 
 // Stats are the counters since the bridge started and for today.
 type Stats struct {
-	Since    time.Time `json:"since"`
-	Total    Counters  `json:"total"`
-	Today    Counters  `json:"today"`
-	LastPush *PushInfo `json:"lastPush,omitempty"`
+	Since time.Time `json:"since"`
+	Total Counters  `json:"total"`
+	Today Counters  `json:"today"`
+	// ByProfile are the counters since the start per household profile
+	// (ADR-0008).
+	ByProfile map[string]Counters `json:"byProfile,omitempty"`
+	LastPush  *PushInfo           `json:"lastPush,omitempty"`
 }
 
 // PushInfo is the result of the latest VoIP push.
@@ -41,6 +44,7 @@ type PushInfo struct {
 // log.showNumbers is on.
 type CallInfo struct {
 	ID          string    `json:"id"`
+	Profile     string    `json:"profile,omitempty"`
 	Direction   string    `json:"direction"`
 	Number      string    `json:"number"`
 	Name        string    `json:"name,omitempty"`
@@ -62,6 +66,7 @@ type Recorder struct {
 	day     string
 	total   Counters
 	today   Counters
+	profile map[string]Counters
 	active  map[string]*CallInfo
 	recent  []CallInfo // newest first
 	keep    int
@@ -74,7 +79,7 @@ func NewRecorder(keep int, now func() time.Time) *Recorder {
 	if now == nil {
 		now = time.Now
 	}
-	r := &Recorder{now: now, keep: keep, active: map[string]*CallInfo{}, counted: map[string]bool{}, total: newCounters(), today: newCounters()}
+	r := &Recorder{now: now, keep: keep, active: map[string]*CallInfo{}, counted: map[string]bool{}, total: newCounters(), today: newCounters(), profile: map[string]Counters{}}
 	r.since = now()
 	r.day = r.since.Local().Format("2006-01-02")
 	return r
@@ -85,10 +90,25 @@ func (r *Recorder) Handle(e calls.Event) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.rollDay(e.At)
-	both := func(f func(c *Counters)) { f(&r.total); f(&r.today) }
+	profileID := e.Profile
+	if ci := r.active[e.CallID]; ci != nil {
+		profileID = ci.Profile
+	}
+	both := func(f func(c *Counters)) {
+		f(&r.total)
+		f(&r.today)
+		if profileID != "" {
+			pc, ok := r.profile[profileID]
+			if !ok {
+				pc = newCounters()
+			}
+			f(&pc)
+			r.profile[profileID] = pc
+		}
+	}
 	switch e.Kind {
 	case calls.EventStarted:
-		ci := &CallInfo{ID: e.CallID, Direction: e.Direction, Number: logsafe.Number(e.Number), HasName: e.Name != "", DeviceID: e.DeviceID, Codec: e.Codec, StartedAt: e.At}
+		ci := &CallInfo{ID: e.CallID, Profile: e.Profile, Direction: e.Direction, Number: logsafe.Number(e.Number), HasName: e.Name != "", DeviceID: e.DeviceID, Codec: e.Codec, StartedAt: e.At}
 		if logsafe.ShowNumbers() {
 			ci.Name = e.Name
 		}
@@ -159,6 +179,12 @@ func (r *Recorder) Stats() Stats {
 	defer r.mu.Unlock()
 	r.rollDay(time.Time{})
 	s := Stats{Since: r.since, Total: copyCounters(r.total), Today: copyCounters(r.today)}
+	if len(r.profile) > 0 {
+		s.ByProfile = make(map[string]Counters, len(r.profile))
+		for id, c := range r.profile {
+			s.ByProfile[id] = copyCounters(c)
+		}
+	}
 	if r.push != nil {
 		p := *r.push
 		s.LastPush = &p

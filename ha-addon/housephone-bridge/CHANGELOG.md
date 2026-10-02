@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Mehrere Profile (HPHN-42): jede Person mit eigener Festnetznummer als
+  eigenes IP-Telefon (Option „Weitere Profile“). Anrufe, Push, Anrufliste
+  und Telefonbücher bleiben im eigenen Profil.
+- Dashboard: Profile mit Anmeldestatus, Profil beim Koppeln und Freigeben
+  wählen, Geräte zwischen Profilen verschieben.
+
 ## 0.1.0
 
 - Erste Version als Home-Assistant-Add-on (HPHN-51).

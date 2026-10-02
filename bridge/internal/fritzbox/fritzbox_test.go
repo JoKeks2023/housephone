@@ -71,7 +71,7 @@ func TestPhonebookFromFritzBoxMatchesFixture(t *testing.T) {
 	box := fritzboxtest.Start(t)
 	dir := newTestDirectory(t, newClient(box, fritzboxtest.Password))
 
-	body, etag, err := dir.Phonebook(context.Background())
+	body, etag, err := dir.Phonebook(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestHistoryFromFritzBoxMatchesFixture(t *testing.T) {
 	box := fritzboxtest.Start(t)
 	dir := newTestDirectory(t, newClient(box, fritzboxtest.Password))
 
-	body, err := dir.History(context.Background(), 100)
+	body, err := dir.History(context.Background(), 100, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestHistoryFromFritzBoxMatchesFixture(t *testing.T) {
 		t.Fatalf("call list requested with max=%q, want 500 (cached, sliced per request)", lastMax)
 	}
 
-	limited, err := dir.History(context.Background(), 2)
+	limited, err := dir.History(context.Background(), 2, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestPhonebookInLatin1(t *testing.T) {
 func TestWrongPasswordIsReportedAsLoginProblem(t *testing.T) {
 	box := fritzboxtest.Start(t)
 	dir := newTestDirectory(t, newClient(box, "falsch"))
-	_, _, err := dir.Phonebook(context.Background())
+	_, _, err := dir.Phonebook(context.Background(), nil)
 	var fe *Error
 	if !errors.As(err, &fe) || fe.Kind != KindAuth {
 		t.Fatalf("want KindAuth, got %v", err)
@@ -332,7 +332,7 @@ func TestDirectoryCachesAndCollapsesConcurrentRequests(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, etag, err := dir.Phonebook(context.Background())
+			_, etag, err := dir.Phonebook(context.Background(), nil)
 			if err != nil {
 				t.Error(err)
 			}
@@ -357,12 +357,12 @@ func TestDirectoryCachesAndCollapsesConcurrentRequests(t *testing.T) {
 	}
 
 	clock.Advance(9 * time.Minute)
-	_, etag, _ := dir.Phonebook(context.Background())
+	_, etag, _ := dir.Phonebook(context.Background(), nil)
 	if src.phonebookHits.Load() != 1 {
 		t.Fatal("refetched within the 10 min cache")
 	}
 	clock.Advance(2 * time.Minute)
-	_, etagAfter, _ := dir.Phonebook(context.Background())
+	_, etagAfter, _ := dir.Phonebook(context.Background(), nil)
 	if src.phonebookHits.Load() != 2 {
 		t.Fatal("not refetched after 10 min")
 	}
@@ -373,17 +373,17 @@ func TestDirectoryCachesAndCollapsesConcurrentRequests(t *testing.T) {
 	src.contacts = append(oma(), protocol.Contact{ID: "0-2", Name: "Opa", Numbers: []protocol.ContactNumber{{Number: "0301", Type: "home"}}})
 	src.mu.Unlock()
 	clock.Advance(11 * time.Minute)
-	if _, changed, _ := dir.Phonebook(context.Background()); changed == etagAfter {
+	if _, changed, _ := dir.Phonebook(context.Background(), nil); changed == etagAfter {
 		t.Fatal("ETag unchanged although the content changed")
 	}
 
-	if _, err := dir.History(context.Background(), 10); err != nil {
+	if _, err := dir.History(context.Background(), 10, nil); err != nil {
 		t.Fatal(err)
 	}
 	clock.Advance(29 * time.Second)
-	_, _ = dir.History(context.Background(), 10)
+	_, _ = dir.History(context.Background(), 10, nil)
 	clock.Advance(2 * time.Second)
-	_, _ = dir.History(context.Background(), 10)
+	_, _ = dir.History(context.Background(), 10, nil)
 	if n := src.historyHits.Load(); n != 2 {
 		t.Fatalf("call list fetched %d times, want 2 (30 s cache)", n)
 	}
@@ -404,7 +404,7 @@ func TestDirectoryFeaturesFollowLastFetch(t *testing.T) {
 	src.historyErr = &Error{Kind: KindUnsupported, Err: errNoCallList}
 	src.mu.Unlock()
 	clock.Advance(time.Minute)
-	if _, err := dir.History(context.Background(), 10); err == nil {
+	if _, err := dir.History(context.Background(), 10, nil); err == nil {
 		t.Fatal("expected error")
 	}
 	if f := dir.Features(); !reflect.DeepEqual(f, []string{protocol.FeatureFritzBoxPhonebook}) {

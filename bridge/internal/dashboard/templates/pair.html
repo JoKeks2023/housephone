@@ -5,6 +5,7 @@
 <p>{{$L.T "pairScan"}}</p>
 <img class="qr" src="{{$.Data.QR}}" alt="QR" width="240" height="240">
 <dl class="grid">
+{{with .ProfileName}}<div><dt>{{$L.T "profile"}}</dt><dd>{{.}}</dd></div>{{end}}
 <div><dt>{{$L.T "code"}}</dt><dd><code class="big">{{.Grouped}}</code></dd></div>
 <div><dt>{{$L.T "fingerprint"}}</dt><dd><code>{{.Fingerprint}}</code></dd></div>
 <div><dt>{{$L.T "validUntil"}}</dt><dd>{{clock .ExpiresAt}}</dd></div>

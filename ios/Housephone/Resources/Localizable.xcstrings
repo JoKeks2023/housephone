@@ -1476,6 +1476,16 @@
         }
       }
     },
+    "Eigene Nummer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Own number"
+          }
+        }
+      }
+    },
     "Ein FRITZ!Box-Benutzer mit dem Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“. Die Daten bleiben im Schlüsselbund dieses iPhones." : {
       "localizations" : {
         "en" : {
@@ -3094,6 +3104,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Home"
+          }
+        }
+      }
+    },
+    "Profil" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile"
           }
         }
       }

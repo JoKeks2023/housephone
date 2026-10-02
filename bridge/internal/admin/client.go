@@ -72,6 +72,9 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&e)
+		if resp.StatusCode == http.StatusBadRequest && e.Error == ErrUnknownProfile.Error() {
+			return ErrUnknownProfile
+		}
 		return fmt.Errorf("admin: %s", e.Error)
 	}
 	if out == nil {
@@ -100,8 +103,17 @@ func (c *Client) RemoveDevice(ctx context.Context, id string, keepCompanions boo
 	return r, c.do(ctx, http.MethodDelete, "/v1/devices/"+url.PathEscape(id)+q, nil, &r)
 }
 
-func (c *Client) CreatePairing(ctx context.Context, name string) (p PairingInfo, err error) {
-	return p, c.do(ctx, http.MethodPost, "/v1/pairing", map[string]string{"name": name}, &p)
+// CreatePairing creates a code whose device joins profile ("": default).
+func (c *Client) CreatePairing(ctx context.Context, name, profile string) (p PairingInfo, err error) {
+	return p, c.do(ctx, http.MethodPost, "/v1/pairing", map[string]string{"name": name, "profile": profile}, &p)
+}
+
+func (c *Client) Profiles(ctx context.Context) (p []ProfileInfo, err error) {
+	return p, c.do(ctx, http.MethodGet, "/v1/profiles", nil, &p)
+}
+
+func (c *Client) MoveDevice(ctx context.Context, id, profile string) (r MoveResult, err error) {
+	return r, c.do(ctx, http.MethodPost, "/v1/devices/"+url.PathEscape(id)+"/move", map[string]string{"profile": profile}, &r)
 }
 
 // WaitPairing long-polls once (up to ~25 s).
@@ -117,8 +129,9 @@ func (c *Client) LanPairings(ctx context.Context) (l []LanPairingRequest, err er
 	return l, c.do(ctx, http.MethodGet, "/v1/lan-pairings", nil, &l)
 }
 
-func (c *Client) ApproveLanPairing(ctx context.Context, id string) (d DeviceInfo, err error) {
-	return d, c.do(ctx, http.MethodPost, "/v1/lan-pairings/"+url.PathEscape(id)+"/approve", nil, &d)
+// ApproveLanPairing pairs the device into profile ("": default).
+func (c *Client) ApproveLanPairing(ctx context.Context, id, profile string) (d DeviceInfo, err error) {
+	return d, c.do(ctx, http.MethodPost, "/v1/lan-pairings/"+url.PathEscape(id)+"/approve", map[string]string{"profile": profile}, &d)
 }
 
 func (c *Client) DenyLanPairing(ctx context.Context, id string) error {

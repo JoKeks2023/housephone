@@ -26,6 +26,15 @@ configuration:
   sip_password:
     name: Kennwort des IP-Telefons
     description: Wird nicht geloggt.
+  profile_name:
+    name: Name des Hauptprofils (optional)
+    description: Nur bei mehreren Profilen wichtig, z. B. dein Vorname. Leer heißt „Standard“.
+  profile_numbers:
+    name: Eigene Nummern des Hauptprofils (optional)
+    description: Kommagetrennt, z. B. 030 1234567. Bei mehreren Profilen sieht ein Profil nur die Anrufe auf seinen Nummern in der Anrufliste.
+  lines:
+    name: Weitere Profile
+    description: Jede Person mit eigener Festnetznummer bekommt ein eigenes IP-Telefon in der FRITZ!Box und hier einen Eintrag mit id (a-z, 0-9, -), name, sip_username, sip_password und numbers (kommagetrennt). Geräte koppelst du dann im Dashboard in das passende Profil.
   fritzbox_username:
     name: FRITZ!Box-Benutzer (optional)
     description: Für Telefonbuch und Anrufliste. Braucht nur das Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“.

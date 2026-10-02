@@ -21,6 +21,7 @@ type Event struct {
 	Kind      EventKind
 	At        time.Time
 	CallID    string
+	Profile   string // household profile of the line (ADR-0008)
 	Direction string // "incoming" | "outgoing"
 	Number    string // remote party
 	Name      string // remote party name, if known
@@ -46,5 +47,5 @@ func (c *call) event(kind EventKind) Event {
 	if c.dir == directionOutgoing {
 		number, name = c.number, ""
 	}
-	return Event{Kind: kind, CallID: c.id, Direction: c.dir.String(), Number: number, Name: name, Codec: string(c.codec)}
+	return Event{Kind: kind, CallID: c.id, Profile: c.profile, Direction: c.dir.String(), Number: number, Name: name, Codec: string(c.codec)}
 }

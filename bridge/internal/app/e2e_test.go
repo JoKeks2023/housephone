@@ -102,6 +102,10 @@ func startWorldWith(t *testing.T, appOpts []app.Option, opts ...func(*config.Con
 	for _, opt := range opts {
 		opt(&cfg)
 	}
+	// Further profiles are further IP phones at the FRITZ!Box.
+	for _, line := range cfg.Lines {
+		box.AddUser(line.SIP.Username, line.SIP.Password)
+	}
 	pusher := &recordingPusher{pushes: make(chan protocol.PushIncomingCall, 10)}
 	bridge, err := app.New(ctx, cfg, logger(), append([]app.Option{app.WithPusher(pusher)}, appOpts...)...)
 	if err != nil {

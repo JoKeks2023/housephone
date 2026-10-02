@@ -30,6 +30,15 @@ struct SettingsOverviewCard: View {
             .accessibilityAddTraits(.isHeader)
 
             Grid(alignment: .leading, horizontalSpacing: Theme.Space.s4, verticalSpacing: Theme.Space.s2) {
+                if !direct.isEnabled, let profile = bridge.welcome?.profile, profile.isWorthShowing {
+                    GridRow {
+                        Text("Profil").foregroundStyle(.secondary)
+                        Text(profileLine(profile))
+                            .lineLimit(1)
+                            .monospacedDigit()
+                    }
+                    .accessibilityElement(children: .combine)
+                }
                 GridRow {
                     Text("Leitung").foregroundStyle(.secondary)
                     lineStatus
@@ -57,6 +66,12 @@ struct SettingsOverviewCard: View {
             return direct.configuration?.registrar ?? "FRITZ!Box"
         }
         return bridge.welcome?.bridgeName ?? bridge.credentials?.bridgeName ?? String(localized: "Bridge")
+    }
+
+    /// "Name · Nummer", or just the name without an own number.
+    private func profileLine(_ profile: BridgeProfile) -> String {
+        guard let number = profile.number else { return profile.name }
+        return "\(profile.name) · \(number)"
     }
 
     @ViewBuilder
