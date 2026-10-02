@@ -12,7 +12,7 @@
 
 ## Entscheidung
 
-1. **Relay des Anbieters.** `housephone-relay` (Go) hält den APNs-Key und leitet weiter. Code und Betrieb (Docker Compose mit Caddy für HTTPS, gebaut auf dem VPS) liegen in einem **privaten Repository** des Anbieters, nicht hier (Vorgabe 2026-10-02). Dieses Repository enthält nur die Seite der Bridge (`internal/push`, `RelayRequest`). Das Relay speichert nichts auf Platte, braucht keine Datenbank und schreibt kein Zugriffslog.
+1. **Relay des Anbieters.** `housephone-relay` (Go) hält den APNs-Key und leitet weiter. Code und Betrieb (Docker Compose, gebaut auf dem VPS, erreichbar über einen Cloudflare Tunnel ohne offene Ports) liegen in einem **privaten Repository** des Anbieters, nicht hier (Vorgabe 2026-10-02). Dieses Repository enthält nur die Seite der Bridge (`internal/push`, `RelayRequest`). Das Relay speichert nichts auf Platte, braucht keine Datenbank und schreibt kein Zugriffslog.
 2. **Schnittstelle.** `POST /v1/push` mit `{token, environment, topic, collapseId?, sealed}`:
    - `token`: APNs-Gerätetoken (hex, klein), `environment`: `production` oder `development`.
    - `topic` muss in `RELAY_TOPICS` stehen (Standard: App und Watch-App, je `….voip`), sonst `403`.
@@ -48,5 +48,5 @@
 ## Folgen
 
 - Die Bridge braucht keinen APNs-Key mehr; das Add-on verliert die APNs-Felder und bekommt optional `push_relay`.
-- `docs/veroeffentlichung.md`: Datenschutzangaben anpassen (Anbieter verarbeitet Push-Tokens), Relay-Domain `housephone.relay.jorisconrad.com` (`config.DefaultPushRelay`).
+- `docs/veroeffentlichung.md`: Datenschutzangaben anpassen (Anbieter verarbeitet Push-Tokens; Cloudflare als Auftragsverarbeiter des Tunnels sieht Token, Topic und Adresse der Bridge, nicht Nummer oder Name), Relay-Domain `housephone.relay.jorisconrad.com` (`config.DefaultPushRelay`).
 - Selbst gebaute Apps mit anderem Bundle: eigener APNs-Key (oder ein eigenes Relay mit der Schnittstelle aus Punkt 2).

@@ -12,4 +12,4 @@
 **Nicht verifiziert:**
 - Push über das echte APNs aus dem Relay (kein Deploy, keine Domain).
 - Klingeln auf echtem iPhone/Watch mit versiegeltem Push; Schlüsselbund-Zugriff im Sperrbildschirm.
-- Relay hinter Caddy auf dem VPS (Zertifikat, X-Forwarded-For).
+- Relay hinter dem Cloudflare Tunnel auf dem VPS (Erreichbarkeit, X-Forwarded-For).
