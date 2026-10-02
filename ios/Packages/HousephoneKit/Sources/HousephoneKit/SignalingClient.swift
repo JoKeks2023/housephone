@@ -246,13 +246,15 @@ public actor SignalingClient {
             || newHello.pushEnvironment != hello.pushEnvironment
             || newHello.mediaCapabilities != hello.mediaCapabilities
             || newHello.pushTopic != hello.pushTopic
+            || newHello.pushKey != hello.pushKey
         hello = newHello
         guard changed, case .connected = state else { return }
         let update = DeviceUpdate(
             pushToken: newHello.pushToken,
             pushEnvironment: newHello.pushEnvironment,
             mediaCapabilities: newHello.mediaCapabilities,
-            pushTopic: newHello.pushTopic
+            pushTopic: newHello.pushTopic,
+            pushKey: newHello.pushKey
         )
         try? await send(.deviceUpdate(update))
     }

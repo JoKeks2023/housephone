@@ -43,6 +43,8 @@ final class WatchBridge {
 
     /// The watch app's bundle ID plus `.voip` (see BridgeConnection).
     static let voipPushTopic = (Bundle.main.bundleIdentifier ?? "com.jorisconrad.housephone.watchkitapp") + ".voip"
+    /// The watch's own X25519 key for sealed VoIP pushes (ADR-0010).
+    nonisolated static let pushKeyStore = PushKeyStore(service: "com.jorisconrad.housephone.watch.pushkey")
     private static let pairedAtKey = "housephone.pairedAt"
 
     /// When this watch paired, to ignore an unpair instruction from the
@@ -192,7 +194,8 @@ final class WatchBridge {
             pushToken: pushToken,
             pushEnvironment: Self.pushEnvironment,
             mediaCapabilities: [.webSocketPCMA],
-            pushTopic: Self.voipPushTopic
+            pushTopic: Self.voipPushTopic,
+            pushKey: Self.pushKeyStore.wirePublicKey()
         )
         do {
             try await http.updateDevice(update, credentials: credentials)
@@ -225,7 +228,8 @@ final class WatchBridge {
             pushToken: pushToken,
             pushEnvironment: pushToken == nil ? nil : Self.pushEnvironment,
             mediaCapabilities: [.webSocketPCMA],
-            pushTopic: Self.voipPushTopic
+            pushTopic: Self.voipPushTopic,
+            pushKey: Self.pushKeyStore.wirePublicKey()
         )
         var configuration = SignalingClient.Configuration()
         configuration.initialBackoff = .milliseconds(300)

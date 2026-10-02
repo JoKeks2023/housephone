@@ -73,6 +73,9 @@ public struct Hello: Codable, Sendable, Equatable {
     public var mediaCapabilities: [MediaCapability]?
     /// APNs topic for this device's VoIP pushes. Missing means the bridge's default.
     public var pushTopic: String?
+    /// X25519 public key for sealed pushes (v1.3, ADR-0010), base64url
+    /// without padding. Missing keeps the one the bridge has.
+    public var pushKey: String?
 
     public init(
         appVersion: String,
@@ -80,7 +83,8 @@ public struct Hello: Codable, Sendable, Equatable {
         pushToken: String? = nil,
         pushEnvironment: PushEnvironment? = nil,
         mediaCapabilities: [MediaCapability]? = nil,
-        pushTopic: String? = nil
+        pushTopic: String? = nil,
+        pushKey: String? = nil
     ) {
         self.appVersion = appVersion
         self.platform = platform
@@ -88,6 +92,7 @@ public struct Hello: Codable, Sendable, Equatable {
         self.pushEnvironment = pushEnvironment
         self.mediaCapabilities = mediaCapabilities
         self.pushTopic = pushTopic
+        self.pushKey = pushKey
     }
 }
 
@@ -97,19 +102,23 @@ public struct DeviceUpdate: Codable, Sendable, Equatable {
     public var deviceName: String?
     public var mediaCapabilities: [MediaCapability]?
     public var pushTopic: String?
+    /// See `Hello.pushKey` (v1.3).
+    public var pushKey: String?
 
     public init(
         pushToken: String? = nil,
         pushEnvironment: PushEnvironment? = nil,
         deviceName: String? = nil,
         mediaCapabilities: [MediaCapability]? = nil,
-        pushTopic: String? = nil
+        pushTopic: String? = nil,
+        pushKey: String? = nil
     ) {
         self.pushToken = pushToken
         self.pushEnvironment = pushEnvironment
         self.deviceName = deviceName
         self.mediaCapabilities = mediaCapabilities
         self.pushTopic = pushTopic
+        self.pushKey = pushKey
     }
 }
 

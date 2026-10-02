@@ -1916,6 +1916,16 @@
         }
       }
     },
+    "Eigener Schlüssel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Own Key"
+          }
+        }
+      }
+    },
     "Ein FRITZ!Box-Benutzer mit dem Recht „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“. Die Daten bleiben im Schlüsselbund dieses iPhones." : {
       "localizations" : {
         "en" : {
@@ -4204,6 +4214,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Through your bridge"
+          }
+        }
+      }
+    },
+    "Über Relay" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Via Relay"
           }
         }
       }

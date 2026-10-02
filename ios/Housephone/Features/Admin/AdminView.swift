@@ -110,7 +110,7 @@ struct AdminView: View {
                 }
             }
             LabeledContent("Push (APNs)") {
-                StatusIndicator(tone: status.apnsConfigured ? .positive : .warning, label: status.apnsConfigured ? "Eingerichtet" : "Fehlt")
+                StatusIndicator(tone: status.apnsConfigured ? .positive : .warning, label: pushLabel(status))
             }
             LabeledContent("Geräte online", value: "\(status.devicesOnline) / \(status.devicesTotal)")
             LabeledContent("Laufende Anrufe", value: "\(status.activeCalls)")
@@ -121,6 +121,15 @@ struct AdminView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    /// How the bridge sends pushes (ADR-0010); older bridges only say whether.
+    private func pushLabel(_ status: AdminStatus) -> LocalizedStringKey {
+        switch status.pushMode {
+        case "relay": "Über Relay"
+        case "apns": "Eigener Schlüssel"
+        default: status.apnsConfigured ? "Eingerichtet" : "Fehlt"
         }
     }
 

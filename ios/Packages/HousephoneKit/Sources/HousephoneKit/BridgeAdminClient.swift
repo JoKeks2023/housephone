@@ -35,7 +35,11 @@ public struct AdminStatus: Codable, Sendable, Equatable {
     public var profiles: [AdminProfile]?
     public var publicIp: String?
     public var publicIpSource: String?
+    /// The bridge can send pushes (own key or relay).
     public var apnsConfigured: Bool
+    /// "apns" (own key), "relay" or "off" (ADR-0010); missing on older bridges.
+    public var pushMode: String?
+    public var pushRelay: String?
     public var fritzBoxConfigured: Bool?
     public var devicesTotal: Int
     public var devicesOnline: Int

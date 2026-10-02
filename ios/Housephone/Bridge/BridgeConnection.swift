@@ -393,9 +393,13 @@ final class BridgeConnection {
             pushToken: pushToken,
             pushEnvironment: pushToken == nil ? nil : Self.pushEnvironment,
             mediaCapabilities: [.webRTC],
-            pushTopic: Self.voipPushTopic
+            pushTopic: Self.voipPushTopic,
+            pushKey: Self.pushKeyStore.wirePublicKey()
         )
     }
+
+    /// The X25519 key the bridge seals VoIP pushes for (ADR-0010).
+    nonisolated static let pushKeyStore = PushKeyStore()
 
     static var appVersion: String {
         let info = Bundle.main.infoDictionary
