@@ -36,6 +36,10 @@ func payloadFor(t *testing.T, msgType string) any {
 		return &CallDTMF{}
 	case TypeDevicePaired:
 		return &DevicePaired{}
+	case TypeAdminAction:
+		return &AdminAction{}
+	case TypeAdminRole:
+		return &AdminRole{}
 	case TypeWelcome:
 		return &Welcome{}
 	case TypeStatus:

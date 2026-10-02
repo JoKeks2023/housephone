@@ -11,12 +11,82 @@
         }
       }
     },
+    "„%@“ die Admin-Rechte entziehen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove admin rights from “%@”"
+          }
+        }
+      }
+    },
+    "„%@“ entfernen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove “%@”"
+          }
+        }
+      }
+    },
+    "„%@“ freigeben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Approve “%@”"
+          }
+        }
+      }
+    },
+    "„%@“ ist gekoppelt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@” is paired."
+          }
+        }
+      }
+    },
+    "„%@“ nach „%@“ verschieben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move “%1$@” to “%2$@”"
+          }
+        }
+      }
+    },
+    "„%@“ umbenennen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rename “%@”"
+          }
+        }
+      }
+    },
     "„%@“ wurde %@ mit deiner Bridge gekoppelt. Warst du das nicht? Entferne das Gerät auf dem Server." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "“%1$@” was paired with your bridge %2$@. Not you? Remove the device on the server."
+          }
+        }
+      }
+    },
+    "„%@“ zum Admin machen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make “%@” an admin"
           }
         }
       }
@@ -61,6 +131,116 @@
         }
       }
     },
+    "%@ hat %@ die Admin-Rechte entzogen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ removed admin rights from %2$@."
+          }
+        }
+      }
+    },
+    "%@ hat %@ entfernt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ removed %2$@."
+          }
+        }
+      }
+    },
+    "%@ hat %@ im Heimnetz gekoppelt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ paired %2$@ in the home network."
+          }
+        }
+      }
+    },
+    "%@ hat %@ in ein anderes Profil verschoben." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ moved %2$@ to another profile."
+          }
+        }
+      }
+    },
+    "%@ hat %@ umbenannt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ renamed %2$@."
+          }
+        }
+      }
+    },
+    "%@ hat %@ zum Admin gemacht." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ made %2$@ an admin."
+          }
+        }
+      }
+    },
+    "%@ hat eine Kopplungsanfrage abgelehnt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ declined a pairing request."
+          }
+        }
+      }
+    },
+    "%@ hat einen Kopplungscode erzeugt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ created a pairing code."
+          }
+        }
+      }
+    },
+    "%@ hat einen Kopplungscode widerrufen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ revoked a pairing code."
+          }
+        }
+      }
+    },
+    "%@ hat etwas an der Bridge geändert." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ changed something on the bridge."
+          }
+        }
+      }
+    },
+    "%@ hat Face ID für die Verwaltung eingerichtet." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ set up Face ID for management."
+          }
+        }
+      }
+    },
     "%@ zu Favoriten" : {
       "localizations" : {
         "en" : {
@@ -77,6 +257,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "%lld eingehend · %lld verpasst · %lld ausgehend" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld incoming · %2$lld missed · %3$lld outgoing"
           }
         }
       }
@@ -147,6 +337,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Decline"
+          }
+        }
+      }
+    },
+    "Admin" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Admin"
+          }
+        }
+      }
+    },
+    "Admin-Rechte entziehen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Admin Rights"
+          }
+        }
+      }
+    },
+    "Admin-Rechte entziehen?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove admin rights?"
+          }
+        }
+      }
+    },
+    "Admins verwalten die Bridge im Heimnetz mit Face ID." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Admins manage the bridge in the home network with Face ID."
           }
         }
       }
@@ -297,6 +527,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Answered elsewhere"
+          }
+        }
+      }
+    },
+    "Anfrage von „%@“ ablehnen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decline request from “%@”"
           }
         }
       }
@@ -622,6 +862,16 @@
         }
       }
     },
+    "Beim Verschieben verbindet sich das Gerät neu, seine Apple Watch wechselt mit." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moving reconnects the device; its Apple Watch moves along."
+          }
+        }
+      }
+    },
     "Benutzername" : {
       "localizations" : {
         "en" : {
@@ -783,6 +1033,16 @@
         }
       }
     },
+    "Bridge verwalten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage Bridge"
+          }
+        }
+      }
+    },
     "C++-Grundbibliothek" : {
       "localizations" : {
         "en" : {
@@ -813,6 +1073,36 @@
         }
       }
     },
+    "Code %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Code erzeugen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create Code"
+          }
+        }
+      }
+    },
+    "Code stimmt – freigeben" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code Matches – Approve"
+          }
+        }
+      }
+    },
     "Code vergleichen" : {
       "localizations" : {
         "en" : {
@@ -829,6 +1119,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Requesting code …"
+          }
+        }
+      }
+    },
+    "Danach kannst du die Bridge von diesem iPhone aus nicht mehr verwalten." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You won’t be able to manage the bridge from this iPhone afterwards."
           }
         }
       }
@@ -883,6 +1183,46 @@
         }
       }
     },
+    "Das Gerät gibt es nicht mehr." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device no longer exists."
+          }
+        }
+      }
+    },
+    "Das Gerät oder die Anfrage gibt es nicht mehr." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The device or request no longer exists."
+          }
+        }
+      }
+    },
+    "Das hat nicht geklappt. Versuch es noch einmal." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That didn’t work. Please try again."
+          }
+        }
+      }
+    },
+    "Das iPhone richtet danach innerhalb einer Stunde Face ID für die Verwaltung ein." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The iPhone then sets up Face ID for management within an hour."
+          }
+        }
+      }
+    },
     "Das ist kein Housephone-Code." : {
       "localizations" : {
         "en" : {
@@ -899,6 +1239,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "That's not a Housephone pairing link."
+          }
+        }
+      }
+    },
+    "Das neue Gerät scannt den QR-Code in Housephone im Heim-WLAN." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The new device scans the QR code in Housephone on your home Wi-Fi."
           }
         }
       }
@@ -1034,6 +1384,16 @@
         }
       }
     },
+    "Der Server" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server"
+          }
+        }
+      }
+    },
     "Details" : {
       "localizations" : {
         "en" : {
@@ -1090,6 +1450,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This replaces the current pairing."
+          }
+        }
+      }
+    },
+    "Die Bridge erkennt dieses iPhone nicht mehr als Admin." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bridge no longer recognizes this iPhone as an admin."
           }
         }
       }
@@ -1266,6 +1636,46 @@
         }
       }
     },
+    "Die Verbindung wird sofort getrennt. Das Gerät muss neu gekoppelt werden." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It is disconnected immediately and has to be paired again."
+          }
+        }
+      }
+    },
+    "Die Verbindung wird sofort getrennt. Die darüber gekoppelte Apple Watch wird ebenfalls entfernt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It is disconnected immediately. The Apple Watch paired through it is removed as well."
+          }
+        }
+      }
+    },
+    "Die Verwaltung braucht Face ID oder Touch ID. Richte es in den iOS-Einstellungen ein." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Management needs Face ID or Touch ID. Set it up in iOS Settings."
+          }
+        }
+      }
+    },
+    "Die Verwaltung ist nur im Heim-WLAN oder über Tailscale erreichbar." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Management is only available on your home Wi-Fi or over Tailscale."
+          }
+        }
+      }
+    },
     "Die Watch hat unerwartet geantwortet. Aktualisiere Housephone auf beiden Geräten." : {
       "localizations" : {
         "en" : {
@@ -1302,6 +1712,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The watch makes calls only through a bridge."
+          }
+        }
+      }
+    },
+    "Die Zeit zum Einrichten ist abgelaufen. Lass dich erneut zum Admin machen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The time to set up has run out. Ask to be made admin again."
           }
         }
       }
@@ -1382,6 +1802,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This iPhone"
+          }
+        }
+      }
+    },
+    "Dieses iPhone ist Admin. Richte Face ID bis %@ ein; danach geht es nur mit einer neuen Freigabe." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This iPhone is an admin. Set up Face ID by %@; after that it needs a new approval."
           }
         }
       }
@@ -1496,6 +1926,26 @@
         }
       }
     },
+    "ein Gerät" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a device"
+          }
+        }
+      }
+    },
+    "Eine Apple Watch gehört zum Profil ihres iPhones." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An Apple Watch belongs to its iPhone’s profile."
+          }
+        }
+      }
+    },
     "Eingehend" : {
       "localizations" : {
         "en" : {
@@ -1512,6 +1962,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Incoming call"
+          }
+        }
+      }
+    },
+    "Eingerichtet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Up"
           }
         }
       }
@@ -1552,6 +2012,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open Settings"
+          }
+        }
+      }
+    },
+    "Entfernen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove"
+          }
+        }
+      }
+    },
+    "Entziehen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove"
           }
         }
       }
@@ -1636,12 +2116,72 @@
         }
       }
     },
+    "Erzeugt einen QR-Code zum Koppeln, gültig für wenige Minuten." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creates a QR code for pairing, valid for a few minutes."
+          }
+        }
+      }
+    },
     "Es läuft bereits ein Anruf." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "A call is already in progress."
+          }
+        }
+      }
+    },
+    "Face ID" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID"
+          }
+        }
+      }
+    },
+    "Face ID für die Verwaltung einrichten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Up Face ID for Management"
+          }
+        }
+      }
+    },
+    "Face ID für die Verwaltung fehlt oder wurde geändert. Mach dieses iPhone auf dem Server erneut zum Admin (TUI, Dashboard oder „devices promote“) und richte Face ID dann neu ein." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID for management is missing or was changed. Make this iPhone an admin again on the server (TUI, dashboard or “devices promote”), then set up Face ID again."
+          }
+        }
+      }
+    },
+    "Face ID neu einrichten lassen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let It Set Up Face ID Again"
+          }
+        }
+      }
+    },
+    "Face ID wurde geändert. Lass dich auf dem Server oder von einem anderen Admin erneut freischalten und richte Face ID dann neu ein." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID was changed. Ask the server or another admin to approve you again, then set up Face ID again."
           }
         }
       }
@@ -1692,6 +2232,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Failed"
+          }
+        }
+      }
+    },
+    "Fehlt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missing"
           }
         }
       }
@@ -1896,12 +2446,82 @@
         }
       }
     },
+    "Gekoppelt über" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paired Through"
+          }
+        }
+      }
+    },
     "Gekoppelt, klingelt noch nicht" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Paired, can’t ring yet"
+          }
+        }
+      }
+    },
+    "Gerät" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Device"
+          }
+        }
+      }
+    },
+    "Gerät einladen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invite Device"
+          }
+        }
+      }
+    },
+    "Gerät entfernen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Device"
+          }
+        }
+      }
+    },
+    "Gerät entfernen?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove device?"
+          }
+        }
+      }
+    },
+    "Geräte" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Devices"
+          }
+        }
+      }
+    },
+    "Geräte online" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Devices Online"
           }
         }
       }
@@ -1936,12 +2556,32 @@
         }
       }
     },
+    "Gib eine Anfrage nur frei, wenn das neue Gerät genau diesen Code zeigt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only approve a request if the new device shows exactly this code."
+          }
+        }
+      }
+    },
     "Grenzen ohne Bridge" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Limits without a bridge"
+          }
+        }
+      }
+    },
+    "Gültig bis %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valid until %1$@ · %2$@"
           }
         }
       }
@@ -1982,6 +2622,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Home Wi-Fi"
+          }
+        }
+      }
+    },
+    "Heute" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
           }
         }
       }
@@ -2192,6 +2842,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iPhone"
+          }
+        }
+      }
+    },
+    "Jede Änderung bestätigst du mit Face ID. Alle Geräte sehen, was ein Admin ändert." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You confirm every change with Face ID. All devices see what an admin changes."
           }
         }
       }
@@ -2497,6 +3157,36 @@
         }
       }
     },
+    "Kopplungsanfrage" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing Request"
+          }
+        }
+      }
+    },
+    "Kopplungsanfragen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing Requests"
+          }
+        }
+      }
+    },
+    "Laufende Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active Calls"
+          }
+        }
+      }
+    },
     "Läuft gerade" : {
       "localizations" : {
         "en" : {
@@ -2697,12 +3387,32 @@
         }
       }
     },
+    "Modell" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Model"
+          }
+        }
+      }
+    },
     "Name" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Name"
+          }
+        }
+      }
+    },
+    "Name (optional)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name (optional)"
           }
         }
       }
@@ -2717,12 +3427,42 @@
         }
       }
     },
+    "Namen speichern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save Name"
+          }
+        }
+      }
+    },
     "Neu anlegen" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Create New"
+          }
+        }
+      }
+    },
+    "Neu freischalten lassen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Needs new approval"
+          }
+        }
+      }
+    },
+    "Neues Gerät einladen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invite New Device"
           }
         }
       }
@@ -2753,6 +3493,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Not set"
+          }
+        }
+      }
+    },
+    "Nicht angemeldet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not registered"
           }
         }
       }
@@ -2857,6 +3607,16 @@
         }
       }
     },
+    "Noch nie verbunden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Never connected"
+          }
+        }
+      }
+    },
     "Notiz" : {
       "localizations" : {
         "en" : {
@@ -2897,12 +3657,32 @@
         }
       }
     },
+    "Nur ein iPhone kann Admin sein, keine Apple Watch." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only an iPhone can be an admin, not an Apple Watch."
+          }
+        }
+      }
+    },
     "Nur im Heim-WLAN" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Home Wi-Fi only"
+          }
+        }
+      }
+    },
+    "Nur im Heim-WLAN oder über Tailscale. Unterwegs ist die Verwaltung ausgeblendet." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only on your home Wi-Fi or over Tailscale. Away from home, management is hidden."
           }
         }
       }
@@ -2978,6 +3758,16 @@
         }
       }
     },
+    "Öffentliche IP" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Public IP"
+          }
+        }
+      }
+    },
     "Öffne Housephone auf deiner Apple Watch" : {
       "localizations" : {
         "en" : {
@@ -3044,6 +3834,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
+          }
+        }
+      }
+    },
+    "Online" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Online"
           }
         }
       }
@@ -3128,6 +3928,16 @@
         }
       }
     },
+    "Push (APNs)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Push (APNs)"
+          }
+        }
+      }
+    },
     "QR-Code der Bridge scannen" : {
       "localizations" : {
         "en" : {
@@ -3144,6 +3954,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scan QR code"
+          }
+        }
+      }
+    },
+    "QR-Code zum Koppeln" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QR code for pairing"
           }
         }
       }
@@ -3184,6 +4004,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Phone Numbers"
+          }
+        }
+      }
+    },
+    "Schlüssel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Key"
           }
         }
       }
@@ -3568,6 +4398,36 @@
         }
       }
     },
+    "Verwaltung" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Management"
+          }
+        }
+      }
+    },
+    "Verwaltung mit Face ID absichern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Secure management with Face ID"
+          }
+        }
+      }
+    },
+    "Verwaltung öffnen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open management"
+          }
+        }
+      }
+    },
     "Video-Codec AV1 (Teil von WebRTC)" : {
       "localizations" : {
         "en" : {
@@ -3678,6 +4538,16 @@
         }
       }
     },
+    "Zeigt „%@“ genau diesen Code?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Does “%@” show exactly this code?"
+          }
+        }
+      }
+    },
     "Zeigt alle Anrufe mit dieser Nummer" : {
       "localizations" : {
         "en" : {
@@ -3764,6 +4634,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Allow access"
+          }
+        }
+      }
+    },
+    "Zuletzt %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last seen %@"
+          }
+        }
+      }
+    },
+    "Zum Admin machen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make Admin"
           }
         }
       }

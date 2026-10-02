@@ -17,6 +17,7 @@ final class AppServices {
     let fritzBox: FritzBoxData
     let callCenter: CallCenter
     let watchLink: WatchLink
+    let admin: AdminCenter
     let appModel: AppModel
     let favorites: FavoritesStore
 
@@ -31,6 +32,7 @@ final class AppServices {
         contacts.fallbackName = { [fritzBox] number in fritzBox.name(for: number) }
         callCenter = CallCenter(bridge: bridge, direct: direct, contacts: contacts, modelContainer: modelContainer)
         watchLink = WatchLink(bridge: bridge)
+        admin = AdminCenter(bridge: bridge)
         // The watch pairs itself as soon as the iPhone is connected.
         let callCenterOnConnected = bridge.onConnected
         bridge.onConnected = { [watchLink] in

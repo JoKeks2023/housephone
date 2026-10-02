@@ -181,6 +181,21 @@ func (f *fakeService) MoveDevice(id, profile string) (MoveResult, error) {
 	}
 	return MoveResult{Moved: []DeviceInfo{{ID: id, Profile: profile}}}, nil
 }
+func (f *fakeService) PromoteDevice(id string) (DeviceInfo, error) {
+	switch id {
+	case "d1":
+		return DeviceInfo{ID: id, Admin: true}, nil
+	case "w1":
+		return DeviceInfo{}, ErrNotAllowed
+	}
+	return DeviceInfo{}, ErrNotFound
+}
+func (f *fakeService) DemoteDevice(id string) (DeviceInfo, error) {
+	if id != "d1" {
+		return DeviceInfo{}, ErrNotFound
+	}
+	return DeviceInfo{ID: id}, nil
+}
 func (f *fakeService) PairingState(code string) (PairingState, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -298,6 +313,15 @@ func TestServerOverSocket(t *testing.T) {
 	}
 	if _, err := c.MoveDevice(ctx, "nope", "b"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("move an unknown device: %v", err)
+	}
+	if d, err := c.PromoteDevice(ctx, "d1"); err != nil || !d.Admin {
+		t.Fatalf("promote %+v %v", d, err)
+	}
+	if _, err := c.PromoteDevice(ctx, "w1"); !errors.Is(err, ErrNotAllowed) {
+		t.Fatalf("promote a watch: %v", err)
+	}
+	if d, err := c.DemoteDevice(ctx, "d1"); err != nil || d.Admin {
+		t.Fatalf("demote %+v %v", d, err)
 	}
 	if err := c.DenyLanPairing(ctx, "r1"); err != nil {
 		t.Fatalf("deny %v", err)

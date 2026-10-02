@@ -96,7 +96,10 @@ type Config struct {
 	// LanPairTTL is how long a LAN pairing request waits for the admin
 	// (default DefaultLanPairTTL).
 	LanPairTTL time.Duration
-	Now        func() time.Time
+	// Admin runs admin actions from the app (ADR-0009); nil disables
+	// /v1/admin/*.
+	Admin AdminBackend
+	Now   func() time.Time
 }
 
 // Limits.
@@ -202,6 +205,7 @@ func (s *Server) routes(private bool) http.Handler {
 	mux.HandleFunc("GET /v1/calls/{callId}", s.authed(s.httpCallStatus))
 	mux.HandleFunc("GET /v1/phonebook", s.authed(s.httpPhonebook))
 	mux.HandleFunc("GET /v1/history", s.authed(s.httpHistory))
+	s.adminRoutes(mux, private)
 	mux.HandleFunc("/", s.notFound)
 	return mux
 }
@@ -482,9 +486,13 @@ func (s *Server) pair(req protocol.PairRequest, decodeErr error, ip string) (pro
 		Profile:   profileID,
 		CreatedAt: now.UTC(),
 	}
-	if err := s.cfg.Devices.Add(dev); err != nil {
+	dev, err = s.cfg.Devices.AddPromotingFirst(dev, now.Add(AdminEnrollWindow).UTC())
+	if err != nil {
 		s.log.Error("storing device failed", "error", err)
 		return protocol.PairResponse{}, errPairInternal
+	}
+	if dev.Admin {
+		s.log.Info("first device of the bridge is admin", "device", dev.ID)
 	}
 	if err := s.cfg.Pairing.RecordUse(pc.Code, dev.ID, now); err != nil {
 		s.log.Warn("recording code use failed", "error", err)

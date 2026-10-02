@@ -1,0 +1,27 @@
+{
+  "description": "HP2 administration from the app (ADR-0009). Device key and request fields as in hp2-vectors.json. base64url without padding, hex lowercase. The ECDSA signatures are random: verify them, do not reproduce them.",
+  "enroll": {
+    "enrollMessage": "HP2-ADMIN-ENROLL\ne7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\n9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d\nBIm8NoKUC9nCXlu_rb50YAruoFnvoV6qSXse7iKbCz_NmxcJLb__LpBDmf3v8n3kjjYA7E4ZR7zIPC27IsG8aLg",
+    "proof": "OwQZSuEjjvJUr8zxrd9a9FMUyApWSAbUKk8Jk9SGpaFVrbyLyktLNlb6soSRNmuZzhG9sfKZuqF30fIrqr1Mig"
+  },
+  "ids": {
+    "bridgeId": "e7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e",
+    "deviceId": "9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d"
+  },
+  "keys": {
+    "adminPrivateScalarHex": "0f5e4d3c2b1a09f8e7d6c5b4a3928170f1e2d3c4b5a69788796a5b4c3d2e1f00",
+    "adminPublicKeyX963": "BIm8NoKUC9nCXlu_rb50YAruoFnvoV6qSXse7iKbCz_NmxcJLb__LpBDmf3v8n3kjjYA7E4ZR7zIPC27IsG8aLg",
+    "devicePublicKeyX963": "BGD-1LolWp0xyWHrdMY1bWjASbiSO2H6bOZpYi5g8p-2eQP-EAi4vJmkGunpVii8ZPLxsgwtfp9Rd6PClNRGIpk"
+  },
+  "request": {
+    "adminMessage": "HP2-ADMIN\nPUT\n/v1/admin/devices/3c4d5e6f-7081-4293-a4b5-c6d7e8f90a1b\ne7a1c3d5-0f2b-4d6e-8a9c-1b3d5f7a9c2e\n9b1d4c2a-5e6f-4a7b-8c9d-0e1f2a3b4c5d\n1790000000\n8OHSw7Sllod4aVpLPC0eDw\nhSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo\na8314f7e3f6c04e8cafd853bdf51b3a70671a67132c893bcd9903043f2a2d673",
+    "adminSignature": "Zj233PZeKDogWrFZ3pqigxDASaSgbyADAWUR5XyF0TgAOAr3ydxgE8cm3KXhS5qnUznBTuzk5VNWtGfx2334-Q",
+    "body": "{\"name\":\"Küche\"}",
+    "bodySha256Hex": "a8314f7e3f6c04e8cafd853bdf51b3a70671a67132c893bcd9903043f2a2d673",
+    "epk": "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo",
+    "method": "PUT",
+    "nonce": "8OHSw7Sllod4aVpLPC0eDw",
+    "path": "/v1/admin/devices/3c4d5e6f-7081-4293-a4b5-c6d7e8f90a1b",
+    "ts": "1790000000"
+  }
+}

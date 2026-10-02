@@ -52,6 +52,8 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Mit der Kamera scannst du den QR-Code deiner Bridge, um dieses iPhone zu koppeln.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Mit Face ID bestätigst du Änderungen in der Verwaltung deiner Bridge.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Housephone zeigt deine Kontakte an, damit du sie direkt anrufen kannst, und erkennt Anrufer an ihrem Namen.</string>
 	<key>NSBonjourServices</key>

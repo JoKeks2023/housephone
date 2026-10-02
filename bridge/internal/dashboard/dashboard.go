@@ -37,6 +37,8 @@ type Service interface {
 	RenameDevice(id, name string) (admin.DeviceInfo, error)
 	RemoveDevice(id string, keepCompanions bool) (admin.RemoveResult, error)
 	MoveDevice(id, profile string) (admin.MoveResult, error)
+	PromoteDevice(id string) (admin.DeviceInfo, error)
+	DemoteDevice(id string) (admin.DeviceInfo, error)
 	CreatePairing(name, profile string) (admin.PairingInfo, error)
 	PairingState(code string) (admin.PairingState, error)
 	RevokePairing(code string) error
@@ -98,6 +100,8 @@ func (d *Dashboard) Handler() http.Handler {
 	mux.HandleFunc("POST /lan/{id}/deny", d.post(d.denyLan))
 	mux.HandleFunc("POST /devices/{id}/rename", d.post(d.rename))
 	mux.HandleFunc("POST /devices/{id}/move", d.post(d.move))
+	mux.HandleFunc("POST /devices/{id}/promote", d.post(d.promote))
+	mux.HandleFunc("POST /devices/{id}/demote", d.post(d.demote))
 	mux.HandleFunc("GET /devices/{id}/remove", d.confirmRemove)
 	mux.HandleFunc("POST /devices/{id}/remove", d.post(d.remove))
 	return d.gate.Guard(secureHeaders(mux))
@@ -138,6 +142,10 @@ func (d *Dashboard) fail(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	if errors.Is(err, admin.ErrUnknownProfile) {
 		d.render(w, r, http.StatusBadRequest, "message.html", msg{Title: langFor(r).T("unknownProfile")})
+		return
+	}
+	if errors.Is(err, admin.ErrNotAllowed) {
+		d.render(w, r, http.StatusBadRequest, "message.html", msg{Title: langFor(r).T("notAllowed")})
 		return
 	}
 	d.log.Error("request failed", "path", r.URL.Path, "error", err)
@@ -321,6 +329,24 @@ func (d *Dashboard) move(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	d.log.Info("devices moved via dashboard", "count", len(res.Moved))
+	d.redirectHome(w, r)
+}
+
+// promote makes an iPhone admin (ADR-0009); on an admin without a Face ID
+// key it reopens the enrollment window.
+func (d *Dashboard) promote(w http.ResponseWriter, r *http.Request) {
+	if _, err := d.svc.PromoteDevice(r.PathValue("id")); err != nil {
+		d.fail(w, r, err)
+		return
+	}
+	d.redirectHome(w, r)
+}
+
+func (d *Dashboard) demote(w http.ResponseWriter, r *http.Request) {
+	if _, err := d.svc.DemoteDevice(r.PathValue("id")); err != nil {
+		d.fail(w, r, err)
+		return
+	}
 	d.redirectHome(w, r)
 }
 

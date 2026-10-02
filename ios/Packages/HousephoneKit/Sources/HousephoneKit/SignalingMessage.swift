@@ -228,8 +228,11 @@ public struct Welcome: Codable, Sendable, Equatable {
     /// whose line it rings on and with which number it calls out. `nil`
     /// from bridges before profiles.
     public var profile: BridgeProfile?
+    /// Set for admin devices only (ADR-0009); `nil` otherwise and from
+    /// older bridges.
+    public var admin: AdminRole?
 
-    public init(bridgeId: String, bridgeName: String, bridgeVersion: String, sipRegistered: Bool, features: [BridgeFeature]? = nil, lanUrl: URL? = nil, profile: BridgeProfile? = nil) {
+    public init(bridgeId: String, bridgeName: String, bridgeVersion: String, sipRegistered: Bool, features: [BridgeFeature]? = nil, lanUrl: URL? = nil, profile: BridgeProfile? = nil, admin: AdminRole? = nil) {
         self.bridgeId = bridgeId
         self.bridgeName = bridgeName
         self.bridgeVersion = bridgeVersion
@@ -237,6 +240,7 @@ public struct Welcome: Codable, Sendable, Equatable {
         self.features = features
         self.lanUrl = lanUrl
         self.profile = profile
+        self.admin = admin
     }
 
     public func supports(_ feature: BridgeFeature) -> Bool {
@@ -267,6 +271,58 @@ public struct BridgeProfile: Codable, Sendable, Equatable {
     public var isWorthShowing: Bool {
         id != Self.defaultID || number != nil
     }
+}
+
+/// A device's admin state (ADR-0009), in `welcome` and `admin.role`.
+public struct AdminRole: Codable, Sendable, Equatable {
+    /// `false` in `admin.role` after a demotion.
+    public var admin: Bool
+    /// The bridge knows this device's admin (Face ID) key.
+    public var enrolled: Bool
+    /// End of the window to enroll (or replace) the admin key; `nil` when
+    /// closed.
+    public var enrollUntil: Date?
+
+    public init(admin: Bool, enrolled: Bool, enrollUntil: Date? = nil) {
+        self.admin = admin
+        self.enrolled = enrolled
+        self.enrollUntil = enrollUntil
+    }
+
+    /// The device may set up Face ID for the management now.
+    public func canEnroll(at now: Date = Date()) -> Bool {
+        admin && (enrollUntil.map { now < $0 } ?? false)
+    }
+}
+
+/// `admin.action`: an admin changed something (ADR-0009). Every device
+/// hears about it.
+public struct AdminAction: Codable, Sendable, Equatable {
+    /// The admin device's name; empty for the server (CLI, TUI, dashboard).
+    public var actor: String
+    public var action: String
+    /// The device or request the action was about; only sent to devices of
+    /// the same profile and to admins.
+    public var target: String?
+    public var at: Date
+
+    public init(actor: String, action: String, target: String? = nil, at: Date) {
+        self.actor = actor
+        self.action = action
+        self.target = target
+        self.at = at
+    }
+
+    public static let rename = "device.rename"
+    public static let remove = "device.remove"
+    public static let move = "device.move"
+    public static let promote = "device.promote"
+    public static let demote = "device.demote"
+    public static let enroll = "admin.enroll"
+    public static let invite = "pairing.create"
+    public static let revokeInvite = "pairing.revoke"
+    public static let approve = "pairing.approve"
+    public static let deny = "pairing.deny"
 }
 
 /// `pair.companion`: a fresh one-time pairing code for a companion device.
@@ -468,6 +524,15 @@ public struct SignalingErrorCode: RawRepresentable, Codable, Sendable, Hashable 
     /// Pairing only works over the private listener (home network or
     /// Tailscale), not through the public tunnel.
     public static let homeNetworkRequired = Self(rawValue: "home_network_required")
+    /// ADR-0009: not admin, no admin key, or the Face ID signature is
+    /// missing or wrong.
+    public static let adminRequired = Self(rawValue: "admin_required")
+    /// The admin key may not be enrolled now (window over).
+    public static let adminEnrollClosed = Self(rawValue: "admin_enroll_closed")
+    /// The admin action is not possible, e.g. making a watch admin.
+    public static let notAllowed = Self(rawValue: "not_allowed")
+    /// Unknown device, request or code.
+    public static let notFound = Self(rawValue: "not_found")
     public static let `internal` = Self(rawValue: "internal")
 }
 
@@ -504,6 +569,10 @@ public enum SignalingMessage: Sendable, Equatable {
     case pairCompanion(CompanionPairing)
     /// v2: another device was paired with the bridge.
     case devicePaired(DevicePaired)
+    /// ADR-0009: an admin changed something.
+    case adminAction(AdminAction)
+    /// ADR-0009: this device's admin role changed.
+    case adminRole(AdminRole)
     case welcome(Welcome)
     case status(BridgeStatus)
     case callIncoming(IncomingCall)
@@ -530,6 +599,8 @@ public enum SignalingMessage: Sendable, Equatable {
         case .callDTMF: "call.dtmf"
         case .pairCompanion: "pair.companion"
         case .devicePaired: "device.paired"
+        case .adminAction: "admin.action"
+        case .adminRole: "admin.role"
         case .welcome: "welcome"
         case .status: "status"
         case .callIncoming: "call.incoming"
@@ -556,7 +627,7 @@ public enum SignalingMessage: Sendable, Equatable {
         case .callState(let payload): payload.callId
         case .callEnded(let payload): payload.callId
         case .error(let payload): payload.callId
-        case .hello, .deviceUpdate, .deviceUnpair, .pairCompanionRequest, .pairCompanion, .devicePaired, .welcome, .status, .unknown: nil
+        case .hello, .deviceUpdate, .deviceUnpair, .pairCompanionRequest, .pairCompanion, .devicePaired, .adminAction, .adminRole, .welcome, .status, .unknown: nil
         }
     }
 }
@@ -590,6 +661,8 @@ extension SignalingMessage: Codable {
         case "call.dtmf": self = .callDTMF(try payload(DTMFDigits.self))
         case "pair.companion": self = .pairCompanion(try payload(CompanionPairing.self))
         case "device.paired": self = .devicePaired(try payload(DevicePaired.self))
+        case "admin.action": self = .adminAction(try payload(AdminAction.self))
+        case "admin.role": self = .adminRole(try payload(AdminRole.self))
         case "welcome": self = .welcome(try payload(Welcome.self))
         case "status": self = .status(try payload(BridgeStatus.self))
         case "call.incoming": self = .callIncoming(try payload(IncomingCall.self))
@@ -616,6 +689,8 @@ extension SignalingMessage: Codable {
         case .callDTMF(let payload): try container.encode(payload, forKey: .payload)
         case .pairCompanion(let payload): try container.encode(payload, forKey: .payload)
         case .devicePaired(let payload): try container.encode(payload, forKey: .payload)
+        case .adminAction(let payload): try container.encode(payload, forKey: .payload)
+        case .adminRole(let payload): try container.encode(payload, forKey: .payload)
         case .pairCompanionRequest(let payload): try container.encode(payload, forKey: .payload)
         case .welcome(let payload): try container.encode(payload, forKey: .payload)
         case .status(let payload): try container.encode(payload, forKey: .payload)

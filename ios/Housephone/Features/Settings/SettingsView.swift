@@ -139,6 +139,8 @@ struct SettingsView: View {
 
         WatchSection()
 
+        AdminSection()
+
         Section {
             Button("Kopplung aufheben", role: .destructive) {
                 confirmsUnpair = true

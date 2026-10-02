@@ -75,6 +75,9 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 		if resp.StatusCode == http.StatusBadRequest && e.Error == ErrUnknownProfile.Error() {
 			return ErrUnknownProfile
 		}
+		if resp.StatusCode == http.StatusBadRequest && e.Error == ErrNotAllowed.Error() {
+			return ErrNotAllowed
+		}
 		return fmt.Errorf("admin: %s", e.Error)
 	}
 	if out == nil {
@@ -110,6 +113,16 @@ func (c *Client) CreatePairing(ctx context.Context, name, profile string) (p Pai
 
 func (c *Client) Profiles(ctx context.Context) (p []ProfileInfo, err error) {
 	return p, c.do(ctx, http.MethodGet, "/v1/profiles", nil, &p)
+}
+
+// PromoteDevice makes an iPhone admin (ADR-0009).
+func (c *Client) PromoteDevice(ctx context.Context, id string) (d DeviceInfo, err error) {
+	return d, c.do(ctx, http.MethodPost, "/v1/devices/"+url.PathEscape(id)+"/promote", nil, &d)
+}
+
+// DemoteDevice takes the admin role away.
+func (c *Client) DemoteDevice(ctx context.Context, id string) (d DeviceInfo, err error) {
+	return d, c.do(ctx, http.MethodPost, "/v1/devices/"+url.PathEscape(id)+"/demote", nil, &d)
 }
 
 func (c *Client) MoveDevice(ctx context.Context, id, profile string) (r MoveResult, err error) {

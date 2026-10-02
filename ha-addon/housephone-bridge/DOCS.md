@@ -68,6 +68,9 @@ Und du kannst dort:
 - Geräte umbenennen und entfernen (sofort getrennt, laufende Anrufe enden;
   über das Gerät gekoppelte Uhren werden mit entfernt, wenn du nichts anderes
   wählst).
+- ein iPhone **zum Admin machen** bzw. die Rechte entziehen: Es verwaltet die
+  Bridge dann auch in der App (nur im Heimnetz, mit Face ID; ADR-0009) und
+  richtet Face ID innerhalb einer Stunde ein.
 
 > [!NOTE]
 > Das Dashboard ist über jeden Weg erreichbar, über den du Home Assistant

@@ -10,6 +10,7 @@
 //	housephone-bridge [-config config.yaml] devices list
 //	housephone-bridge [-config config.yaml] devices remove <device-id>
 //	housephone-bridge [-config config.yaml] devices move <device-id> <profile-id>
+//	housephone-bridge [-config config.yaml] devices promote|demote <device-id>
 //	housephone-bridge version
 package main
 
@@ -71,6 +72,9 @@ Befehle:
   devices approve <id>      Anfrage freigeben, wenn das iPhone denselben Code zeigt
                             (-code 123456 ohne Rückfrage, -profile ID für das Profil)
   devices deny <id>         Anfrage ablehnen
+  devices promote <id>      iPhone zum Admin machen (Verwaltung in der App, nur im
+                            Heimnetz); es richtet dann innerhalb einer Stunde Face ID ein
+  devices demote <id>       Admin-Rechte entziehen
   version                   Version anzeigen
 
 Globale Optionen:
@@ -358,7 +362,7 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 		}
 		profiles := cfg.Profiles()
 		tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(tw, "ID\tNAME\tPROFIL\tPLATTFORM\tSCHLÜSSEL\tPUSH\tGEKOPPELT\tÜBER\tZULETZT GESEHEN")
+		fmt.Fprintln(tw, "ID\tNAME\tPROFIL\tPLATTFORM\tADMIN\tSCHLÜSSEL\tPUSH\tGEKOPPELT\tÜBER\tZULETZT GESEHEN")
 		for _, d := range list {
 			pushInfo := "nein"
 			if d.PushToken != "" {
@@ -383,7 +387,7 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 			if p, ok := profiles.Get(d.ProfileID()); ok {
 				profileName = p.Name
 			}
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", d.ID, displayName(d.Name), displayName(profileName), displayName(d.Platform), keyInfo, pushInfo, d.CreatedAt.Local().Format("02.01.2006 15:04"), via, lastSeen)
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", d.ID, displayName(d.Name), displayName(profileName), displayName(d.Platform), adminLabel(d, time.Now()), keyInfo, pushInfo, d.CreatedAt.Local().Format("02.01.2006 15:04"), via, lastSeen)
 		}
 		return tw.Flush()
 	}
@@ -401,6 +405,8 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 		return removeDevice(reg, store.NewPairing(cfg.Bridge.DataDir), args[1:], out)
 	case "move":
 		return moveDevice(cfg, reg, client, args[1:], out)
+	case "promote", "demote":
+		return setAdmin(reg, client, args[0] == "promote", args[1:], out)
 	case "rename":
 		if len(args) != 3 {
 			return errors.New("usage: devices rename <device-id> NAME")
@@ -420,7 +426,7 @@ func devices(cfg config.Config, args []string, out io.Writer) error {
 		fmt.Fprintf(out, "Umbenannt: %s (%s)\n", d.ID, displayName(d.Name))
 		return nil
 	}
-	return fmt.Errorf("unbekannter devices-Befehl %q (list|remove|rename|move|pending|approve|deny)", args[0])
+	return fmt.Errorf("unbekannter devices-Befehl %q (list|remove|rename|move|promote|demote|pending|approve|deny)", args[0])
 }
 
 // removeDeviceLive removes a device through the running bridge, which

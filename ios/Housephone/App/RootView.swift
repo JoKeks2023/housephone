@@ -167,5 +167,6 @@ struct MainTabView: View {
         }
         .tabBarMinimizeBehavior(.onScrollDown)
         .devicePairedBanner()
+        .adminActionBanner()
     }
 }

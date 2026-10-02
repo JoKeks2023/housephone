@@ -29,6 +29,7 @@ type fakeService struct {
 	// profiles, if set, makes the household multi-profile (ADR-0008).
 	profiles []admin.ProfileInfo
 	moved    []string
+	admins   []string
 }
 
 func (f *fakeService) Status() admin.Status {
@@ -49,6 +50,17 @@ func (f *fakeService) MoveDevice(id, profile string) (admin.MoveResult, error) {
 	return admin.MoveResult{Moved: []admin.DeviceInfo{{ID: id}}}, nil
 }
 func (f *fakeService) Devices() ([]admin.DeviceInfo, error) { return f.devices, nil }
+func (f *fakeService) PromoteDevice(id string) (admin.DeviceInfo, error) {
+	if id == "watch" {
+		return admin.DeviceInfo{}, admin.ErrNotAllowed
+	}
+	f.admins = append(f.admins, "+"+id)
+	return admin.DeviceInfo{ID: id, Admin: true}, nil
+}
+func (f *fakeService) DemoteDevice(id string) (admin.DeviceInfo, error) {
+	f.admins = append(f.admins, "-"+id)
+	return admin.DeviceInfo{ID: id}, nil
+}
 func (f *fakeService) RenameDevice(id, name string) (admin.DeviceInfo, error) {
 	for _, d := range f.devices {
 		if d.ID == id {
@@ -247,6 +259,36 @@ func TestRenameAndRemove(t *testing.T) {
 	}
 	if w := do(h, "POST", "/devices/iphone/remove", proxy, url.Values{"csrf": {token}, "keepCompanions": {"1"}}, nil); w.Code != http.StatusSeeOther || len(svc.removed) != 1 || !svc.keep {
 		t.Errorf("remove: %d %v keep=%v", w.Code, svc.removed, svc.keep)
+	}
+}
+
+// Admins for the management in the app (ADR-0009): only iPhones get the
+// button, a watch is refused.
+func TestPromoteAndDemote(t *testing.T) {
+	svc, h, _ := setup(t)
+	page := do(h, "GET", "/", proxy, nil, nil).Body.String()
+	if !strings.Contains(page, "devices/iphone/promote") || strings.Contains(page, "devices/watch/promote") {
+		t.Errorf("promote buttons: only for the iPhone")
+	}
+	token := csrfOf(t, h)
+	if w := do(h, "POST", "/devices/iphone/promote", proxy, url.Values{"csrf": {token}}, nil); w.Code != http.StatusSeeOther {
+		t.Errorf("promote: %d", w.Code)
+	}
+	if w := do(h, "POST", "/devices/watch/promote", proxy, url.Values{"csrf": {token}}, nil); w.Code != http.StatusBadRequest {
+		t.Errorf("promote watch: %d", w.Code)
+	}
+	if w := do(h, "POST", "/devices/iphone/demote", proxy, url.Values{"csrf": {token}}, nil); w.Code != http.StatusSeeOther {
+		t.Errorf("demote: %d", w.Code)
+	}
+	if w := do(h, "POST", "/devices/iphone/demote", proxy, url.Values{"csrf": {"wrong"}}, nil); w.Code == http.StatusSeeOther {
+		t.Errorf("demote without CSRF token accepted")
+	}
+	if strings.Join(svc.admins, ",") != "+iphone,-iphone" {
+		t.Errorf("admin changes %v", svc.admins)
+	}
+	svc.devices[0].Admin, svc.devices[0].AdminEnrollUntil = true, time.Now().Add(time.Hour)
+	if page := do(h, "GET", "/", proxy, nil, nil).Body.String(); !strings.Contains(page, "devices/iphone/demote") || !strings.Contains(page, "Face ID") {
+		t.Errorf("admin row: %s", page)
 	}
 }
 

@@ -31,9 +31,19 @@ type Device struct {
 	PairedBy string `json:"pairedBy,omitempty"`
 	// Profile is the household profile the device belongs to (ADR-0008).
 	// Empty: the default profile (devices paired before profiles existed).
-	Profile   string    `json:"profile,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
-	LastSeen  time.Time `json:"lastSeen,omitzero"`
+	Profile string `json:"profile,omitempty"`
+	// Admin may manage the bridge from the app (ADR-0009). Only an iPhone
+	// can be admin, never a watch.
+	Admin bool `json:"admin,omitempty"`
+	// AdminKey is the second P-256 key (base64url X9.63) that signs admin
+	// requests; it lives in the Secure Enclave and signs only after Face
+	// ID. Empty until the device enrolled it.
+	AdminKey string `json:"adminKey,omitempty"`
+	// AdminEnrollUntil is the end of the window in which the admin may
+	// enroll (or replace) its admin key; zero when closed.
+	AdminEnrollUntil time.Time `json:"adminEnrollUntil,omitzero"`
+	CreatedAt        time.Time `json:"createdAt"`
+	LastSeen         time.Time `json:"lastSeen,omitzero"`
 }
 
 // DefaultProfile mirrors profile.DefaultID; store must not import other
@@ -139,6 +149,45 @@ func (d *Devices) Add(dev Device) error {
 		f.Devices = append(f.Devices, dev)
 		return writeJSON(d.path, f)
 	})
+}
+
+// PlatformIOS mirrors protocol.PlatformIOS; store must not import
+// protocol.
+const PlatformIOS = "ios"
+
+// CanBeAdmin reports whether the device may become admin: an iPhone, not
+// a watch.
+func (d Device) CanBeAdmin() bool { return d.Platform == PlatformIOS }
+
+// AdminEnrollOpen reports whether the device may enroll its admin key now.
+func (d Device) AdminEnrollOpen(now time.Time) bool {
+	return d.Admin && d.CanBeAdmin() && now.Before(d.AdminEnrollUntil)
+}
+
+// AddPromotingFirst stores a new device. If it is the very first device of
+// the bridge (a fresh install) and an iPhone paired with a code from the
+// server, it becomes admin with an enrollment window until enrollUntil
+// (ADR-0009). The check and the write happen under one lock.
+func (d *Devices) AddPromotingFirst(dev Device, enrollUntil time.Time) (Device, error) {
+	err := withLock(d.path, func() error {
+		f, err := d.load()
+		if err != nil {
+			return err
+		}
+		for _, existing := range f.Devices {
+			if existing.ID == dev.ID {
+				return errors.New("device already exists")
+			}
+		}
+		if len(f.Devices) == 0 && dev.CanBeAdmin() && dev.PairedBy == "" {
+			dev.Admin = true
+			dev.AdminKey = ""
+			dev.AdminEnrollUntil = enrollUntil
+		}
+		f.Devices = append(f.Devices, dev)
+		return writeJSON(d.path, f)
+	})
+	return dev, err
 }
 
 // Update applies fn to the device and stores the result.

@@ -24,6 +24,8 @@ type API interface {
 	RenameDevice(ctx context.Context, id, name string) (admin.DeviceInfo, error)
 	RemoveDevice(ctx context.Context, id string, keepCompanions bool) (admin.RemoveResult, error)
 	MoveDevice(ctx context.Context, id, profile string) (admin.MoveResult, error)
+	PromoteDevice(ctx context.Context, id string) (admin.DeviceInfo, error)
+	DemoteDevice(ctx context.Context, id string) (admin.DeviceInfo, error)
 	CreatePairing(ctx context.Context, name, profile string) (admin.PairingInfo, error)
 	WaitPairing(ctx context.Context, code string) (admin.PairingState, error)
 	RevokePairing(ctx context.Context, code string) error
@@ -382,6 +384,31 @@ func (m Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 				break
 			}
 			m.picker = &profilePicker{purpose: pickMove, target: d.ID, cursor: m.profileIndex(d.Profile)}
+		case "a":
+			// Admin for the management in the app (ADR-0009); on an admin
+			// it reopens the window to set up Face ID.
+			if len(m.devices) == 0 {
+				break
+			}
+			d := m.devices[m.cursor]
+			if d.Platform != "ios" {
+				m.flash = "Nur ein iPhone kann Admin sein."
+				break
+			}
+			id := d.ID
+			return m, call(func(ctx context.Context) (admin.DeviceInfo, error) { return m.api.PromoteDevice(ctx, id) },
+				func(d admin.DeviceInfo) tea.Msg {
+					return flashMsg(fmt.Sprintf("„%s“ ist Admin – Face ID in der App einrichten bis %s.", d.Name, d.AdminEnrollUntil.Local().Format("15:04")))
+				})
+		case "A":
+			if len(m.devices) == 0 || !m.devices[m.cursor].Admin {
+				break
+			}
+			id := m.devices[m.cursor].ID
+			return m, call(func(ctx context.Context) (admin.DeviceInfo, error) { return m.api.DemoteDevice(ctx, id) },
+				func(d admin.DeviceInfo) tea.Msg {
+					return flashMsg(fmt.Sprintf("„%s“ ist kein Admin mehr.", d.Name))
+				})
 		}
 	case tabPairing:
 		switch k.String() {
@@ -668,6 +695,8 @@ const helpText = `Tasten
   Übersicht     k  Konfiguration ein/aus
   Geräte        ↑↓ auswählen · r umbenennen · x entfernen (sofort getrennt)
                 p  in ein anderes Profil verschieben (bei mehreren Profilen)
+                a  iPhone zum Admin machen (App-Verwaltung) · A  entziehen
+                a  iPhone zum Admin machen (App-Verwaltung) · A  entziehen
   Kopplung      n  neuer Code mit QR · Esc Code widerrufen
                 a  Anfrage aus dem Heimnetz freigeben · d ablehnen
   Logs          l  Level (alle/info/warn/error) · /  suchen · Esc Suche löschen
@@ -796,7 +825,16 @@ func (m Model) viewDevices() string {
 		if d.PairedByName != "" {
 			via = " über " + d.PairedByName
 		}
-		b.WriteString(mutedS.Width(max(20, m.width-2)).PaddingLeft(2).Render(fmt.Sprintf("\nID %s · Schlüssel %s · gekoppelt %s%s", d.ID, d.KeyFingerprint, d.CreatedAt.Local().Format("02.01.2006"), via)) + "\n")
+		role := ""
+		switch {
+		case d.Admin && !d.AdminEnrollUntil.IsZero():
+			role = " · Admin (Face ID einrichten bis " + d.AdminEnrollUntil.Local().Format("15:04") + ")"
+		case d.Admin && !d.AdminEnrolled:
+			role = " · Admin ohne Face ID (a: erneut freischalten)"
+		case d.Admin:
+			role = " · Admin"
+		}
+		b.WriteString(mutedS.Width(max(20, m.width-2)).PaddingLeft(2).Render(fmt.Sprintf("\nID %s · Schlüssel %s · gekoppelt %s%s%s", d.ID, d.KeyFingerprint, d.CreatedAt.Local().Format("02.01.2006"), via, role)) + "\n")
 	}
 	return b.String()
 }

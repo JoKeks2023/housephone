@@ -431,7 +431,8 @@ func (s *Server) approveLan(id, profileID string, now time.Time) (store.Device, 
 	if err != nil {
 		return store.Device{}, err
 	}
-	if err := s.cfg.Devices.Add(dev); err != nil {
+	dev, err = s.cfg.Devices.AddPromotingFirst(dev, now.Add(AdminEnrollWindow).UTC())
+	if err != nil {
 		return store.Device{}, err
 	}
 	e.status = lanApproved
