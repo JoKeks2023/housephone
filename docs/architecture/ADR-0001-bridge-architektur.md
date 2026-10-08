@@ -45,7 +45,7 @@ Ein eigener Dienst **„Bridge“** läuft auf dem Heimserver und vermittelt zwi
    - `sideshow/apns2` für Pushes (MIT)
    - ergibt ein statisches Binary, Deployment per Docker
 8. **Technik iOS:**
-   - SwiftUI, Swift 6, iOS 26 (Liquid Glass)
+   - SwiftUI, Swift 6, ab iOS 17 (iPhone und iPad, Watch ab watchOS 10); Liquid Glass ab iOS 26, darunter Materialien
    - CallKit + PushKit
    - WebRTC über `stasel/WebRTC` (SPM-Binary, BSD)
    - Protokoll- und Zustandslogik im lokalen Swift-Paket `HousephoneKit` (plattformneutral, lokal testbar)

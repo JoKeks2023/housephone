@@ -50,7 +50,7 @@ private struct DeviceContactsContent: View {
                 Button("Zugriff erlauben") {
                     Task { await contacts.requestAccess() }
                 }
-                .buttonStyle(.glassProminent)
+                .glassButtonStyle(prominent: true)
             }
         case .denied, .restricted:
             EmptyStateView(

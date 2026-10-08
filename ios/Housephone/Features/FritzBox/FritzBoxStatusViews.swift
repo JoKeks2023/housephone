@@ -71,7 +71,7 @@ struct FritzBoxFailureView: View {
                 Button("Zu den Einstellungen") {
                     appModel.selectedTab = .settings
                 }
-                .buttonStyle(.glassProminent)
+                .glassButtonStyle(prominent: true)
             case .unavailable:
                 Button("Erneut versuchen", action: retry)
                 Link("Anleitung öffnen", destination: fritzBoxSetupGuide)

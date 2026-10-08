@@ -49,7 +49,7 @@ struct ConnectionStatusCard: View {
 
     var body: some View {
         let status = status
-        GlassEffectContainer(spacing: Theme.Space.s2) {
+        GlassGroup(spacing: Theme.Space.s2) {
             HStack(spacing: Theme.Space.s2) {
                 statusPill(status)
                 if newMissed > 0 {
@@ -78,7 +78,7 @@ struct ConnectionStatusCard: View {
         .padding(.vertical, Theme.Space.s2)
         .padding(.horizontal, Theme.Space.s3)
         .frame(minHeight: 36)
-        .glassEffect(.regular.interactive(status.opensSettings), in: .capsule)
+        .glassSurface(in: .capsule, interactive: status.opensSettings)
 
         if status.opensSettings {
             Button {
@@ -110,7 +110,7 @@ struct ConnectionStatusCard: View {
             .padding(.vertical, Theme.Space.s2)
             .padding(.horizontal, Theme.Space.s3)
             .frame(minHeight: 36)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .glassSurface(in: .capsule, interactive: true)
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityHint(Text("Zeigt die verpassten Anrufe"))

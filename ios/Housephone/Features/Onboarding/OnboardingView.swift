@@ -99,7 +99,7 @@ struct OnboardingView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Theme.Space.s2)
                 }
-                .buttonStyle(.glassProminent)
+                .glassButtonStyle(prominent: true)
                 .controlSize(.large)
             } else {
                 Button {
@@ -110,7 +110,7 @@ struct OnboardingView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Theme.Space.s1)
                 }
-                .buttonStyle(.glass)
+                .glassButtonStyle()
                 .controlSize(.large)
             }
 
@@ -145,7 +145,7 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Theme.Space.s1)
             }
-            .buttonStyle(.glass)
+            .glassButtonStyle()
             .controlSize(.large)
             .padding(.top, Theme.Space.s3)
             .accessibilityHint(Text("Ohne Bridge, nur im Heim-WLAN, ohne Apple Watch."))
@@ -274,7 +274,7 @@ private struct DiscoveredBridgesView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, Theme.Space.s2)
                 }
-                .buttonStyle(.glassProminent)
+                .glassButtonStyle(prominent: true)
                 .controlSize(.large)
                 .accessibilityHint(Text("Koppelt dieses iPhone mit der Bridge, nachdem du einen Code verglichen hast."))
             }

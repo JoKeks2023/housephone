@@ -43,7 +43,7 @@ struct RecentsView: View {
             .motion(Theme.Motion.snappy, value: showsFritzBox)
             .navigationTitle("Anrufe")
             .listSourceMenu($source, isAvailable: fritzBox.showsHistory)
-            .safeAreaBar(edge: .top) {
+            .topAccessoryBar {
                 Picker("Filter", selection: $appModel.recentsShowsMissedOnly) {
                     Text("Alle").tag(false)
                     Text("Verpasst").tag(true)
@@ -89,7 +89,7 @@ struct RecentsView: View {
             } else if visibleRecords.isEmpty {
                 EmptyStateView(symbol: "checkmark.circle", title: "Keine verpassten Anrufe", message: "Alles erledigt.") {
                     Button("Alle Anrufe zeigen") { appModel.recentsShowsMissedOnly = false }
-                        .buttonStyle(.glass)
+                        .glassButtonStyle()
                 }
             } else {
                 List {
@@ -123,10 +123,10 @@ struct RecentsView: View {
                 : "Anrufe über Housephone erscheinen hier – und in der Telefon-App."
         ) {
             Button("Zum Tastenfeld") { appModel.selectedTab = .keypad }
-                .buttonStyle(.glassProminent)
+                .glassButtonStyle(prominent: true)
             if offersTR064 {
                 Button("TR-064 aktivieren") { appModel.selectedTab = .settings }
-                    .buttonStyle(.glass)
+                    .glassButtonStyle()
             }
         }
     }
@@ -223,7 +223,7 @@ private struct ListSourceMenu: ViewModifier {
         if isAvailable {
             content
                 .navigationBarTitleDisplayMode(.inline)
-                .navigationSubtitle(Text(source.title))
+                .navigationSubtitleIfAvailable(Text(source.title))
                 .toolbarTitleMenu {
                     Picker("Quelle", selection: $source) {
                         ForEach(ListSource.allCases, id: \.self) { option in

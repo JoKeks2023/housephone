@@ -67,6 +67,6 @@ struct DevicePairedBanner: View {
         }
         .padding(.leading, Theme.Space.s4)
         .padding(.vertical, Theme.Space.s2)
-        .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.xl))
+        .glassSurface(in: .rect(cornerRadius: Theme.Radius.xl))
     }
 }

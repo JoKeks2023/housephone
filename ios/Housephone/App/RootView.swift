@@ -150,22 +150,43 @@ struct MainTabView: View {
     private var tabs: some View {
         @Bindable var appModel = appModel
 
-        return TabView(selection: $appModel.selectedTab) {
-            Tab("Anrufe", systemImage: "clock", value: AppModel.Tab.recents) {
-                RecentsView()
-            }
-            .badge(newMissed)
-            Tab("Tastenfeld", systemImage: "circle.grid.3x3.fill", value: AppModel.Tab.keypad) {
-                KeypadView()
-            }
-            Tab("Kontakte", systemImage: "person.crop.circle", value: AppModel.Tab.contacts) {
-                ContactsView()
-            }
-            Tab("Einstellungen", systemImage: "gearshape", value: AppModel.Tab.settings) {
-                SettingsView()
+        return Group {
+            if #available(iOS 18, *) {
+                TabView(selection: $appModel.selectedTab) {
+                    Tab("Anrufe", systemImage: "clock", value: AppModel.Tab.recents) {
+                        RecentsView()
+                    }
+                    .badge(newMissed)
+                    Tab("Tastenfeld", systemImage: "circle.grid.3x3.fill", value: AppModel.Tab.keypad) {
+                        KeypadView()
+                    }
+                    Tab("Kontakte", systemImage: "person.crop.circle", value: AppModel.Tab.contacts) {
+                        ContactsView()
+                    }
+                    Tab("Einstellungen", systemImage: "gearshape", value: AppModel.Tab.settings) {
+                        SettingsView()
+                    }
+                }
+                .minimizesTabBarOnScroll()
+            } else {
+                // iOS 17 (iPads that stop there): the classic tab items.
+                TabView(selection: $appModel.selectedTab) {
+                    RecentsView()
+                        .tabItem { Label("Anrufe", systemImage: "clock") }
+                        .tag(AppModel.Tab.recents)
+                        .badge(newMissed)
+                    KeypadView()
+                        .tabItem { Label("Tastenfeld", systemImage: "circle.grid.3x3.fill") }
+                        .tag(AppModel.Tab.keypad)
+                    ContactsView()
+                        .tabItem { Label("Kontakte", systemImage: "person.crop.circle") }
+                        .tag(AppModel.Tab.contacts)
+                    SettingsView()
+                        .tabItem { Label("Einstellungen", systemImage: "gearshape") }
+                        .tag(AppModel.Tab.settings)
+                }
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
         .devicePairedBanner()
         .adminActionBanner()
     }

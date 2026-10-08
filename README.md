@@ -11,8 +11,8 @@ Zu Hause und unterwegs, ohne VPN, mit echtem Anruf-Bildschirm.
 [![iOS](https://github.com/JoKeks2023/housephone/actions/workflows/ios.yml/badge.svg)](https://github.com/JoKeks2023/housephone/actions/workflows/ios.yml)
 [![Image](https://github.com/JoKeks2023/housephone/actions/workflows/bridge-image.yml/badge.svg)](https://github.com/JoKeks2023/housephone/pkgs/container/housephone-bridge)
 <br/>
-![iOS 26](https://img.shields.io/badge/iOS-26-0D9488?logo=apple&logoColor=white)
-![watchOS 26](https://img.shields.io/badge/watchOS-26-0D9488?logo=apple&logoColor=white)
+![iOS 17+](https://img.shields.io/badge/iOS-17%2B-0D9488?logo=apple&logoColor=white)
+![watchOS 10+](https://img.shields.io/badge/watchOS-10%2B-0D9488?logo=apple&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-amd64%20%7C%20arm64-0D9488?logo=docker&logoColor=white)
 ![FRITZ!Box](https://img.shields.io/badge/FRITZ!Box-FRITZ!OS%208-0D9488)
 

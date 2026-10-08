@@ -49,7 +49,7 @@ struct QRScannerSheet: View {
             .font(.callout.weight(.medium))
             .padding(.horizontal, Theme.Space.s4)
             .padding(.vertical, Theme.Space.s3)
-            .glassEffect()
+            .glassSurface(in: .capsule)
             .padding(.bottom, Theme.Space.s8)
             .motion(Theme.Motion.standard, value: rejectedCode)
     }

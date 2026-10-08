@@ -97,7 +97,7 @@ struct WatchInCallView: View {
                 .foregroundStyle(isOn ? Color.black : Color.white)
                 .frame(width: WatchTheme.minTarget, height: WatchTheme.minTarget)
                 .background(Circle().fill(isOn ? Color.white : Color.white.opacity(0.16)))
-                .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
+                .magicReplaceTransition()
         }
         .buttonStyle(WatchPressStyle())
         .motion(WatchTheme.Motion.snappy, value: isOn)
@@ -207,5 +207,17 @@ struct DTMFKeypad: View {
             } onLongPressZero: {}
         }
         .padding(.horizontal, WatchTheme.Space.s1)
+    }
+}
+
+private extension View {
+    /// The watchOS 11 "magic" symbol replace; plain replace on watchOS 10.
+    @ViewBuilder
+    func magicReplaceTransition() -> some View {
+        if #available(watchOS 11, *) {
+            contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
+        } else {
+            contentTransition(.symbolEffect(.replace))
+        }
     }
 }

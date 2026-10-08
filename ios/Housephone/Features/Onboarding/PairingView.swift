@@ -122,7 +122,7 @@ struct PairingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Theme.Space.s2)
             }
-            .buttonStyle(.glassProminent)
+            .glassButtonStyle(prominent: true)
             .controlSize(.large)
             .disabled(phase == .pairing)
         case .microphone:
@@ -137,7 +137,7 @@ struct PairingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Theme.Space.s2)
             }
-            .buttonStyle(.glassProminent)
+            .glassButtonStyle(prominent: true)
             .controlSize(.large)
         }
     }

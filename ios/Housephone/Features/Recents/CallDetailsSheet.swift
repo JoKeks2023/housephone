@@ -67,7 +67,7 @@ struct CallDetailsSheet: View {
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
 
-            GlassEffectContainer(spacing: Theme.Space.s3) {
+            GlassGroup(spacing: Theme.Space.s3) {
                 HStack(spacing: Theme.Space.s3) {
                     DetailAction(symbol: "phone.fill", label: "Anrufen", isProminent: true) {
                         let name = name
@@ -125,7 +125,7 @@ private struct DetailAction: View {
                     .background {
                         if isProminent { Circle().fill(Theme.call) }
                     }
-                    .glassEffect(isProminent ? Glass.identity : Glass.regular.interactive(), in: .circle)
+                    .glassSurface(in: .circle, interactive: true, enabled: !isProminent)
                 Text(label)
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
