@@ -43,3 +43,14 @@ Widgets starten Anrufe über Deep Links (`Link`/`widgetURL`), nicht über `Butto
 Abweichungen vom Plan:
 - **Siri auf der Watch nur für Favoriten.** watchOS bietet keinen In-App-Handler für `INStartCallIntent` (nur `handleIntent` nach einer Intents-Extension). Statt einer eigenen Intents-Extension gibt es App Shortcuts. Beliebige Namen aus dem FRITZ!Box-Telefonbuch per Siri gehen nur am iPhone.
 - **Favoriten auf dem Startbildschirm** statt in `WatchContactsView`: Die Kontakte erscheinen nur mit FRITZ!Box-Telefonbuch, die Favoriten sollen auch ohne es sichtbar sein.
+
+## Phase 4: CarPlay
+
+| Teil | Änderung |
+|---|---|
+| `CarPlay/CarPlayInterface.swift` | `CPTabBarTemplate` mit drei `CPListTemplate`s. Favoriten und Anrufe kommen aus dem Schnappschuss (Anrufe in der in der App gewählten Quelle), Kontakte aus dem FRITZ!Box-Telefonbuch (alphabetische Abschnitte mit Index, Grenzen `maximumItemCount`/`maximumSectionCount`, mehrere Nummern → Unterliste). Avatare als Initialen in der Identitätsfarbe. Fehler beim Anrufen → `CPAlertTemplate`. Aktualisiert sich über Observation, solange CarPlay verbunden ist |
+| `CarPlaySceneDelegate` | Verbindet und trennt die Oberfläche. Eingetragen in der `Info.plist` (`CPTemplateApplicationSceneSessionRoleApplication`) und in `AppDelegate.configurationForConnecting` |
+| `SnapshotPublisher` | `@Observable` mit `latest`, damit CarPlay die Listen ohne eigene Abfragen bekommt |
+| Entitlements | `Housephone-CarPlay.entitlements` = Standard + `com.apple.developer.carplay-communication`. `CODE_SIGN_ENTITLEMENTS = Housephone/Housephone$(HOUSEPHONE_CARPLAY_SUFFIX).entitlements`, Standard leer. Die Variante ist von den Ressourcen ausgenommen |
+| Setup-Skript | `--carplay` / `--no-carplay`. Ohne Angabe bleibt der bisherige Zustand, auch im interaktiven Modus |
+| CI | Umschalten per Skript, Gleichstand der beiden Entitlement-Dateien, CarPlay-Szene in der `Info.plist` |
