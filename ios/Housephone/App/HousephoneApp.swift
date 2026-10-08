@@ -22,13 +22,17 @@ struct HousephoneApp: App {
                 .environment(services.favorites)
                 .modelContainer(services.modelContainer)
                 .onOpenURL { url in
-                    services.appModel.open(url)
+                    services.open(url)
                 }
                 .onContinueUserActivity(NSStringFromClass(INStartCallIntent.self)) { activity in
                     startCall(from: activity)
                 }
         }
         .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                // E.g. the recents were just looked at: badges in widgets.
+                services.snapshot.publish()
+            }
             guard phase == .active else { return }
             services.bridge.refresh()
             services.direct.refresh()

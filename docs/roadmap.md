@@ -24,6 +24,7 @@
 | 6 | **Home Assistant** | MQTT-Discovery (nur ausgehend), Sensoren, Ereignis „Anruf eingehend“ |
 | 7 | **Home-Assistant-Add-on** | Bridge als Add-on mit Dashboard per Ingress (HPHN-51, ADR-0006) |
 | 8 | *Optional:* Web-UI ohne Home Assistant | Dasselbe Dashboard über den Heimnetz-Zugang mit Passkey-Gate (HPHN-39), Zitadel optional |
+| 9 | **Systemintegration** (T-0017) | Siri, Kurzbefehle, Schnellaktionen; Widgets und Kontrollzentrum; Watch-Komplikationen und Favoriten; CarPlay (Entitlement auf Antrag) |
 
 ## Später
 

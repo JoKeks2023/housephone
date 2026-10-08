@@ -71,6 +71,21 @@ struct RootView: View {
         } message: { failure in
             Text(failure.message)
         }
+        .alert(
+            Text("Anrufen?"),
+            isPresented: Binding(
+                get: { appModel.callConfirmation != nil },
+                set: { if !$0 { appModel.callConfirmation = nil } }
+            ),
+            presenting: appModel.callConfirmation
+        ) { confirmation in
+            Button("Anrufen") {
+                Task { await callCenter.startCall(to: confirmation.number) }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: { confirmation in
+            Text("Ein Link möchte \(confirmation.number) über Housephone anrufen.")
+        }
     }
 
     private var callScreenPresented: Binding<Bool> {

@@ -1,0 +1,86 @@
+{
+  "sourceLanguage" : "de",
+  "strings" : {
+    "${favorite} mit ${applicationName} anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call ${favorite} with ${applicationName}"
+          }
+        }
+      }
+    },
+    "Ruf ${favorite} mit ${applicationName} an" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call ${favorite} using ${applicationName}"
+          }
+        }
+      }
+    },
+    "Mit ${applicationName} ${favorite} anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} call ${favorite}"
+          }
+        }
+      }
+    },
+    "Favorit mit ${applicationName} anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call a favorite with ${applicationName}"
+          }
+        }
+      }
+    },
+    "Verpasste Anrufe in ${applicationName}" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missed calls in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Zeig verpasste Anrufe in ${applicationName}" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show missed calls in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Öffne das Tastenfeld in ${applicationName}" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the keypad in ${applicationName}"
+          }
+        }
+      }
+    },
+    "${applicationName} Tastenfeld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} keypad"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
