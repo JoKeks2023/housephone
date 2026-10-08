@@ -10,19 +10,23 @@ import WidgetKit
 /// snapshot for widgets and controls, the home screen quick actions and
 /// the favorites Siri knows for App Shortcuts.
 @MainActor
+@Observable
 final class SnapshotPublisher {
-    private let favorites: FavoritesStore
-    private let fritzBox: FritzBoxData
-    private let contacts: ContactsDirectory
-    private let bridge: BridgeConnection
-    private let direct: DirectPhone
-    private let appModel: AppModel
-    private let modelContainer: ModelContainer
-    private let store = SharedSnapshotStore.appGroup
-    private var pending: Task<Void, Never>?
+    /// The latest snapshot, also for CarPlay's lists.
+    private(set) var latest: SharedSnapshot?
+
+    @ObservationIgnored private let favorites: FavoritesStore
+    @ObservationIgnored private let fritzBox: FritzBoxData
+    @ObservationIgnored private let contacts: ContactsDirectory
+    @ObservationIgnored private let bridge: BridgeConnection
+    @ObservationIgnored private let direct: DirectPhone
+    @ObservationIgnored private let appModel: AppModel
+    @ObservationIgnored private let modelContainer: ModelContainer
+    @ObservationIgnored private let store = SharedSnapshotStore.appGroup
+    @ObservationIgnored private var pending: Task<Void, Never>?
     /// Every publish, changed or not (e.g. to hand favorites to the watch).
-    var onPublish: ((SharedSnapshot) -> Void)?
-    private let logger = Logger(subsystem: "com.jorisconrad.housephone", category: "integration")
+    @ObservationIgnored var onPublish: ((SharedSnapshot) -> Void)?
+    @ObservationIgnored private let logger = Logger(subsystem: "com.jorisconrad.housephone", category: "integration")
 
     init(favorites: FavoritesStore, fritzBox: FritzBoxData, contacts: ContactsDirectory, bridge: BridgeConnection, direct: DirectPhone, appModel: AppModel, modelContainer: ModelContainer) {
         self.favorites = favorites
@@ -51,6 +55,7 @@ final class SnapshotPublisher {
         pending = nil
         let snapshot = makeSnapshot()
         updateQuickActions(snapshot.favorites)
+        if latest != snapshot { latest = snapshot }
         onPublish?(snapshot)
         guard let store else { return }
         do {

@@ -8,6 +8,10 @@
 # Ohne Rückfragen (z. B. CI):
 #   ./Housephone\ einrichten.command --team ABCDE12345 --prefix org.example
 #
+# CarPlay erst einschalten, wenn Apple das Entitlement freigegeben hat:
+#   ./Housephone\ einrichten.command --team … --prefix … --carplay
+# (--no-carplay schaltet es wieder aus; ohne beides bleibt es, wie es war.)
+#
 # Keine Abhängigkeiten außer macOS und Xcode.
 
 emulate -L zsh
@@ -44,9 +48,11 @@ config_value() {
 
 current_team() { config_value $LOCAL_CONFIG DEVELOPMENT_TEAM || config_value $BASE_CONFIG DEVELOPMENT_TEAM; }
 current_prefix() { config_value $LOCAL_CONFIG HOUSEPHONE_BUNDLE_PREFIX || config_value $BASE_CONFIG HOUSEPHONE_BUNDLE_PREFIX; }
+# "yes" once the CarPlay entitlement is switched on in Local.xcconfig.
+current_carplay() { [[ $(config_value $LOCAL_CONFIG HOUSEPHONE_CARPLAY_SUFFIX) == -CarPlay ]] && print yes || print no; }
 
 write_local_config() {
-  local team=$1 prefix=$2
+  local team=$1 prefix=$2 carplay=${3:-$(current_carplay)}
   mkdir -p ${LOCAL_CONFIG:h}
   cat > $LOCAL_CONFIG <<EOF
 // Written by "Housephone einrichten.command". Not checked in.
@@ -54,6 +60,10 @@ write_local_config() {
 DEVELOPMENT_TEAM = $team
 HOUSEPHONE_BUNDLE_PREFIX = $prefix
 EOF
+  if [[ $carplay == yes ]]; then
+    print "// Apple granted the CarPlay entitlement (--carplay)." >> $LOCAL_CONFIG
+    print "HOUSEPHONE_CARPLAY_SUFFIX = -CarPlay" >> $LOCAL_CONFIG
+  fi
 }
 
 # "TEAMID<TAB>Team name" for every signing certificate in the keychain.
@@ -93,14 +103,17 @@ suggested_prefix() {
 # MARK: - Non-interactive mode
 
 if (( $# > 0 )); then
-  team="" prefix=""
+  team="" prefix="" carplay=$(current_carplay)
   while (( $# > 0 )); do
     case $1 in
       --team) team=${2-}; shift 2 ;;
       --prefix) prefix=${2-}; shift 2 ;;
+      --carplay) carplay=yes; shift ;;
+      --no-carplay) carplay=no; shift ;;
       -h|--help)
-        print "Aufruf: ${0:t} [--team TEAMID --prefix com.example]"
+        print "Aufruf: ${0:t} [--team TEAMID --prefix com.example] [--carplay | --no-carplay]"
         print "Ohne Argumente startet die interaktive Einrichtung."
+        print "--carplay erst, wenn Apple das CarPlay-Entitlement freigegeben hat."
         exit 0 ;;
       *) print -u2 "Unbekannte Option: $1"; exit 2 ;;
     esac
@@ -108,8 +121,8 @@ if (( $# > 0 )); then
   team=${(U)team}
   valid_team "$team" || { print -u2 "Ungültige Team-ID: '$team' (10 Zeichen, A–Z und 0–9)"; exit 2; }
   valid_prefix "$prefix" || { print -u2 "Ungültiges Präfix: '$prefix' (z. B. com.example)"; exit 2; }
-  write_local_config $team $prefix
-  print "$LOCAL_CONFIG geschrieben: Team $team, Präfix $prefix"
+  write_local_config $team $prefix $carplay
+  print "$LOCAL_CONFIG geschrieben: Team $team, Präfix $prefix, CarPlay $([[ $carplay == yes ]] && print an || print aus)"
   print "apns.topic für die Bridge: $prefix.housephone.voip"
   exit 0
 fi

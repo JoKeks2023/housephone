@@ -20,6 +20,8 @@ Phase 3:
 - Siri auf der Watch: „Ruf <Favorit> mit Housephone an“ (App Shortcuts).
 - Die CI prüft die Einbettung der Komplikationen in der Watch-App, ihre Bundle-ID, die App-Intents-Metadaten der Watch-App und das Privacy-Manifest.
 
-Phase 4: wird beim Start der Phase hier ergänzt.
+Phase 4:
+- Ohne Freigabe: Die App signiert und läuft wie bisher (kein CarPlay-Entitlement). Die CI prüft, dass `--carplay` die Entitlements umschaltet und beide Dateien bis auf den CarPlay-Schlüssel gleich sind.
+- Mit Freigabe und `--carplay`: Housephone erscheint in CarPlay mit den Tabs Favoriten, Anrufe (gewählte Quelle, verpasste rot) und Kontakte (FRITZ!Box-Telefonbuch, alphabetisch). Ein Tippen ruft an; ein Kontakt mit mehreren Nummern zeigt eine Auswahl. Scheitert der Anruf, erscheint ein Hinweis in CarPlay.
 
 Funktionsnachweis: auf echtem iPhone (Siri, Kurzbefehle, Schnellaktionen). Ohne Gerätetest gilt eine Phase als „nicht vollständig verifiziert“.

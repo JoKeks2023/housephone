@@ -1,3 +1,4 @@
+import CarPlay
 import HousephoneKit
 import Intents
 import os
@@ -109,12 +110,19 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         intent is INStartCallIntent ? StartCallIntentHandler() : nil
     }
 
-    /// A scene delegate for the home screen quick actions.
+    /// Scene delegates for the home screen quick actions and for CarPlay.
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
-        if connectingSceneSession.role == .windowApplication {
-            configuration.delegateClass = SceneDelegate.self
+        switch connectingSceneSession.role {
+        case .carTemplateApplication:
+            let configuration = UISceneConfiguration(name: "CarPlay", sessionRole: connectingSceneSession.role)
+            configuration.delegateClass = CarPlaySceneDelegate.self
+            return configuration
+        default:
+            let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+            if connectingSceneSession.role == .windowApplication {
+                configuration.delegateClass = SceneDelegate.self
+            }
+            return configuration
         }
-        return configuration
     }
 }

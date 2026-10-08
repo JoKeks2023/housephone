@@ -41,6 +41,26 @@
         }
       }
     },
+    "Das Telefonbuch erscheint, sobald die App es einmal geladen hat." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The phonebook appears once the app has loaded it."
+          }
+        }
+      }
+    },
+    "Der Anruf konnte nicht gestartet werden." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The call could not be started."
+          }
+        }
+      }
+    },
     "Ein Link möchte %@ über Housephone anrufen." : {
       "localizations" : {
         "en" : {
@@ -57,6 +77,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Call Favorite"
+          }
+        }
+      }
+    },
+    "Housephone ist nicht eingerichtet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Housephone is not set up"
+          }
+        }
+      }
+    },
+    "Kein FRITZ!Box-Telefonbuch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No FRITZ!Box Phonebook"
+          }
+        }
+      }
+    },
+    "Keine Favoriten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Favorites"
+          }
+        }
+      }
+    },
+    "Lege Favoriten in Housephone auf dem iPhone an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add favorites in Housephone on your iPhone."
           }
         }
       }
@@ -97,6 +157,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Opens Housephone on the keypad."
+          }
+        }
+      }
+    },
+    "Richte Housephone auf dem iPhone ein." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set up Housephone on your iPhone."
           }
         }
       }

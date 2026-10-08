@@ -18,4 +18,11 @@ HOUSEPHONE_BUNDLE_PREFIX = com.jorisconrad
 // controls). The app derives the same ID from its bundle ID at runtime.
 HOUSEPHONE_APP_GROUP = group.$(HOUSEPHONE_BUNDLE_PREFIX).housephone
 
+// CarPlay (T-0017): Apple grants the entitlement
+// com.apple.developer.carplay-communication only on request. Until then the
+// app signs without it. Once granted, set HOUSEPHONE_CARPLAY_SUFFIX =
+// -CarPlay in Local.xcconfig (or run the setup script with --carplay); the
+// app then signs with Housephone/Housephone-CarPlay.entitlements.
+HOUSEPHONE_CARPLAY_SUFFIX =
+
 #include? "Local.xcconfig"
