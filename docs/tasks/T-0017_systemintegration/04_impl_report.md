@@ -15,3 +15,15 @@
 | Tests | `SharedSnapshotTests.swift` (AppGroup, Snapshot, NameMatcher), `DeepLinkTests.swift` |
 
 Abweichung vom Plan: Die Favoriten bleiben in `UserDefaults.standard`. Erweiterungen lesen sie aus dem Schnappschuss, ein Umzug der Ablage war daher unnötig.
+
+## Phase 2: Widgets und Schalter
+
+| Teil | Änderung |
+|---|---|
+| Projekt | Neues Target `HousephoneWidgets` (`<präfix>.housephone.widgets`, iOS 17), eingebettet über „Embed Foundation Extensions“. Neuer synchronisierter Ordner `Shared/` in App und Extension. Die App kompiliert mit `HOUSEPHONE_APP`. Eingefügt per Skript in die `project.pbxproj` (IDs deterministisch) |
+| `Shared/` | `FavoriteEntity`/`FavoriteQuery` und `CallFavoriteIntent`, `OpenKeypadIntent`, `ShowMissedCallsIntent` (aus `Integration/AppIntents.swift` verschoben; `perform` nur mit `HOUSEPHONE_APP`, denn die Intents öffnen die App), `AvatarTint`/`Monogram` (aus `Design/Avatar.swift` verschoben) |
+| `HousephoneWidgets/` | `FavoritesWidget` (`AppIntentConfiguration` mit `SelectFavoritesIntent`), `RecentCallsWidget`, `MissedCallsWidget` (Sperrbildschirm), `CallFavoriteControl` + `OpenKeypadControl` (iOS 18), `SnapshotEntry`/`SnapshotProvider` (liest Schnappschuss und Link-Schlüssel, neue Zeitleiste um Mitternacht), eigene Farben, Privacy-Manifest, String-Katalog (en) |
+| App | `SnapshotPublisher` lädt zusätzlich die Controls neu (iOS 18) |
+| CI | Extension unter `PlugIns/`, Bundle-ID, Extension-Point, App-Intents-Metadaten, App-Group-Variable in beiden Entitlements, Privacy-Manifest |
+
+Widgets starten Anrufe über Deep Links (`Link`/`widgetURL`), nicht über `Button(intent:)`: Das funktioniert schon ab iOS 17 zuverlässig und auch auf dem Sperrbildschirm.
