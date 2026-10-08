@@ -20,6 +20,8 @@ final class SnapshotPublisher {
     private let modelContainer: ModelContainer
     private let store = SharedSnapshotStore.appGroup
     private var pending: Task<Void, Never>?
+    /// Every publish, changed or not (e.g. to hand favorites to the watch).
+    var onPublish: ((SharedSnapshot) -> Void)?
     private let logger = Logger(subsystem: "com.jorisconrad.housephone", category: "integration")
 
     init(favorites: FavoritesStore, fritzBox: FritzBoxData, contacts: ContactsDirectory, bridge: BridgeConnection, direct: DirectPhone, appModel: AppModel, modelContainer: ModelContainer) {
@@ -49,6 +51,7 @@ final class SnapshotPublisher {
         pending = nil
         let snapshot = makeSnapshot()
         updateQuickActions(snapshot.favorites)
+        onPublish?(snapshot)
         guard let store else { return }
         do {
             guard try store.save(snapshot) else { return }

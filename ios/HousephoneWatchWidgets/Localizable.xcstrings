@@ -1,0 +1,156 @@
+{
+  "sourceLanguage" : "de",
+  "strings" : {
+    "${favorite} anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call ${favorite}"
+          }
+        }
+      }
+    },
+    "%@ anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call %@"
+          }
+        }
+      }
+    },
+    "Favorit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favorite"
+          }
+        }
+      }
+    },
+    "Favorit anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call Favorite"
+          }
+        }
+      }
+    },
+    "Favorit wählen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Favorite"
+          }
+        }
+      }
+    },
+    "Favoriten legst du auf dem iPhone an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add favorites on your iPhone."
+          }
+        }
+      }
+    },
+    "Keine Favoriten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No favorites"
+          }
+        }
+      }
+    },
+    "Keine in den letzten 24 Stunden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None in the last 24 hours"
+          }
+        }
+      }
+    },
+    "Ruft einen Favoriten mit einem Tippen an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls a favorite with one tap."
+          }
+        }
+      }
+    },
+    "Ruft einen Favoriten über Housephone an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls a favorite with Housephone."
+          }
+        }
+      }
+    },
+    "Unbekannt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
+          }
+        }
+      }
+    },
+    "Verpasst: %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missed: %lld"
+          }
+        }
+      }
+    },
+    "Verpasste Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missed Calls"
+          }
+        }
+      }
+    },
+    "Verpasste Anrufe der letzten 24 Stunden." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missed calls of the last 24 hours."
+          }
+        }
+      }
+    },
+    "Welchen Favoriten die Komplikation anruft." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Which favorite the complication calls."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
