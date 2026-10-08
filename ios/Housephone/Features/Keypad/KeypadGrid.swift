@@ -148,7 +148,7 @@ private struct GlassKeyModifier: ViewModifier {
     func body(content: Content) -> some View {
         if enabled {
             content
-                .glassEffect(.regular.interactive(), in: .circle)
+                .glassSurface(in: .circle, interactive: true)
                 .glassMorph(morph)
         } else {
             content

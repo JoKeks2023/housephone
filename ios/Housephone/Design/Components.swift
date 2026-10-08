@@ -62,13 +62,13 @@ struct CallControlButton: View {
                 Image(systemName: symbol)
                     .font(.title2.weight(.medium))
                     .symbolVariant(isOn ? .fill : .none)
-                    .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
+                    .magicReplaceTransition()
                     .frame(width: 72, height: 72)
                     .foregroundStyle(isOn ? Color.black : Color.white)
                     .background {
                         Circle().fill(Color.white).opacity(isOn ? 1 : 0)
                     }
-                    .glassEffect(.regular.interactive(), in: .circle)
+                    .glassSurface(in: .circle, interactive: true)
                     .glassMorph(morph)
                 Text(label)
                     .font(.footnote.weight(.medium))
@@ -88,7 +88,7 @@ extension View {
     /// `GlassEffectContainer`. No-op without `morph`.
     @ViewBuilder
     func glassMorph(_ morph: GlassMorph?) -> some View {
-        if let morph {
+        if #available(iOS 26, *), let morph {
             glassEffectID(morph.id, in: morph.namespace)
         } else {
             self

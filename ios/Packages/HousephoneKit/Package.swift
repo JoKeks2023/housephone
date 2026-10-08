@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "HousephoneKit",
-    platforms: [.iOS(.v26), .watchOS(.v26), .macOS(.v15)],
+    platforms: [.iOS(.v17), .watchOS(.v10), .macOS(.v15)],
     products: [
         .library(name: "HousephoneKit", targets: ["HousephoneKit"]),
     ],

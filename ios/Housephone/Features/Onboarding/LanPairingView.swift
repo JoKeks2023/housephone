@@ -152,7 +152,7 @@ struct LanPairingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Theme.Space.s2)
             }
-            .buttonStyle(.glassProminent)
+            .glassButtonStyle(prominent: true)
             .controlSize(.large)
             .disabled(phase == .connecting)
         case .waiting:
@@ -173,7 +173,7 @@ struct LanPairingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Theme.Space.s2)
             }
-            .buttonStyle(.glassProminent)
+            .glassButtonStyle(prominent: true)
             .controlSize(.large)
         }
     }
@@ -243,7 +243,7 @@ private struct SASCodeView: View {
                 .monospacedDigit()
                 .padding(.horizontal, Theme.Space.s6)
                 .padding(.vertical, Theme.Space.s4)
-                .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.xl))
+                .glassSurface(in: .rect(cornerRadius: Theme.Radius.xl))
                 .accessibilityLabel(Text("Code \(Text(sas).speechSpellsOutCharacters())"))
                 .textSelection(.disabled)
             Text("Vergleiche diesen Code mit der Anzeige auf deiner Bridge. Gib die Kopplung nur frei, wenn beide gleich sind.")

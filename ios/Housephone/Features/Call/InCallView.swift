@@ -69,7 +69,7 @@ struct InCallView: View {
 
             Spacer(minLength: Theme.Space.s6)
 
-            GlassEffectContainer(spacing: Theme.Space.s4) {
+            GlassGroup(spacing: Theme.Space.s4) {
                 if showsKeypad {
                     VStack(spacing: Theme.Space.s4) {
                         Text(dtmfDigits.isEmpty ? " " : dtmfDigits)
@@ -113,7 +113,7 @@ struct InCallView: View {
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.white)
                         .frame(width: 44, height: 44)
-                        .glassEffect(.regular.interactive(), in: .circle)
+                        .glassSurface(in: .circle, interactive: true)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Minimieren"))
@@ -362,7 +362,7 @@ private struct AudioOutputButton: View {
                         }
                         .allowsHitTesting(false)
                 }
-                .glassEffect(.regular.interactive(), in: .circle)
+                .glassSurface(in: .circle, interactive: true)
                 .glassMorph(morph)
             Text("Audio")
                 .font(.footnote.weight(.medium))

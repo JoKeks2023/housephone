@@ -40,30 +40,30 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		C0FF1C0000000000000000A1 /* Housephone.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Housephone.xcconfig; sourceTree = "<group>"; };
-		2F39AC5F6E8B537142EE1694 /* HousephoneLocalPush.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = HousephoneLocalPush.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		60EB083C463E76C08EB7324A /* Housephone.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Housephone.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2F39AC5F6E8B537142EE1694 /* HousephoneLocalPush.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HousephoneLocalPush.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		60EB083C463E76C08EB7324A /* Housephone.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Housephone.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		61E65336FDD80B6C9F6AA7D8 /* HousephoneKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HousephoneKit; path = Packages/HousephoneKit; sourceTree = SOURCE_ROOT; };
 		6C582354C0418D5F2614E520 /* HousephoneWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HousephoneWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0FF1C0000000000000000A1 /* Housephone.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Housephone.xcconfig; sourceTree = "<group>"; };
 		F3C6170C651792E2D90CAE28 /* NetworkExtension.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NetworkExtension.framework; path = System/Library/Frameworks/NetworkExtension.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6E98E722D95FB4A8343D4F05 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		6E98E722D95FB4A8343D4F05 /* Exceptions for "HousephoneWatch" folder in "HousephoneWatch" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = 89D4FF449F8E4FC9E729D785 /* HousephoneWatch */;
 		};
-		9FECDBA4CF24C9ED64FABA61 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		9FECDBA4CF24C9ED64FABA61 /* Exceptions for "Housephone" folder in "Housephone" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = 444E74BA3EEEEDABA0BC490D /* Housephone */;
 		};
-		A3CF809F7CAC157EABB4211E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		A3CF809F7CAC157EABB4211E /* Exceptions for "HousephoneLocalPush" folder in "HousephoneLocalPush" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -76,11 +76,7 @@
 		6E752E8BADA8367D6057CE0A /* HousephoneWatch */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				6E98E722D95FB4A8343D4F05 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
+				6E98E722D95FB4A8343D4F05 /* Exceptions for "HousephoneWatch" folder in "HousephoneWatch" target */,
 			);
 			path = HousephoneWatch;
 			sourceTree = "<group>";
@@ -88,11 +84,7 @@
 		7A444F88E5710BD5F302B069 /* Housephone */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				9FECDBA4CF24C9ED64FABA61 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
+				9FECDBA4CF24C9ED64FABA61 /* Exceptions for "Housephone" folder in "Housephone" target */,
 			);
 			path = Housephone;
 			sourceTree = "<group>";
@@ -100,11 +92,7 @@
 		A96752AAF23593F8E0A1A57B /* HousephoneLocalPush */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				A3CF809F7CAC157EABB4211E /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
+				A3CF809F7CAC157EABB4211E /* Exceptions for "HousephoneLocalPush" folder in "HousephoneLocalPush" target */,
 			);
 			path = HousephoneLocalPush;
 			sourceTree = "<group>";
@@ -141,14 +129,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		C0FF1C0000000000000000A2 /* Config */ = {
-			isa = PBXGroup;
-			children = (
-				C0FF1C0000000000000000A1 /* Housephone.xcconfig */,
-			);
-			path = Config;
-			sourceTree = "<group>";
-		};
 		044AD2BA500BC96C67C4368B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -173,6 +153,14 @@
 				61E65336FDD80B6C9F6AA7D8 /* HousephoneKit */,
 			);
 			path = Packages;
+			sourceTree = "<group>";
+		};
+		C0FF1C0000000000000000A2 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				C0FF1C0000000000000000A1 /* Housephone.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		DB0482FE742096768AB76DBF = {
@@ -405,7 +393,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -424,7 +412,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -437,7 +425,7 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
-				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Debug;
 		};
@@ -478,7 +466,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -491,7 +479,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -503,7 +491,7 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
-				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
 		};

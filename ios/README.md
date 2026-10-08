@@ -1,6 +1,6 @@
 # Housephone für iOS und watchOS
 
-SwiftUI-App (iOS 26+) mit CallKit und PushKit, dazu eine eigenständige Apple-Watch-App (watchOS 26+). Sie telefoniert über die Bridge (`bridge/`) mit der FRITZ!Box. Architektur: `docs/architecture/ADR-0001-bridge-architektur.md`, Protokoll: `docs/protocol/signaling-v1.md`.
+SwiftUI-App (iOS 17+, iPhone und iPad; Liquid Glass ab iOS 26) mit CallKit und PushKit, dazu eine eigenständige Apple-Watch-App (watchOS 10+). Sie telefoniert über die Bridge (`bridge/`) mit der FRITZ!Box. Architektur: `docs/architecture/ADR-0001-bridge-architektur.md`, Protokoll: `docs/protocol/signaling-v1.md`.
 
 ## Bauen
 

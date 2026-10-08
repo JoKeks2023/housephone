@@ -224,7 +224,7 @@ private struct SuggestionButton: View {
             .padding(.vertical, Theme.Space.s1)
             .padding(.leading, Theme.Space.s1)
             .padding(.trailing, Theme.Space.s3)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .glassSurface(in: .capsule, interactive: true)
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityElement(children: .ignore)
