@@ -44,7 +44,10 @@ final class ContactsDirectory {
     }
 
     var canRead: Bool {
-        authorization == .authorized || authorization == .limited
+        if authorization == .authorized { return true }
+        // Limited access exists from iOS 18.
+        if #available(iOS 18, *) { return authorization == .limited }
+        return false
     }
 
     func requestAccess() async {

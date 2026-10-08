@@ -136,7 +136,7 @@ struct CallActionButton: View {
                             // Tactile construction: a ring one step darker than
                             // the fill and a light-catching top edge.
                             Circle()
-                                .strokeBorder(kind.color.mix(with: .black, by: 0.2), lineWidth: 1)
+                                .strokeBorder(kind.color.darkened(by: 0.2), lineWidth: 1)
                         }
                         .overlay {
                             Circle()

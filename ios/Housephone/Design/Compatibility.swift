@@ -78,6 +78,20 @@ extension View {
     }
 }
 
+extension Color {
+    /// The color mixed with black: `mix(with:by:)` from iOS 18, the same
+    /// arithmetic on the resolved components before.
+    func darkened(by amount: Double) -> Color {
+        if #available(iOS 18, *) {
+            return mix(with: .black, by: amount)
+        }
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        guard UIColor(self).getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return self }
+        let keep = 1 - amount
+        return Color(red: red * keep, green: green * keep, blue: blue * keep, opacity: alpha)
+    }
+}
+
 /// `GlassEffectContainer` from iOS 26, so neighbouring glass blends and
 /// morphs; before that just the content.
 struct GlassGroup<Content: View>: View {
