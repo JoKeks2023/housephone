@@ -31,7 +31,7 @@ final class StartCallIntentHandler: NSObject, INStartCallIntentHandling {
     func resolveContacts(for intent: INStartCallIntent) async -> [INStartCallContactResolutionResult] {
         if intent.destinationType == .redial {
             guard let last = await MainActor.run(body: { AppServices.shared.lastDialedTarget() }) else {
-                return [.unsupported(forReason: .noCallHistoryForRedial)]
+                return [.unsupported(forReason: .noUsableHandleForRedial)]
             }
             return [.success(with: last.person)]
         }
