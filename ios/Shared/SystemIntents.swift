@@ -1,9 +1,10 @@
 import AppIntents
 import HousephoneKit
 
-// Intents shared by the app and its widget extension (controls in Control
-// Center and on the Action button). They open the app, so `perform` always
-// runs in the app process; the extension only needs them to exist.
+// Intents shared by the apps and their widget extensions (controls in
+// Control Center and on the Action button, complications). They open the
+// app, so `perform` always runs in the app process; the extensions only
+// need them to exist.
 
 struct CallFavoriteIntent: AppIntent {
     static var title: LocalizedStringResource { "Favorit anrufen" }
@@ -29,11 +30,14 @@ struct CallFavoriteIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         #if HOUSEPHONE_APP
         AppServices.shared.handle(.call(number: favorite.number, name: favorite.name, key: nil), trusted: true)
+        #elseif HOUSEPHONE_WATCH_APP
+        WatchServices.shared.handle(.call(number: favorite.number, name: favorite.name, key: nil), trusted: true)
         #endif
         return .result()
     }
 }
 
+#if os(iOS)
 struct OpenKeypadIntent: AppIntent {
     static var title: LocalizedStringResource { "Tastenfeld öffnen" }
     static var description: IntentDescription { "Öffnet Housephone mit dem Tastenfeld." }
@@ -61,3 +65,4 @@ struct ShowMissedCallsIntent: AppIntent {
         return .result()
     }
 }
+#endif

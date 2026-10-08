@@ -29,3 +29,16 @@ Ohne die Gerätetests ist Phase 1 **nicht vollständig verifiziert**.
 | Gerät: StandBy mit kleinem Favoriten-Widget | offen |
 
 Ohne die Gerätetests ist Phase 2 **nicht vollständig verifiziert**.
+
+## Phase 3
+
+| Prüfung | Ergebnis |
+|---|---|
+| `swift test` (CompanionFavorites) | siehe PR |
+| CI: Komplikationen eingebettet, Watch-App mit App-Intents-Metadaten | siehe PR |
+| Gerät: Favorit am iPhone hinzufügen → erscheint auf der Watch (auch bei geschlossener Watch-App) | offen |
+| Gerät: Komplikation „Favorit anrufen“ im Zifferblatt-Editor, Tippen ruft an | offen |
+| Gerät: Komplikation „Verpasste Anrufe“ zählt, fällt nach 24 Stunden weg | offen |
+| Gerät: „Hey Siri, ruf <Favorit> mit Housephone an“ an der Watch | offen |
+
+Ohne die Gerätetests ist Phase 3 **nicht vollständig verifiziert**.

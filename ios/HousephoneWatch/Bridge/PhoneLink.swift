@@ -3,16 +3,18 @@ import HousephoneKit
 import os
 import WatchConnectivity
 
-/// The watch side of WatchConnectivity: receives pairing codes and unpair
-/// instructions from the iPhone and keeps the iPhone informed about the
-/// watch's pairing state.
+/// The watch side of WatchConnectivity: receives pairing codes, unpair
+/// instructions and the iPhone's favorites, and keeps the iPhone informed
+/// about the watch's pairing state.
 @MainActor
 final class PhoneLink: NSObject {
     private let bridge: WatchBridge
+    private let favorites: WatchFavorites
     private let logger = Logger(subsystem: "com.jorisconrad.housephone.watch", category: "phone")
 
-    init(bridge: WatchBridge) {
+    init(bridge: WatchBridge, favorites: WatchFavorites) {
         self.bridge = bridge
+        self.favorites = favorites
         super.init()
         bridge.onStateChange = { [weak self] state in self?.publish(state) }
         guard WCSession.isSupported() else { return }
@@ -33,6 +35,13 @@ final class PhoneLink: NSObject {
 
     fileprivate func activated() {
         publish(bridge.pairingState)
+        if let received = CompanionFavorites(dictionary: WCSession.default.receivedApplicationContext) {
+            favorites.update(received)
+        }
+    }
+
+    fileprivate func received(_ received: CompanionFavorites) {
+        favorites.update(received)
     }
 
     fileprivate func handle(_ instruction: CompanionPairingInstruction, reply: UncheckedReply?) {
@@ -74,6 +83,11 @@ extension PhoneLink: WCSessionDelegate {
         } else {
             replyHandler([:])
         }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        guard let received = CompanionFavorites(dictionary: applicationContext) else { return }
+        Task { @MainActor in self.received(received) }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
