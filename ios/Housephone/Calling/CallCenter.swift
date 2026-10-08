@@ -50,6 +50,8 @@ final class CallCenter: NSObject {
     private(set) var isMuted = false
     private(set) var mediaState: MediaEngine.ConnectionState?
     var failure: CallFailure?
+    /// A call was added to the recents (for widgets and the like).
+    @ObservationIgnored var onCallRecorded: (() -> Void)?
 
     @ObservationIgnored private let provider: CXProvider
     @ObservationIgnored private let callController = CXCallController()
@@ -305,6 +307,7 @@ final class CallCenter: NSObject {
             context.insert(record)
             do {
                 try context.save()
+                onCallRecorded?()
             } catch {
                 logger.error("Saving call record failed: \(error.localizedDescription, privacy: .public)")
             }
