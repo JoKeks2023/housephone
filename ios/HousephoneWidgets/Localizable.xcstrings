@@ -1,0 +1,266 @@
+{
+  "sourceLanguage" : "de",
+  "strings" : {
+    "${favorite} anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call ${favorite}"
+          }
+        }
+      }
+    },
+    "%@ anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call %@"
+          }
+        }
+      }
+    },
+    "%@ zurückrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call back %@"
+          }
+        }
+      }
+    },
+    "Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls"
+          }
+        }
+      }
+    },
+    "Deine letzten Anrufe, verpasste hervorgehoben." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your latest calls, missed ones highlighted."
+          }
+        }
+      }
+    },
+    "Favorit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favorite"
+          }
+        }
+      }
+    },
+    "Favorit anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call Favorite"
+          }
+        }
+      }
+    },
+    "Favorit wählen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Favorite"
+          }
+        }
+      }
+    },
+    "Favoriten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favorites"
+          }
+        }
+      }
+    },
+    "Favoriten wählen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Favorites"
+          }
+        }
+      }
+    },
+    "Füge in Housephone Favoriten hinzu." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add favorites in Housephone."
+          }
+        }
+      }
+    },
+    "Keine verpassten Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No missed calls"
+          }
+        }
+      }
+    },
+    "Noch keine Anrufe." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No calls yet."
+          }
+        }
+      }
+    },
+    "Öffnet die Anrufliste mit den verpassten Anrufen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the recents showing missed calls."
+          }
+        }
+      }
+    },
+    "Öffnet Housephone mit dem Tastenfeld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens Housephone on the keypad."
+          }
+        }
+      }
+    },
+    "Richte Housephone in der App ein." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set up Housephone in the app."
+          }
+        }
+      }
+    },
+    "Ruf deine Favoriten mit einem Tippen an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call your favorites with one tap."
+          }
+        }
+      }
+    },
+    "Ruft einen Favoriten über Housephone an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls a favorite with Housephone."
+          }
+        }
+      }
+    },
+    "Tastenfeld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keypad"
+          }
+        }
+      }
+    },
+    "Tastenfeld öffnen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Keypad"
+          }
+        }
+      }
+    },
+    "Unbekannt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
+          }
+        }
+      }
+    },
+    "Verpasst: %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missed: %lld"
+          }
+        }
+      }
+    },
+    "Verpasste Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missed Calls"
+          }
+        }
+      }
+    },
+    "Verpasste Anrufe zeigen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Missed Calls"
+          }
+        }
+      }
+    },
+    "Welche Favoriten das Widget zeigt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Which favorites the widget shows."
+          }
+        }
+      }
+    },
+    "Zeigt neue verpasste Anrufe." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows new missed calls."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -8,8 +8,14 @@
 DEVELOPMENT_TEAM = T9CA6D7T8N
 
 // Bundle IDs: <prefix>.housephone (iPhone), <prefix>.housephone.watchkitapp
-// (watch) and <prefix>.housephone.localpush (Local Push extension). The
-// bridge's APNs topic must be <prefix>.housephone.voip.
+// (watch), <prefix>.housephone.widgets (widgets),
+// <prefix>.housephone.watchkitapp.widgets (complications) and
+// <prefix>.housephone.localpush (Local Push extension). The bridge's APNs
+// topic must be <prefix>.housephone.voip.
 HOUSEPHONE_BUNDLE_PREFIX = com.jorisconrad
+
+// App Group shared by the iPhone app and its extensions (widgets,
+// controls). The app derives the same ID from its bundle ID at runtime.
+HOUSEPHONE_APP_GROUP = group.$(HOUSEPHONE_BUNDLE_PREFIX).housephone
 
 #include? "Local.xcconfig"

@@ -12,9 +12,10 @@ open ios/Housephone.xcodeproj
 
 - Auf ein **echtes iPhone** bauen. CallKit, PushKit und Audio lassen sich im Simulator nicht sinnvoll testen.
 - **Team und Bundle-IDs** stehen nicht in der `project.pbxproj`, sondern in `ios/Config/Housephone.xcconfig` (Standard: Team `T9CA6D7T8N`, Präfix `com.jorisconrad`). Eigene Werte schreibt das Setup-Skript nach `ios/Config/Local.xcconfig` (nicht eingecheckt); die überschreibt die Standards. Ohne Rückfragen: `./"Housephone einrichten.command" --team ABCDE12345 --prefix org.example`.
-- Bundle-IDs: `<präfix>.housephone` (iPhone), `<präfix>.housephone.watchkitapp` (Watch), `<präfix>.housephone.localpush` (Local-Push-Extension). Die App leitet ihr VoIP-Topic aus der eigenen Bundle-ID ab (`<bundle-id>.voip`); in der Bridge muss deshalb `apns.topic` = `<präfix>.housephone.voip` sein.
+- Bundle-IDs: `<präfix>.housephone` (iPhone), `<präfix>.housephone.watchkitapp` (Watch), `<präfix>.housephone.widgets` (Widgets), `<präfix>.housephone.watchkitapp.widgets` (Komplikationen), `<präfix>.housephone.localpush` (Local-Push-Extension). Die App leitet ihr VoIP-Topic aus der eigenen Bundle-ID ab (`<bundle-id>.voip`); in der Bridge muss deshalb `apns.topic` = `<präfix>.housephone.voip` sein.
 - Signing in Xcode bleibt automatisch. Team oder Präfix nicht im Xcode-Reiter „Signing & Capabilities“ ändern: Das schreibt in die `project.pbxproj` und überdeckt die xcconfig. Stattdessen das Skript erneut starten.
 - Die Capability „Push Notifications“ muss im Developer-Account für beide App-IDs aktiv sein. `aps-environment` steht in den Entitlements.
+- App Group `group.<präfix>.housephone` (`HOUSEPHONE_APP_GROUP` in der xcconfig) und Siri stehen in den Entitlements. Die automatische Signierung legt beides im Developer-Account an. Die App leitet die Gruppe zur Laufzeit aus ihrer Bundle-ID ab.
 - Die Watch-App wird mit dem Scheme **Housephone** gebaut und in die iPhone-App eingebettet (`Watch/`; unter `PlugIns/` lehnt App Store Connect den Upload ab, ITMS-90680).
 - Das Xcode-Projekt ist eingecheckt und nutzt synchronisierte Ordner: Neue Dateien in `Housephone/`, `HousephoneWatch/` und `HousephoneLocalPush/` erscheinen automatisch in Xcode, ohne Generator. Einstellungen, Info.plist und Entitlements änderst du direkt in Xcode.
 
@@ -31,6 +32,16 @@ open ios/Housephone.xcodeproj
 | `HousephoneWatch/Calling` | `WatchCallCenter` (CallKit + PushKit, eine WebSocket-Verbindung pro Anruf), `CallAudio` (AVAudioEngine mit Echounterdrückung, A-law, Jitter-Puffer, Freiton) |
 | `HousephoneWatch/Bridge` | `WatchBridge` (Zugangsdaten, Push-Token per HTTPS), `PhoneLink` (WatchConnectivity) |
 | `HousephoneWatch/Features` | Kopplungshinweis, Start (Bereitschaft, verpasste FRITZ!Box-Anrufe, letzte Anrufe), Tastenfeld, FRITZ!Box-Kontakte, Anrufbildschirm mit Digital-Crown-Lautstärke |
+
+### Systemintegration (T-0017)
+
+- **Siri:** „Ruf <Name> mit Housephone an“ läuft über `INStartCallIntent` in der App (`Integration/StartCallIntentHandler.swift`), auch in CarPlay. Siri kennt iPhone-Kontakte selbst, Favoriten und FRITZ!Box-Telefonbuch sucht die App.
+- **Kurzbefehle und App Shortcuts:** `Integration/AppIntents.swift` (Favorit anrufen, Nummer anrufen, Tastenfeld, verpasste Anrufe).
+- **Schnellaktionen:** bis zu vier Favoriten am App-Icon (`Integration/QuickActions.swift`).
+- **Schnappschuss für Erweiterungen:** `SnapshotPublisher` schreibt Favoriten und letzte Anrufe als JSON in die App Group (`SharedSnapshot` in HousephoneKit). Erweiterungen lesen nur und telefonieren nie selbst.
+- **Widgets und Schalter:** Target `HousephoneWidgets` (Favoriten, Anrufe, verpasste Anrufe auf dem Sperrbildschirm; ab iOS 18 Kontrollzentrum und Action-Button). Code, den App und Extension teilen, liegt in `Shared/` (synchronisierter Ordner in beiden Targets). Die App kompiliert mit `HOUSEPHONE_APP`.
+- **Watch:** Das iPhone schickt seine Favoriten per Application Context (`CompanionFavorites`). Die Watch zeigt sie auf dem Startbildschirm, bietet sie als App Shortcuts für Siri an und als Komplikation (Target `HousephoneWatchWidgets`, dazu „Verpasste Anrufe“).
+- **Deep Links:** `housephone://call?number=…`, `housephone://keypad`, `housephone://recents?missed=1`. Anruf-Links ohne den Schlüssel aus der App Group (`DeepLinkKey`) fragen vor dem Wählen nach.
 
 ### Warum die Watch anders telefoniert
 

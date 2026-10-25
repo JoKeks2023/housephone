@@ -102,6 +102,7 @@ struct WatchHomeView: View {
     @Environment(WatchCallCenter.self) private var callCenter
     @Environment(RecentCalls.self) private var recents
     @Environment(WatchFritzBox.self) private var fritzBox
+    @Environment(WatchFavorites.self) private var favorites
     @State private var microphone = AVAudioApplication.shared.recordPermission
 
     var body: some View {
@@ -129,6 +130,31 @@ struct WatchHomeView: View {
                     } label: {
                         Label("Mikrofon erlauben", systemImage: "mic.slash")
                     }
+                }
+            }
+
+            if !favorites.favorites.isEmpty {
+                Section {
+                    ForEach(favorites.favorites) { favorite in
+                        Button {
+                            Task { await callCenter.startCall(to: favorite.number, name: favorite.name) }
+                        } label: {
+                            VStack(alignment: .leading, spacing: WatchTheme.Space.hairline) {
+                                Text(favorite.name)
+                                    .lineLimit(1)
+                                Text(favorite.label ?? favorite.number)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
+                        .accessibilityHint(Text("Anrufen"))
+                    }
+                } header: {
+                    Text("Favoriten")
+                } footer: {
+                    Text("Vom iPhone")
                 }
             }
 

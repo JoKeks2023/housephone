@@ -30,6 +30,9 @@ final class AppModel {
     static var canMinimizeCall: Bool {
         if #available(iOS 26.1, *) { true } else { false }
     }
+    /// A call link from another app or a web page, waiting for the user
+    /// to confirm.
+    var callConfirmation: CallConfirmation?
     /// A pairing link opened via `housephone://pair?…` or scanned.
     var pairingLink: PairingLink?
     var pairingLinkError: PairingLinkError?
@@ -41,6 +44,11 @@ final class AppModel {
             pairingLinkError = error
         }
     }
+}
+
+struct CallConfirmation: Identifiable, Equatable {
+    let id = UUID()
+    let number: String
 }
 
 extension PairingLink: @retroactive Identifiable {
