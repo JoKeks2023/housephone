@@ -8,7 +8,8 @@
 DEVELOPMENT_TEAM = T9CA6D7T8N
 
 // Bundle IDs: <prefix>.housephone (iPhone), <prefix>.housephone.watchkitapp
-// (watch), <prefix>.housephone.widgets (widgets) and
+// (watch), <prefix>.housephone.widgets (widgets),
+// <prefix>.housephone.watchkitapp.widgets (complications) and
 // <prefix>.housephone.localpush (Local Push extension). The bridge's APNs
 // topic must be <prefix>.housephone.voip.
 HOUSEPHONE_BUNDLE_PREFIX = com.jorisconrad

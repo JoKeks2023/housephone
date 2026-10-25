@@ -120,7 +120,7 @@ jobs:
           lipo -info "$watch/HousephoneWatch"
           echo "Swift files compiled for watchOS: $(grep -c 'SwiftCompile.*HousephoneWatch' build.log || true)"
 
-      - name: Check system integration (Siri, App Intents, widgets)
+      - name: Check system integration (Siri, App Intents, widgets, complications)
         working-directory: ios
         run: |
           app="DerivedData/Build/Products/Debug-iphoneos/Housephone.app"
@@ -129,7 +129,7 @@ jobs:
           # App Shortcuts and intents are only found through this metadata.
           test -d "$app/Metadata.appintents" || { echo "::error::No App Intents metadata in the app"; exit 1; }
           ls "$app/Metadata.appintents"
-          for entitlements in Housephone/Housephone.entitlements HousephoneWidgets/HousephoneWidgets.entitlements; do
+          for entitlements in Housephone/Housephone.entitlements HousephoneWidgets/HousephoneWidgets.entitlements HousephoneWatch/HousephoneWatch.entitlements HousephoneWatchWidgets/HousephoneWatchWidgets.entitlements; do
             grep -q 'HOUSEPHONE_APP_GROUP' "$entitlements" \
               || { echo "::error::$entitlements must use HOUSEPHONE_APP_GROUP"; exit 1; }
           done
@@ -139,13 +139,20 @@ jobs:
           test "$(plutil -extract CFBundleIdentifier raw "$widgets/Info.plist")" = org.example.housephone.widgets
           test "$(plutil -extract NSExtension.NSExtensionPointIdentifier raw "$widgets/Info.plist")" = com.apple.widgetkit-extension
           test -d "$widgets/Metadata.appintents" || { echo "::error::No App Intents metadata in the widget extension"; exit 1; }
+          # Complications (T-0017 phase 3), inside the watch app.
+          complications="$app/Watch/HousephoneWatch.app/PlugIns/HousephoneWatchWidgets.appex"
+          test -x "$complications/HousephoneWatchWidgets" || { echo "::error::Complications are not embedded in the watch app"; ls -R "$app/Watch/HousephoneWatch.app/PlugIns" 2>/dev/null | head; exit 1; }
+          test "$(plutil -extract CFBundleIdentifier raw "$complications/Info.plist")" = org.example.housephone.watchkitapp.widgets
+          lipo -info "$complications/HousephoneWatchWidgets"
+          # App Shortcuts on the watch ("Ruf <Favorit> mit Housephone an").
+          test -d "$app/Watch/HousephoneWatch.app/Metadata.appintents" || { echo "::error::No App Intents metadata in the watch app"; exit 1; }
 
       - name: Check privacy manifests and licenses
         working-directory: ios
         run: |
           app="DerivedData/Build/Products/Debug-iphoneos/Housephone.app"
           watch="$app/Watch/HousephoneWatch.app"
-          for bundle in "$app" "$watch" "$app/PlugIns/HousephoneWidgets.appex"; do
+          for bundle in "$app" "$watch" "$app/PlugIns/HousephoneWidgets.appex" "$watch/PlugIns/HousephoneWatchWidgets.appex"; do
             manifest="$bundle/PrivacyInfo.xcprivacy"
             test -f "$manifest" || { echo "::error::Missing $manifest"; exit 1; }
             plutil -lint "$manifest"

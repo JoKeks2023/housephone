@@ -33,6 +33,9 @@ final class WatchLink: NSObject {
 
     @ObservationIgnored private let bridge: BridgeConnection
     @ObservationIgnored private var lastAutoPairAttempt: Date?
+    /// The favorites for the watch, and whether the watch has them.
+    @ObservationIgnored private var favorites: CompanionFavorites?
+    @ObservationIgnored private var favoritesDelivered = false
     /// Minimum gap between automatic attempts; the bridge allows 5 companion
     /// codes per hour.
     static let autoPairInterval: TimeInterval = 15 * 60
@@ -195,6 +198,31 @@ final class WatchLink: NSObject {
     fileprivate func sessionChanged() {
         update(from: WCSession.default)
         autoPairIfNeeded()
+        deliverFavorites()
+    }
+
+    // MARK: - Favorites
+
+    /// The iPhone's favorites on the watch (home screen, complications,
+    /// Siri). The application context keeps only the latest list.
+    func send(favorites list: [SharedSnapshot.Favorite]) {
+        let message = CompanionFavorites(favorites: list)
+        guard message != favorites else { return }
+        favorites = message
+        favoritesDelivered = false
+        deliverFavorites()
+    }
+
+    private func deliverFavorites() {
+        guard !favoritesDelivered, let favorites,
+              isSupported, isActivated, isWatchPaired, isAppInstalled
+        else { return }
+        do {
+            try WCSession.default.updateApplicationContext(favorites.dictionary)
+            favoritesDelivered = true
+        } catch {
+            logger.error("Sending favorites to the watch failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     fileprivate func received(_ state: WatchPairingState) {

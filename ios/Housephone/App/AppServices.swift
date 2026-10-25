@@ -50,6 +50,7 @@ final class AppServices {
         linkKey = AppGroup.containerURL.flatMap { try? DeepLinkKey.loadOrCreate(in: $0) }
         snapshot = SnapshotPublisher(favorites: favorites, fritzBox: fritzBox, contacts: contacts, bridge: bridge, direct: direct, appModel: appModel, modelContainer: modelContainer)
         callCenter.onCallRecorded = { [snapshot] in snapshot.setNeedsPublish() }
+        snapshot.onPublish = { [watchLink] snapshot in watchLink.send(favorites: snapshot.favorites) }
         bridge.start()
     }
 

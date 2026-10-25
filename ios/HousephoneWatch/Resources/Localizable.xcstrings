@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "de",
   "strings" : {
+    "${favorite} anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call ${favorite}"
+          }
+        }
+      }
+    },
     "%lld Nummern" : {
       "localizations" : {
         "en" : {
@@ -318,6 +328,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Favorite"
+          }
+        }
+      }
+    },
+    "Favorit anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call Favorite"
           }
         }
       }
@@ -682,6 +702,16 @@
         }
       }
     },
+    "Ruft einen Favoriten über Housephone an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls a favorite with Housephone."
+          }
+        }
+      }
+    },
     "Sonstige" : {
       "localizations" : {
         "en" : {
@@ -778,6 +808,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Missed"
+          }
+        }
+      }
+    },
+    "Vom iPhone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From iPhone"
           }
         }
       }

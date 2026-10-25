@@ -27,3 +27,19 @@ Abweichung vom Plan: Die Favoriten bleiben in `UserDefaults.standard`. Erweiteru
 | CI | Extension unter `PlugIns/`, Bundle-ID, Extension-Point, App-Intents-Metadaten, App-Group-Variable in beiden Entitlements, Privacy-Manifest |
 
 Widgets starten Anrufe über Deep Links (`Link`/`widgetURL`), nicht über `Button(intent:)`: Das funktioniert schon ab iOS 17 zuverlässig und auch auf dem Sperrbildschirm.
+
+## Phase 3: Watch
+
+| Teil | Änderung |
+|---|---|
+| HousephoneKit | `CompanionFavorites` (iPhone → Watch, Application Context, eigener Schlüssel neben `WatchPairingState`) mit Tests |
+| iPhone | `WatchLink.send(favorites:)` schickt die Favoriten bei jeder Änderung und nach dem Aktivieren der Verbindung erneut, wenn sie noch nicht angekommen sind. Ausgelöst über `SnapshotPublisher.onPublish` |
+| Watch-App | `WatchFavorites` (gespeichert), `PhoneLink` übernimmt den Application Context, Abschnitt „Favoriten · Vom iPhone“ auf dem Startbildschirm, `WatchSnapshotPublisher` (Favoriten + FRITZ!Box-Anrufliste bzw. eigene Anrufe in die App Group der Watch), `WatchShortcuts` (App Shortcuts mit `CallFavoriteIntent`), Deep Links: Anruf nur mit Link-Schlüssel (Komplikation) oder aus einem App Shortcut, sonst ignoriert (die Watch hat keine Rückfrage) |
+| Projekt | Neues Target `HousephoneWatchWidgets` (`<präfix>.housephone.watchkitapp.widgets`, watchOS 10), eingebettet in die Watch-App. `Shared/` jetzt auch in Watch-App und Komplikationen. Die Watch-App kompiliert mit `HOUSEPHONE_WATCH_APP`. App Group in den Watch-Entitlements |
+| `Shared/SystemIntents.swift` | `CallFavoriteIntent` handelt auf der Watch über `WatchServices`. Tastenfeld und verpasste Anrufe gibt es nur unter iOS |
+| Komplikationen | `FavoriteComplication` (`AppIntentConfiguration`, Vorschläge je Favorit), `MissedCallsComplication` (Zeitleiste fällt mit jedem 24-Stunden-Ablauf weiter) |
+| CI | Einbettung, Bundle-ID und Architektur der Komplikationen, App-Intents-Metadaten der Watch-App, App-Group-Variable in allen vier Entitlements, Privacy-Manifest |
+
+Abweichungen vom Plan:
+- **Siri auf der Watch nur für Favoriten.** watchOS bietet keinen In-App-Handler für `INStartCallIntent` (nur `handleIntent` nach einer Intents-Extension). Statt einer eigenen Intents-Extension gibt es App Shortcuts. Beliebige Namen aus dem FRITZ!Box-Telefonbuch per Siri gehen nur am iPhone.
+- **Favoriten auf dem Startbildschirm** statt in `WatchContactsView`: Die Kontakte erscheinen nur mit FRITZ!Box-Telefonbuch, die Favoriten sollen auch ohne es sichtbar sein.

@@ -142,3 +142,28 @@ public struct WatchPairingState: Codable, Equatable, Sendable {
         self = state
     }
 }
+
+/// iPhone → Watch: the iPhone's favorites, so the watch can call them and
+/// show them in complications. Kept in the application context: only the
+/// latest list matters, and it survives restarts of either app.
+public struct CompanionFavorites: Codable, Equatable, Sendable {
+    public var favorites: [SharedSnapshot.Favorite]
+
+    public init(favorites: [SharedSnapshot.Favorite]) {
+        self.favorites = favorites
+    }
+
+    public static let key = "housephone.favorites"
+
+    public var dictionary: [String: Any] {
+        guard let data = try? JSONEncoder().encode(self) else { return [:] }
+        return [Self.key: data]
+    }
+
+    public init?(dictionary: [String: Any]) {
+        guard let data = dictionary[Self.key] as? Data,
+              let value = try? JSONDecoder().decode(Self.self, from: data)
+        else { return nil }
+        self = value
+    }
+}

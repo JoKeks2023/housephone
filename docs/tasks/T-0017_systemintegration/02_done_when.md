@@ -14,6 +14,12 @@ Phase 2:
 - Widgets aktualisieren sich nach jedem Anruf, nach Änderungen an Favoriten und nach dem Ansehen der Anrufliste.
 - Die CI prüft, dass die Extension unter `PlugIns/` eingebettet ist, ihre Bundle-ID, die App-Intents-Metadaten und das Privacy-Manifest.
 
-Phase 3 und 4: werden beim Start der jeweiligen Phase hier ergänzt.
+Phase 3:
+- Die Favoriten vom iPhone erscheinen auf der Watch (Startbildschirm, Abschnitt „Favoriten“), auch wenn die Watch-App beim Ändern geschlossen war.
+- Komplikationen: „Favorit anrufen“ (im Zifferblatt-Editor ein Vorschlag je Favorit) und „Verpasste Anrufe“ (letzte 24 Stunden). Tippen auf den Favoriten startet den Anruf an der Watch.
+- Siri auf der Watch: „Ruf <Favorit> mit Housephone an“ (App Shortcuts).
+- Die CI prüft die Einbettung der Komplikationen in der Watch-App, ihre Bundle-ID, die App-Intents-Metadaten der Watch-App und das Privacy-Manifest.
+
+Phase 4: wird beim Start der Phase hier ergänzt.
 
 Funktionsnachweis: auf echtem iPhone (Siri, Kurzbefehle, Schnellaktionen). Ohne Gerätetest gilt eine Phase als „nicht vollständig verifiziert“.
