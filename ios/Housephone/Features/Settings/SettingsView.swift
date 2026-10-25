@@ -1,11 +1,14 @@
 import AVFAudio
 import HousephoneKit
+import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
     @Environment(BridgeConnection.self) private var bridge
     @Environment(DirectPhone.self) private var direct
     @Environment(WatchLink.self) private var watch
+    @Environment(DemoMode.self) private var demo
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @State private var confirmsUnpair = false
@@ -23,7 +26,15 @@ struct SettingsView: View {
                         .overlay(LinearGradient(colors: [Theme.accent.opacity(0.14), .clear], startPoint: .topLeading, endPoint: .center))
                 )
 
-                if direct.isEnabled {
+                if demo.isActive, !direct.isEnabled, !bridge.isPaired {
+                    Section {
+                        Button("Demo beenden", role: .destructive) {
+                            demo.stop(in: modelContext)
+                        }
+                    } footer: {
+                        Text("Du siehst Beispieldaten. Anrufe sind simuliert, es wird nichts übertragen. Beende die Demo, um deine Bridge zu koppeln.")
+                    }
+                } else if direct.isEnabled {
                     DirectSettingsSection()
                     Section("Dieses iPhone") {
                         microphoneRows
