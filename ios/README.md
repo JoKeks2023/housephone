@@ -41,6 +41,11 @@ open ios/Housephone.xcodeproj
 - **Schnappschuss für Erweiterungen:** `SnapshotPublisher` schreibt Favoriten und letzte Anrufe als JSON in die App Group (`SharedSnapshot` in HousephoneKit). Erweiterungen lesen nur und telefonieren nie selbst.
 - **Widgets und Schalter:** Target `HousephoneWidgets` (Favoriten, Anrufe, verpasste Anrufe auf dem Sperrbildschirm; ab iOS 18 Kontrollzentrum und Action-Button). Code, den App und Extension teilen, liegt in `Shared/` (synchronisierter Ordner in beiden Targets). Die App kompiliert mit `HOUSEPHONE_APP`.
 - **Watch:** Das iPhone schickt seine Favoriten per Application Context (`CompanionFavorites`). Die Watch zeigt sie auf dem Startbildschirm, bietet sie als App Shortcuts für Siri an und als Komplikation (Target `HousephoneWatchWidgets`, dazu „Verpasste Anrufe“).
+- **CarPlay:** `CarPlay/CarPlayInterface.swift` (Favoriten, Anrufe, FRITZ!Box-Kontakte). Das Entitlement `com.apple.developer.carplay-communication` vergibt Apple nur auf Antrag. Ohne Freigabe signiert die App ohne es und CarPlay bleibt aus. Anrufe annehmen und Siri im Auto gehen auch so.
+  1. Antrag unter developer.apple.com/contact/carplay stellen, Kategorie „Communication“ (VoIP-Anrufe mit CallKit und SiriKit).
+  2. Nach der Freigabe in „Certificates, Identifiers & Profiles“ bei der App-ID die Capability „CarPlay Communication“ aktivieren.
+  3. `./"Housephone einrichten.command" --team … --prefix … --carplay` ausführen. Dann signiert Xcode mit `Housephone/Housephone-CarPlay.entitlements`. Mit `--no-carplay` geht es zurück.
+  4. Neue Entitlements immer in **beide** Dateien eintragen (die CI prüft den Gleichstand).
 - **Deep Links:** `housephone://call?number=…`, `housephone://keypad`, `housephone://recents?missed=1`. Anruf-Links ohne den Schlüssel aus der App Group (`DeepLinkKey`) fragen vor dem Wählen nach.
 
 ### Warum die Watch anders telefoniert

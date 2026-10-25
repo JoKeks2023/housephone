@@ -101,6 +101,7 @@
 		9FECDBA4CF24C9ED64FABA61 /* Exceptions for "Housephone" folder in "Housephone" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Housephone-CarPlay.entitlements,
 				Info.plist,
 			);
 			target = 444E74BA3EEEEDABA0BC490D /* Housephone */;
@@ -733,7 +734,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Housephone/Housephone.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "Housephone/Housephone$(HOUSEPHONE_CARPLAY_SUFFIX).entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = Housephone/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -786,7 +787,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Housephone/Housephone.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "Housephone/Housephone$(HOUSEPHONE_CARPLAY_SUFFIX).entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = Housephone/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

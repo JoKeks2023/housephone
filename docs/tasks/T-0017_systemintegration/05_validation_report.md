@@ -42,3 +42,13 @@ Ohne die Gerätetests ist Phase 2 **nicht vollständig verifiziert**.
 | Gerät: „Hey Siri, ruf <Favorit> mit Housephone an“ an der Watch | offen |
 
 Ohne die Gerätetests ist Phase 3 **nicht vollständig verifiziert**.
+
+## Phase 4
+
+| Prüfung | Ergebnis |
+|---|---|
+| CI: Build ohne CarPlay-Entitlement, Schalter, Entitlement-Gleichstand, Szene in der Info.plist | siehe PR |
+| Apple: Entitlement „CarPlay Communication“ beantragt | offen (User) |
+| Gerät/Auto nach Freigabe: Tabs, Anruf per Tippen, Nummernwahl, Fehlerhinweis, eingehender Anruf im CarPlay-Anrufbildschirm | offen |
+
+Ohne Freigabe und Test im Auto ist Phase 4 **nicht verifiziert**.
