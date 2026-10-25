@@ -1,33 +1,46 @@
 import HousephoneKit
 import SwiftUI
 
-/// First slice of the Mac app (T-0018): proves that the shared package runs
-/// on macOS by reading a pairing link. Pairing, calls and the call UI follow.
 struct RootView: View {
+    @Environment(MacBridge.self) private var bridge
+
+    var body: some View {
+        if bridge.isPaired {
+            StatusView()
+        } else {
+            PairingView()
+        }
+    }
+}
+
+/// Pairing with the link the bridge shows (`housephone-bridge pair`).
+private struct PairingView: View {
+    @Environment(MacBridge.self) private var bridge
     @State private var text = ""
-    @State private var link: PairingLink?
-    @State private var error: PairingLinkError?
+    @State private var isPairing = false
+    @State private var failure: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Housephone")
                 .font(.largeTitle.bold())
-            Text("Füge den Kopplungslink deiner Bridge ein.")
+            Text("Füge den Kopplungslink deiner Bridge ein. Du bekommst ihn mit `housephone-bridge pair`.")
                 .foregroundStyle(.secondary)
 
             TextField("housephone://pair?…", text: $text)
                 .textFieldStyle(.roundedBorder)
-                .onSubmit(read)
+                .onSubmit(pair)
+                .disabled(isPairing)
 
-            Button("Link prüfen", action: read)
-                .keyboardShortcut(.defaultAction)
-                .disabled(text.isEmpty)
+            HStack {
+                Button("Koppeln", action: pair)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(text.isEmpty || isPairing)
+                if isPairing { ProgressView().controlSize(.small) }
+            }
 
-            if let link {
-                Label(link.bridgeName ?? link.bridgeURL.host() ?? link.bridgeURL.absoluteString, systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            } else if let error {
-                Label(String(describing: error), systemImage: "exclamationmark.triangle.fill")
+            if let failure {
+                Label(failure, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
             }
             Spacer()
@@ -35,15 +48,97 @@ struct RootView: View {
         .padding(24)
     }
 
-    private func read() {
+    private func pair() {
+        failure = nil
+        let link: PairingLink
         do {
             link = try PairingLink(string: text)
-            error = nil
-        } catch let failure as PairingLinkError {
-            link = nil
-            error = failure
         } catch {
-            link = nil
+            failure = "Das ist kein gültiger Kopplungslink."
+            return
+        }
+        isPairing = true
+        Task {
+            defer { isPairing = false }
+            do {
+                try await bridge.pair(with: link)
+                text = ""
+            } catch {
+                failure = "Kopplung fehlgeschlagen: \(error.localizedDescription)"
+            }
+        }
+    }
+}
+
+private struct StatusView: View {
+    @Environment(MacBridge.self) private var bridge
+    @State private var confirmsUnpair = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(bridge.credentials?.bridgeName ?? "Bridge")
+                .font(.largeTitle.bold())
+
+            Label(statusText, systemImage: statusSymbol)
+                .foregroundStyle(statusColor)
+
+            if let problem = bridge.problem {
+                Text(problemText(problem))
+                    .foregroundStyle(.secondary)
+            }
+            if bridge.isOnHomeNetwork {
+                Label("Direkt im Heimnetz", systemImage: "house")
+                    .foregroundStyle(.secondary)
+            }
+            if let fingerprint = bridge.credentials?.bridgeFingerprint {
+                LabeledContent("Kennung der Bridge") {
+                    Text(fingerprint).font(.caption.monospaced()).textSelection(.enabled)
+                }
+            }
+
+            Spacer()
+            Button("Kopplung aufheben…", role: .destructive) { confirmsUnpair = true }
+        }
+        .padding(24)
+        .confirmationDialog("Kopplung aufheben?", isPresented: $confirmsUnpair, titleVisibility: .visible) {
+            Button("Kopplung aufheben", role: .destructive) {
+                Task { await bridge.unpair() }
+            }
+        } message: {
+            Text("Die Zugangsdaten werden von diesem Mac gelöscht.")
+        }
+    }
+
+    private var statusText: String {
+        switch bridge.status {
+        case .unpaired: "Nicht gekoppelt"
+        case .connecting: "Verbinde…"
+        case .online(let sipRegistered): sipRegistered ? "Verbunden, FRITZ!Box angemeldet" : "Verbunden, FRITZ!Box nicht erreichbar"
+        case .offline: "Offline"
+        case .rejected: "Von der Bridge entfernt. Koppeln erneut."
+        }
+    }
+
+    private var statusSymbol: String {
+        switch bridge.status {
+        case .online(true): "checkmark.circle.fill"
+        case .online(false), .connecting: "exclamationmark.circle"
+        case .offline, .rejected, .unpaired: "xmark.circle.fill"
+        }
+    }
+
+    private var statusColor: Color {
+        switch bridge.status {
+        case .online(true): .green
+        case .online(false), .connecting: .orange
+        case .offline, .rejected, .unpaired: .red
+        }
+    }
+
+    private func problemText(_ problem: MacBridge.Problem) -> String {
+        switch problem {
+        case .untrustedBridge: "Die Bridge konnte ihre Identität nicht belegen. Die Verbindung wurde nicht aufgebaut."
+        case .clockSkew: "Die Uhr dieses Macs weicht zu stark von der der Bridge ab."
         }
     }
 }

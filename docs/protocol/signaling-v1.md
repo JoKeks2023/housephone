@@ -45,7 +45,7 @@ Vertrag zwischen **Bridge** (`bridge/`, Go) und **Geräten** (`ios/`: iPhone-App
 
 | type | payload | Wann |
 |---|---|---|
-| `pair` | `{code, deviceName, platform, model?}` | Erste Nachricht einer Kopplungsverbindung. `platform`: `"ios"` \| `"watchos"`. |
+| `pair` | `{code, deviceName, platform, model?}` | Erste Nachricht einer Kopplungsverbindung. `platform`: `"ios"` \| `"watchos"` \| `"macos"`. |
 | `hello` | `{appVersion, platform, pushToken?, pushEnvironment?}` | Erste Nachricht jeder normalen Verbindung. `pushToken`: VoIP-Token als Hex-String (klein). `pushEnvironment`: `"development"` \| `"production"`. |
 | `device.update` | `{pushToken?, pushEnvironment?, deviceName?}` | Wenn sich z. B. das Push-Token ändert. Ungültige Werte (Token nicht klein geschriebenes Hex) werden ignoriert. |
 | `device.unpair` | `{}` | Gerät entkoppelt sich selbst. Die Bridge löscht das Gerät samt Push-Token und schließt die Verbindung mit Close-Code `1000`. |

@@ -620,3 +620,17 @@ func TestEndToEndRevocation(t *testing.T) {
 		t.Fatal("revoked device reconnected")
 	}
 }
+
+// A Mac pairs like an iPhone but has no push: it appears in the device list
+// with its platform and is not offered the admin role.
+func TestEndToEndMacPairs(t *testing.T) {
+	w := startWorld(t)
+	client := w.pair(t, "Mac", protocol.PlatformMacOS, "Mac15,6")
+	dev, err := w.bridge.Devices.Get(client.DeviceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dev.Platform != protocol.PlatformMacOS || dev.CanBeAdmin() {
+		t.Fatalf("device %+v", dev)
+	}
+}

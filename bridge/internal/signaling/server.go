@@ -433,7 +433,7 @@ func (s *Server) pair(req protocol.PairRequest, decodeErr error, ip string) (pro
 	// Malformed requests are 400 and do not count towards the rate limit
 	// (a buggy app must not lock itself out); wrong codes and proofs do.
 	if decodeErr != nil || strings.TrimSpace(req.Code) == "" || !validPlatform(req.Platform) {
-		return protocol.PairResponse{}, &pairError{protocol.ErrorBadRequest, "code, deviceName, platform (ios|watchos), publicKey, nonce and proof are required", http.StatusBadRequest}
+		return protocol.PairResponse{}, &pairError{protocol.ErrorBadRequest, "code, deviceName, platform (ios|watchos|macos), publicKey, nonce and proof are required", http.StatusBadRequest}
 	}
 	if _, err := hp2.ParseDevicePublicKey(req.PublicKey); err != nil {
 		return protocol.PairResponse{}, &pairError{protocol.ErrorBadRequest, "publicKey must be an uncompressed P-256 key", http.StatusBadRequest}
@@ -547,7 +547,7 @@ func (s *Server) checkCompanionCode(pc store.PairingCode, platform string) error
 }
 
 func validPlatform(p string) bool {
-	return p == protocol.PlatformIOS || p == protocol.PlatformWatchOS
+	return p == protocol.PlatformIOS || p == protocol.PlatformWatchOS || p == protocol.PlatformMacOS
 }
 
 // sanitizeName cleans a device name or model from a client: control

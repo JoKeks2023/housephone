@@ -8,6 +8,7 @@ import Foundation
 public enum DevicePlatform: String, Codable, Sendable {
     case ios
     case watchos
+    case macos
 }
 
 public enum PushEnvironment: String, Codable, Sendable {
