@@ -1,6 +1,46 @@
 {
   "sourceLanguage" : "de",
   "strings" : {
+    "Demo ansehen (ohne FRITZ!Box)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View demo (no FRITZ!Box)"
+          }
+        }
+      }
+    },
+    "Zeigt die App mit Beispieldaten und einem simulierten Anruf." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows the app with sample data and a simulated call."
+          }
+        }
+      }
+    },
+    "Demo beenden" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End demo"
+          }
+        }
+      }
+    },
+    "Du siehst Beispieldaten. Anrufe sind simuliert, es wird nichts übertragen. Beende die Demo, um deine Bridge zu koppeln." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You are seeing sample data. Calls are simulated and nothing is transmitted. End the demo to pair your bridge."
+          }
+        }
+      }
+    },
     "„%@“ (%@) gibt es schon. Beim Weiterverwenden bekommt es ein neues Kennwort." : {
       "localizations" : {
         "en" : {

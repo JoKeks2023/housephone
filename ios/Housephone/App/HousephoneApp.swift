@@ -20,6 +20,7 @@ struct HousephoneApp: App {
                 .environment(services.fritzBox)
                 .environment(services.appModel)
                 .environment(services.favorites)
+                .environment(services.demo)
                 .modelContainer(services.modelContainer)
                 .onOpenURL { url in
                     services.appModel.open(url)

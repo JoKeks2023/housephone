@@ -27,7 +27,7 @@
     - Welche Komponenten darin stecken, ist an der Binary belegt: Pfade und Versionskennungen in den Strings.
     - Nachgewiesen: WebRTC, BoringSSL, libSRTP, Opus, Abseil, Protocol Buffers, LLVM libc++abi, libvpx (+ PATENTS), libaom, dav1d, libyuv.
     - Die Lizenztexte liegen wörtlich aus den offiziellen Quellen unter `ios/Housephone/Resources/Licenses/`. Die Datei zu libaom stammt aus dem Release v3.15.1.
-  - **Offen:** Die Volltexte von **libyuv** und der **WebRTC-PATENTS** gibt es nur bei googlesource, das am 2026-09-29 durchgehend mit 503 antwortete. Beide sind vorerst in der App verlinkt; vor einem Release einbetten.
+  - ✅ Die Volltexte von **libyuv** samt Patentzusage und der **WebRTC-PATENTS** sind seit 2026-10-25 ebenfalls eingebettet (aus googlesource).
   - Die Watch-App und HousephoneKit nutzen keine Fremdbibliotheken.
   - Die Bridge wird nicht mit der App ausgeliefert. pion (MIT) und diago/sipgo (MPL-2.0 bzw. BSD-2) betreffen ihre eigene Verteilung. MPL heißt: geänderte Dateien offenlegen, sonst keine Pflichten.
 
@@ -37,7 +37,9 @@
 
 ## 4. App Review
 
-- **Zugang für die Prüfer:** Die Prüfer haben keine FRITZ!Box. Nötig ist ein **Demo-Zugang**: eine Demo-Bridge des Anbieters mit Testanschluss oder ein Demo-Modus in der App.
+- **Zugang für die Prüfer:** Die Prüfer haben keine FRITZ!Box.
+  - ✅ **Demo-Modus** in der App (Onboarding → „Demo ansehen“, 2026-10-25): Beispiel-Anrufliste mit erfundenen Nummern und simulierte Anrufe (Klingeln, dann verbunden). Kein CallKit, kein Netzwerk, kein Ton; beendet wird er unter Einstellungen → „Demo beenden“.
+  - In den Review-Notizen auf den Demo-Modus hinweisen; echte Anrufe lassen sich nur mit Bridge und FRITZ!Box zeigen.
 - **Begründung für VoIP-Hintergrund und PushKit:** Echte VoIP-Anrufe über CallKit sind vorhanden. In den Review-Notizen den Ablauf erklären.
 - **Datenschutz:**
   - ✅ **Privacy Manifest** in iPhone- und Watch-App (`ios/Housephone/Resources/PrivacyInfo.xcprivacy`, `ios/HousephoneWatch/Resources/PrivacyInfo.xcprivacy`; die CI prüft, dass beide in den Bundles liegen):
@@ -45,7 +47,8 @@
     - **`NSPrivacyCollectedDataTypes` ist leer.** Die Apps senden Daten (Nummern, Namen, Push-Token, Ton) nur an die **eigene Bridge des Nutzers**; der Entwickler betreibt sie nicht und hat keinen Zugriff. Nach Apples Definition ist das keine Datenerhebung durch den Entwickler.
     - **Required-Reason-API:** Nur UserDefaults mit Grund **CA92.1** (nur für die App selbst lesbar). Das iPhone nutzt es über `@AppStorage` für Ansichtseinstellungen, die Watch für Kopplungsdatum und letzte Anrufe. Datei-Zeitstempel, Systemstartzeit, Speicherplatz-APIs und aktive Tastaturen verwendet der eigene Code nicht; das ist per Code-Suche geprüft.
     - **WebRTC** bringt ein eigenes Manifest mit (Systemstartzeit 35F9.1/8FFB.1, Datei-Zeitstempel C617.1).
-  - **Muss nachgezogen werden, sobald das Push-Relay läuft (ADR-0010):** Dann verarbeitet der Anbieter Push-Tokens (über die Bridge des Nutzers, nur im Speicher). Manifest (`NSPrivacyCollectedDataTypeDeviceID`, Zweck App-Funktion) und App-Datenschutzangaben anpassen.
+  - ✅ **Manifest nachgezogen (2026-10-25):** Das Push-Relay verarbeitet Push-Tokens (über die Bridge des Nutzers, nur im Speicher). Beide Manifeste führen `NSPrivacyCollectedDataTypeDeviceID` (nicht verknüpft, kein Tracking, Zweck App-Funktion) und der erste Punkt oben („leer“) gilt nicht mehr.
+  - **Noch offen:** die App-Datenschutzangaben in App Store Connect und die Datenschutzerklärung entsprechend ausfüllen (Geräte-ID, nicht verknüpft, kein Tracking).
   - Nutzungsbeschreibungen für Mikrofon, Kamera und Kontakte sind vorhanden.
 - **Verschlüsselung/Export:**
   - Die App nutzt Standardverschlüsselung (TLS, DTLS-SRTP).

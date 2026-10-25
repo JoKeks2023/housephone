@@ -62,6 +62,8 @@ final class CallCenter: NSObject {
     @ObservationIgnored private let media = MediaEngine()
     @ObservationIgnored private let ringback = RingbackPlayer()
     @ObservationIgnored private let modelContainer: ModelContainer
+    @ObservationIgnored private let demo: DemoMode
+    @ObservationIgnored private var demoTask: Task<Void, Never>?
     @ObservationIgnored private let logger = Logger(subsystem: "com.jorisconrad.housephone", category: "calls")
 
     /// Connection generation on which each call last attached or dialed.
@@ -86,7 +88,8 @@ final class CallCenter: NSObject {
     /// ICE-restart offers; a reconnect re-attaches) before the call ends.
     static let mediaRecoveryTimeout: Duration = .seconds(15)
 
-    init(bridge: BridgeConnection, direct: DirectPhone, contacts: ContactsDirectory, modelContainer: ModelContainer) {
+    init(bridge: BridgeConnection, direct: DirectPhone, contacts: ContactsDirectory, modelContainer: ModelContainer, demo: DemoMode) {
+        self.demo = demo
         self.bridge = bridge
         self.direct = direct
         self.contacts = contacts
@@ -129,6 +132,10 @@ final class CallCenter: NSObject {
             failure = .callInProgress
             return false
         }
+        if demo.isActive, !bridge.isPaired, !isDirect {
+            startDemoCall(to: number, name: name ?? contacts.name(for: number))
+            return true
+        }
         if isDirect {
             switch direct.status {
             case .ready: break
@@ -165,17 +172,59 @@ final class CallCenter: NSObject {
 
     func end() {
         guard let call = activeCall, call.isActive else { return }
+        if isDemoCall(call) { endDemoCall(); return }
         request(CXEndCallAction(call: call.id.uuid))
     }
 
     func setMuted(_ muted: Bool) {
         guard let call = activeCall, call.isActive else { return }
+        if isDemoCall(call) { isMuted = muted; return }
         request(CXSetMutedCallAction(call: call.id.uuid, muted: muted))
     }
 
     func playDTMF(_ digits: String) {
         guard let call = activeCall, call.phase == .connected || call.phase == .earlyMedia, PhoneNumber.isDTMF(digits) else { return }
+        if isDemoCall(call) { return }
         request(CXPlayDTMFCallAction(call: call.id.uuid, digits: digits, type: .singleTone))
+    }
+
+    // MARK: - Demo calls
+
+    /// Demo calls never touch CallKit, the bridge or audio: the call screen
+    /// shows ringing, then a connected call that the user ends.
+    @ObservationIgnored private var demoCallID: CallID?
+
+    private func isDemoCall(_ call: CallSession) -> Bool { call.id == demoCallID }
+
+    private func startDemoCall(to number: String, name: String?) {
+        let id = CallID()
+        demoCallID = id
+        callsNotRecorded.insert(id)
+        clearTask?.cancel()
+        isMuted = false
+        mediaState = nil
+        var call = CallSession.outgoing(id: id, number: number, name: name, now: .now)
+        activeCall = call
+        demoTask?.cancel()
+        demoTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled, let self, self.activeCall?.id == id else { return }
+            call.handle(.remoteState(.ringing))
+            self.activeCall = call
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled, self.activeCall?.id == id else { return }
+            call.handle(.remoteState(.connected))
+            self.activeCall = call
+        }
+    }
+
+    private func endDemoCall() {
+        guard var call = activeCall else { return }
+        demoTask?.cancel()
+        call.handle(.userEnded)
+        activeCall = call
+        finish(call)
+        demoCallID = nil
     }
 
     private func request(_ action: CXCallAction) {

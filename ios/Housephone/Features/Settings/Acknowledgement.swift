@@ -38,7 +38,7 @@ struct Acknowledgement: Identifiable {
         Acknowledgement(
             id: "webrtc", name: "WebRTC", role: "Gesprächsverbindung und Audio",
             license: "BSD-3-Clause", website: URL(string: "https://webrtc.org")!,
-            links: [Link(title: "Patentzusage", url: URL(string: "https://webrtc.googlesource.com/src/+/main/PATENTS")!)]
+            additionalFiles: ["webrtc-patents"]
         ),
         Acknowledgement(
             id: "boringssl", name: "BoringSSL", role: "Verschlüsselung",
@@ -80,7 +80,7 @@ struct Acknowledgement: Identifiable {
         Acknowledgement(
             id: "libyuv", name: "libyuv", role: "Bildformate (Teil von WebRTC)",
             license: "BSD-3-Clause", website: URL(string: "https://chromium.googlesource.com/libyuv/libyuv")!,
-            links: [Link(title: "Lizenztext", url: URL(string: "https://chromium.googlesource.com/libyuv/libyuv/+/main/LICENSE")!)]
+            additionalFiles: ["libyuv-patents"]
         ),
     ]
 }

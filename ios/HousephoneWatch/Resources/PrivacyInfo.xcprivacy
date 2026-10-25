@@ -3,8 +3,10 @@
 <!--
   Housephone (Apple Watch). Reasons are documented in docs/veroeffentlichung.md.
   - No tracking.
-  - No collected data: the watch sends data only to the user's own bridge,
-    which the developer neither runs nor can access.
+  - Collected data: only the PushKit device token, which the user's own bridge
+    passes to the developer's push relay (ADR-0010). Numbers and names are
+    sealed end to end and never readable by the relay. The relay keeps nothing
+    on disk. Everything else goes only to the user's own bridge.
   - Required-reason APIs used by the app's own code (incl. HousephoneKit):
     UserDefaults for the pairing date and recent calls (CA92.1).
     No third-party code.
@@ -16,7 +18,20 @@
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 	<key>NSPrivacyCollectedDataTypes</key>
-	<array/>
+	<array>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
 		<dict>

@@ -1,9 +1,12 @@
 import HousephoneKit
+import SwiftData
 import SwiftUI
 
 /// First screen when no bridge is paired.
 struct OnboardingView: View {
     @Environment(AppModel.self) private var appModel
+    @Environment(DemoMode.self) private var demo
+    @Environment(\.modelContext) private var modelContext
     @State private var showsScanner = false
     @State private var scannedLink: PairingLink?
     @State private var setsUpDirect = false
@@ -149,6 +152,13 @@ struct OnboardingView: View {
             .controlSize(.large)
             .padding(.top, Theme.Space.s3)
             .accessibilityHint(Text("Ohne Bridge, nur im Heim-WLAN, ohne Apple Watch."))
+
+            Button("Demo ansehen (ohne FRITZ!Box)") {
+                demo.start(in: modelContext)
+            }
+            .font(.footnote)
+            .tint(.secondary)
+            .accessibilityHint(Text("Zeigt die App mit Beispieldaten und einem simulierten Anruf."))
         }
         .padding(.horizontal, Theme.Space.s6)
         .padding(.bottom, Theme.Space.s4)

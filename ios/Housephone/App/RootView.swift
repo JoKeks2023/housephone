@@ -8,19 +8,20 @@ struct RootView: View {
     @Environment(CallCenter.self) private var callCenter
     @Environment(AppModel.self) private var appModel
     @Environment(FritzBoxData.self) private var fritzBox
+    @Environment(DemoMode.self) private var demo
 
     var body: some View {
         @Bindable var appModel = appModel
         @Bindable var callCenter = callCenter
 
         Group {
-            if bridge.isPaired || direct.isEnabled {
+            if bridge.isPaired || direct.isEnabled || demo.isActive {
                 MainTabView()
             } else {
                 OnboardingView()
             }
         }
-        .motion(Theme.Motion.standard, value: bridge.isPaired || direct.isEnabled)
+        .motion(Theme.Motion.standard, value: bridge.isPaired || direct.isEnabled || demo.isActive)
         .onChange(of: bridge.isPaired) { _, paired in
             // Phonebook and call list belong to the bridge that is gone.
             if !paired { fritzBox.clear() }
