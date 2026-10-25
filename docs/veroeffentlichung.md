@@ -16,11 +16,8 @@
 
 ## 2. Lizenz und Repository
 
-- **Heutiger Stand:** Das Repository steht unter **GPL-3.0**, weil es aus *Telephone* (64characters) entstanden ist. Die neuen Teile (`bridge/`, `ios/`) enthalten keinen Telephone-Code.
-- **GPL und App Store:** Die GPL gilt als schwer vereinbar mit den Nutzungsbedingungen des App Stores.
-- **Vor einem Release:**
-  - Housephone in ein **eigenes Repository ohne Telephone-Historie** überführen oder die neuen Teile ausdrücklich eigenständig lizenzieren.
-  - Das ist eine rechtliche Entscheidung des Nutzers.
+- ✅ **Entschieden (2026-10-25):** Housephone steht unter **Apache-2.0**. `legacy/` (Telephone-Code, GPL-3.0) ist aus dem aktuellen Stand entfernt. `bridge/` und `ios/` enthielten nie Telephone-Code (Autoren der Commits: nur der Anbieter; die einzigen Treffer für „Telephone“ sind RTP-Begriffe wie `telephone-event`).
+- **Rest:** Die Commits vor der Umstellung enthalten den Telephone-Code weiter und bleiben unter GPL-3.0. Wer ihn ganz loswerden will, braucht ein neues Repository ohne Historie; für den Store ist das nicht nötig, weil die App keinen Telephone-Code enthält.
 - **Abhängigkeiten:**
   - ✅ **Danksagungen in der App** (Einstellungen → Über → Danksagungen, 2026-09-29):
     - Die iPhone-App liefert nur über WebRTC (stasel/WebRTC 153.0.0) fremden Code aus.
