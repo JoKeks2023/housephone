@@ -12,4 +12,8 @@ DEVELOPMENT_TEAM = T9CA6D7T8N
 // bridge's APNs topic must be <prefix>.housephone.voip.
 HOUSEPHONE_BUNDLE_PREFIX = com.jorisconrad
 
+// App Group shared by the iPhone app and its extensions (widgets,
+// controls). The app derives the same ID from its bundle ID at runtime.
+HOUSEPHONE_APP_GROUP = group.$(HOUSEPHONE_BUNDLE_PREFIX).housephone
+
 #include? "Local.xcconfig"

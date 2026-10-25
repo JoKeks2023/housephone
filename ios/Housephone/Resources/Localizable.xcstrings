@@ -1,6 +1,156 @@
 {
   "sourceLanguage" : "de",
   "strings" : {
+    "${favorite} anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call ${favorite}"
+          }
+        }
+      }
+    },
+    "${number} anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call ${number}"
+          }
+        }
+      }
+    },
+    "Anrufen?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call?"
+          }
+        }
+      }
+    },
+    "Das ist keine gültige Telefonnummer." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That is not a valid phone number."
+          }
+        }
+      }
+    },
+    "Ein Link möchte %@ über Housephone anrufen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A link wants to call %@ with Housephone."
+          }
+        }
+      }
+    },
+    "Favorit anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call Favorite"
+          }
+        }
+      }
+    },
+    "Nummer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Number"
+          }
+        }
+      }
+    },
+    "Nummer anrufen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Call Number"
+          }
+        }
+      }
+    },
+    "Öffnet die Anrufliste mit den verpassten Anrufen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the recents showing missed calls."
+          }
+        }
+      }
+    },
+    "Öffnet Housephone mit dem Tastenfeld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens Housephone on the keypad."
+          }
+        }
+      }
+    },
+    "Ruft eine Telefonnummer über Housephone an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls a phone number with Housephone."
+          }
+        }
+      }
+    },
+    "Ruft einen Favoriten über Housephone an." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls a favorite with Housephone."
+          }
+        }
+      }
+    },
+    "Tastenfeld öffnen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Keypad"
+          }
+        }
+      }
+    },
+    "Verpasste Anrufe" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missed Calls"
+          }
+        }
+      }
+    },
+    "Verpasste Anrufe zeigen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Missed Calls"
+          }
+        }
+      }
+    },
     "„%@“ (%@) gibt es schon. Beim Weiterverwenden bekommt es ein neues Kennwort." : {
       "localizations" : {
         "en" : {

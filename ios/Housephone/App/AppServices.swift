@@ -1,4 +1,5 @@
 import HousephoneKit
+import Intents
 import os
 import SwiftData
 import UIKit
@@ -20,6 +21,11 @@ final class AppServices {
     let admin: AdminCenter
     let appModel: AppModel
     let favorites: FavoritesStore
+    let snapshot: SnapshotPublisher
+    /// Proves that a call link comes from one of the app's own extensions
+    /// (`DeepLinkKey`). `nil` without the App Group, e.g. unsigned builds:
+    /// then every call link asks first.
+    let linkKey: String?
 
     private init() {
         modelContainer = Self.makeModelContainer()
@@ -41,7 +47,40 @@ final class AppServices {
         }
         appModel = AppModel()
         favorites = FavoritesStore()
+        linkKey = AppGroup.containerURL.flatMap { try? DeepLinkKey.loadOrCreate(in: $0) }
+        snapshot = SnapshotPublisher(favorites: favorites, fritzBox: fritzBox, contacts: contacts, bridge: bridge, direct: direct, appModel: appModel, modelContainer: modelContainer)
+        callCenter.onCallRecorded = { [snapshot] in snapshot.setNeedsPublish() }
         bridge.start()
+    }
+
+    // MARK: - Links from extensions, Siri and Shortcuts
+
+    func open(_ url: URL) {
+        if let link = DeepLink(url: url) {
+            handle(link, trusted: false)
+        } else {
+            appModel.open(url)
+        }
+    }
+
+    /// `trusted`: the request comes from the app itself (quick actions, App
+    /// Intents). Call links from elsewhere start without asking only when
+    /// they carry the link key.
+    func handle(_ link: DeepLink, trusted: Bool) {
+        switch link {
+        case .call(let number, let name, let key):
+            if trusted || DeepLinkKey.matches(key, expected: linkKey) {
+                Task { await callCenter.startCall(to: number, name: name) }
+            } else {
+                // A name from a foreign link could be made up; show the number.
+                appModel.callConfirmation = CallConfirmation(number: number)
+            }
+        case .keypad:
+            appModel.selectedTab = .keypad
+        case .recents(let missedOnly):
+            appModel.recentsShowsMissedOnly = missedOnly
+            appModel.selectedTab = .recents
+        }
     }
 
     private static func makeModelContainer() -> ModelContainer {
@@ -62,5 +101,19 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         _ = AppServices.shared
         return true
+    }
+
+    /// "Hey Siri, ruf … mit Housephone an", also in CarPlay.
+    func application(_ application: UIApplication, handlerFor intent: INIntent) -> Any? {
+        intent is INStartCallIntent ? StartCallIntentHandler() : nil
+    }
+
+    /// A scene delegate for the home screen quick actions.
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        if connectingSceneSession.role == .windowApplication {
+            configuration.delegateClass = SceneDelegate.self
+        }
+        return configuration
     }
 }
