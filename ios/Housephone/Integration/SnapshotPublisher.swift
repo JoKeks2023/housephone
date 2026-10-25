@@ -53,6 +53,10 @@ final class SnapshotPublisher {
         do {
             guard try store.save(snapshot) else { return }
             WidgetCenter.shared.reloadAllTimelines()
+            if #available(iOS 18, *) {
+                // A renamed favorite shows up in its control.
+                ControlCenter.shared.reloadAllControls()
+            }
             HousephoneShortcuts.updateAppShortcutParameters()
         } catch {
             logger.error("Writing the snapshot failed: \(error.localizedDescription, privacy: .public)")

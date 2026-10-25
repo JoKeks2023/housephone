@@ -15,3 +15,17 @@
 | Gerät: Signieren mit App Group und Siri (automatische Signierung legt beides an) | offen |
 
 Ohne die Gerätetests ist Phase 1 **nicht vollständig verifiziert**.
+
+## Phase 2
+
+| Prüfung | Ergebnis |
+|---|---|
+| CI: App-Build mit eingebetteter Widget-Extension | siehe PR |
+| Gerät: Signieren der Extension (automatische Signierung, App Group) | offen |
+| Gerät: Favoriten-Widget klein/mittel, Favoriten wählen, Tippen ruft an | offen |
+| Gerät: Anrufe-Widget, Rückruf per Tippen, verpasste rot | offen |
+| Gerät: Sperrbildschirm-Widget zeigt neue verpasste Anrufe; nach Ansehen der Liste 0 | offen |
+| Gerät: Kontrollzentrum „Favorit anrufen“ und „Tastenfeld öffnen“, auch auf dem Action-Button | offen |
+| Gerät: StandBy mit kleinem Favoriten-Widget | offen |
+
+Ohne die Gerätetests ist Phase 2 **nicht vollständig verifiziert**.

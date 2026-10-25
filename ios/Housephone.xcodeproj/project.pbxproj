@@ -13,6 +13,8 @@
 		821E57838315754F73B4C221 /* HousephoneKit in Frameworks */ = {isa = PBXBuildFile; productRef = 40FABC2F3E22EF1FA370C696 /* HousephoneKit */; };
 		C86C794DC63B73847202FA9F /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = 29571C34F1498C777A5F5C78 /* WebRTC */; };
 		D506BFC71ABD6A570271C3BE /* HousephoneKit in Frameworks */ = {isa = PBXBuildFile; productRef = 49051CF863D1469B11100BA4 /* HousephoneKit */; };
+		A532B0E02B25268BD0402B02 /* HousephoneWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 61B6A003541C9F8874B5BE81 /* HousephoneWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		BE38456AA3A202D7A307BF24 /* HousephoneKit in Frameworks */ = {isa = PBXBuildFile; productRef = D29791007A11C012F5261C99 /* HousephoneKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -22,6 +24,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 89D4FF449F8E4FC9E729D785;
 			remoteInfo = HousephoneWatch;
+		};
+		F4914DEAA334BB212B9B1A6A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 02FEEC63117DC40AD1FA1CC1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 450A4AD52755E6191820393F;
+			remoteInfo = HousephoneWidgets;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -37,6 +46,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		563009E64D40A49FB69264C8 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A532B0E02B25268BD0402B02 /* HousephoneWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +66,7 @@
 		6C582354C0418D5F2614E520 /* HousephoneWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HousephoneWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0FF1C0000000000000000A1 /* Housephone.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Housephone.xcconfig; sourceTree = "<group>"; };
 		F3C6170C651792E2D90CAE28 /* NetworkExtension.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NetworkExtension.framework; path = System/Library/Frameworks/NetworkExtension.framework; sourceTree = SDKROOT; };
+		61B6A003541C9F8874B5BE81 /* HousephoneWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HousephoneWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -69,6 +90,13 @@
 				Info.plist,
 			);
 			target = CAF2740010D70242964BB81C /* HousephoneLocalPush */;
+		};
+		6DC0A32A0A284DD8C3F6E2C4 /* Exceptions for "HousephoneWidgets" folder in "HousephoneWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 450A4AD52755E6191820393F /* HousephoneWidgets */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -95,6 +123,19 @@
 				A3CF809F7CAC157EABB4211E /* Exceptions for "HousephoneLocalPush" folder in "HousephoneLocalPush" target */,
 			);
 			path = HousephoneLocalPush;
+			sourceTree = "<group>";
+		};
+		54D80C050E868653F35C2B0D /* HousephoneWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6DC0A32A0A284DD8C3F6E2C4 /* Exceptions for "HousephoneWidgets" folder in "HousephoneWidgets" target */,
+			);
+			path = HousephoneWidgets;
+			sourceTree = "<group>";
+		};
+		C6FA6F67067291A6E1BC6609 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -126,6 +167,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F81990938741DD4EB55895B7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BE38456AA3A202D7A307BF24 /* HousephoneKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -143,6 +192,7 @@
 				60EB083C463E76C08EB7324A /* Housephone.app */,
 				2F39AC5F6E8B537142EE1694 /* HousephoneLocalPush.appex */,
 				6C582354C0418D5F2614E520 /* HousephoneWatch.app */,
+				61B6A003541C9F8874B5BE81 /* HousephoneWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -170,7 +220,9 @@
 				7A444F88E5710BD5F302B069 /* Housephone */,
 				A96752AAF23593F8E0A1A57B /* HousephoneLocalPush */,
 				6E752E8BADA8367D6057CE0A /* HousephoneWatch */,
+				54D80C050E868653F35C2B0D /* HousephoneWidgets */,
 				96728F8A1A18C2A26A11CCF9 /* Packages */,
+				C6FA6F67067291A6E1BC6609 /* Shared */,
 				044AD2BA500BC96C67C4368B /* Frameworks */,
 				45B65FF2B85BBE826E193FD8 /* Products */,
 			);
@@ -187,14 +239,17 @@
 				36324CE8523C7085D135C5EA /* Resources */,
 				392FB7E97B4A24F094B692E6 /* Frameworks */,
 				5917E0E9EFBA369D326A6D2C /* Embed Watch Content */,
+				563009E64D40A49FB69264C8 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				6E7623623D37AF5B0E609CCE /* PBXTargetDependency */,
+				C4AF159799F460F2E2E242E6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				7A444F88E5710BD5F302B069 /* Housephone */,
+				C6FA6F67067291A6E1BC6609 /* Shared */,
 			);
 			name = Housephone;
 			packageProductDependencies = (
@@ -251,6 +306,30 @@
 			productReference = 2F39AC5F6E8B537142EE1694 /* HousephoneLocalPush.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		450A4AD52755E6191820393F /* HousephoneWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D12F3648FBA8F40E860A4860 /* Build configuration list for PBXNativeTarget "HousephoneWidgets" */;
+			buildPhases = (
+				D27AA56F3AF11D38ED235F6F /* Sources */,
+				08A26D241B311AE390255C74 /* Resources */,
+				F81990938741DD4EB55895B7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				54D80C050E868653F35C2B0D /* HousephoneWidgets */,
+				C6FA6F67067291A6E1BC6609 /* Shared */,
+			);
+			name = HousephoneWidgets;
+			packageProductDependencies = (
+				D29791007A11C012F5261C99 /* HousephoneKit */,
+			);
+			productName = HousephoneWidgets;
+			productReference = 61B6A003541C9F8874B5BE81 /* HousephoneWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -269,6 +348,10 @@
 						ProvisioningStyle = Automatic;
 					};
 					CAF2740010D70242964BB81C = {
+						DevelopmentTeam = T9CA6D7T8N;
+						ProvisioningStyle = Automatic;
+					};
+					450A4AD52755E6191820393F = {
 						DevelopmentTeam = T9CA6D7T8N;
 						ProvisioningStyle = Automatic;
 					};
@@ -295,6 +378,7 @@
 				444E74BA3EEEEDABA0BC490D /* Housephone */,
 				CAF2740010D70242964BB81C /* HousephoneLocalPush */,
 				89D4FF449F8E4FC9E729D785 /* HousephoneWatch */,
+				450A4AD52755E6191820393F /* HousephoneWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -315,6 +399,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E0BD0348597FF60F934ECA68 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		08A26D241B311AE390255C74 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -345,6 +436,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D27AA56F3AF11D38ED235F6F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -352,6 +450,11 @@
 			isa = PBXTargetDependency;
 			target = 89D4FF449F8E4FC9E729D785 /* HousephoneWatch */;
 			targetProxy = 72C80C21A29B1E9F96D0EC87 /* PBXContainerItemProxy */;
+		};
+		C4AF159799F460F2E2E242E6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 450A4AD52755E6191820393F /* HousephoneWidgets */;
+			targetProxy = F4914DEAA334BB212B9B1A6A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -540,6 +643,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(HOUSEPHONE_BUNDLE_PREFIX).housephone";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) HOUSEPHONE_APP";
 				PRODUCT_NAME = Housephone;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -591,8 +695,47 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(HOUSEPHONE_BUNDLE_PREFIX).housephone";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) HOUSEPHONE_APP";
 				PRODUCT_NAME = Housephone;
 				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		48F6DED8760E8179F10A4899 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HousephoneWidgets/HousephoneWidgets.entitlements;
+				INFOPLIST_FILE = HousephoneWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HOUSEPHONE_BUNDLE_PREFIX).housephone.widgets";
+				PRODUCT_NAME = HousephoneWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		69EC477B70ED742B7272B7E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HousephoneWidgets/HousephoneWidgets.entitlements;
+				INFOPLIST_FILE = HousephoneWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HOUSEPHONE_BUNDLE_PREFIX).housephone.widgets";
+				PRODUCT_NAME = HousephoneWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -636,6 +779,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		D12F3648FBA8F40E860A4860 /* Build configuration list for PBXNativeTarget "HousephoneWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				48F6DED8760E8179F10A4899 /* Debug */,
+				69EC477B70ED742B7272B7E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -671,6 +823,10 @@
 			productName = HousephoneKit;
 		};
 		94B68EDBD4C77DB295D2950A /* HousephoneKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HousephoneKit;
+		};
+		D29791007A11C012F5261C99 /* HousephoneKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = HousephoneKit;
 		};
