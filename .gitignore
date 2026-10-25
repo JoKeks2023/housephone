@@ -1,16 +1,10 @@
 .DS_Store
 **/*.xcodeproj/*.mode?v?
 **/*.xcodeproj/*.pbxuser
-legacy/*.xcodeproj/project.xcworkspace/
 xcuserdata/
 build/
 .idea/
 
-legacy/ThirdParty/Opus
-legacy/ThirdParty/LibreSSL/*
-!legacy/ThirdParty/LibreSSL/patches
-legacy/ThirdParty/PJSIP/*
-!legacy/ThirdParty/PJSIP/patches
 
 # Housephone (new iOS app + bridge)
 ios/**/.build/
