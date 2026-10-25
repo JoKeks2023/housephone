@@ -7,7 +7,7 @@ Grenzen: Name 30 Zeichen, Untertitel 30, Keywords 100 (kommagetrennt, ohne Leerz
 - **Name:** Housephone
 - **Untertitel:** Dein Festnetz unterwegs (29)
 - **Werbetext:** Telefoniere mit deiner Festnetznummer vom iPhone und der Apple Watch, auch unterwegs und ohne VPN. Über deine eigene Bridge zu Hause.
-- **Keywords:** festnetz,telefon,voip,sip,heimnetz,watch,anrufe,carplay,router,telefonbuch,selbst gehostet
+- **Keywords:** festnetz,telefon,voip,sip,heimnetz,watch,anrufe,router,telefonbuch,selbst gehostet
 - **Kategorie:** Dienstprogramme (alternativ Produktivität)
 
 **Beschreibung**
@@ -38,7 +38,7 @@ Voraussetzung: eine FRITZ!Box mit Festnetzanschluss und die Housephone-Bridge (D
 - **Name:** Housephone
 - **Subtitle:** Your landline on the go (22)
 - **Promotional text:** Make and take calls on your home landline number from iPhone and Apple Watch, anywhere and without a VPN, through your own bridge at home.
-- **Keywords:** landline,phone,voip,sip,home,watch,calls,carplay,router,phonebook,self-hosted
+- **Keywords:** landline,phone,voip,sip,home,watch,calls,router,phonebook,self-hosted
 - **Category:** Utilities (alternatively Productivity)
 
 **Description**

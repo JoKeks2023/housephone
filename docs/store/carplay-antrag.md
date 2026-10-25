@@ -24,4 +24,4 @@ Die CarPlay-Oberfläche ist gebaut (PR #51, `ios/Housephone/CarPlay/`), aber aus
 3. Im CarPlay-Simulator oder Fahrzeug prüfen: Listen laden, Anruf starten, Fehler-Alert.
 4. Store-Eintrag um CarPlay ergänzen (Beschreibung, Screenshots) und neues Build einreichen.
 
-Bis dahin CarPlay weder in der Beschreibung noch in Screenshots erwähnen. Die Beschreibung in `listing.md` tut das nur in den Stichwörtern, nicht im Text.
+Bis dahin CarPlay weder in der Beschreibung noch in Screenshots erwähnen. Auch die Keywords in `listing.md` nennen CarPlay deshalb nicht.
