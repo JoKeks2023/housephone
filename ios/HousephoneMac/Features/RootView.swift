@@ -3,12 +3,27 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(MacBridge.self) private var bridge
+    @Environment(MacCallCenter.self) private var calls
 
     var body: some View {
-        if bridge.isPaired {
-            StatusView()
-        } else {
-            PairingView()
+        @Bindable var calls = calls
+        Group {
+            if let call = calls.activeCall {
+                InCallView(call: call)
+            } else if bridge.isPaired {
+                StatusView()
+            } else {
+                PairingView()
+            }
+        }
+        .alert(
+            "Anruf nicht möglich",
+            isPresented: Binding(get: { calls.failure != nil }, set: { if !$0 { calls.failure = nil } }),
+            presenting: calls.failure
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { failure in
+            Text(failure.message)
         }
     }
 }
@@ -72,7 +87,9 @@ private struct PairingView: View {
 
 private struct StatusView: View {
     @Environment(MacBridge.self) private var bridge
+    @Environment(MacCallCenter.self) private var calls
     @State private var confirmsUnpair = false
+    @State private var number = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -96,6 +113,16 @@ private struct StatusView: View {
                 }
             }
 
+            Divider()
+            HStack {
+                TextField("Nummer", text: $number)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(call)
+                Button("Anrufen", action: call)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(number.isEmpty || !canCall)
+            }
+
             Spacer()
             Button("Kopplung aufheben…", role: .destructive) { confirmsUnpair = true }
         }
@@ -107,6 +134,15 @@ private struct StatusView: View {
         } message: {
             Text("Die Zugangsdaten werden von diesem Mac gelöscht.")
         }
+    }
+
+    private var canCall: Bool {
+        if case .online(true) = bridge.status { true } else { false }
+    }
+
+    private func call() {
+        guard canCall, calls.startCall(to: number) else { return }
+        number = ""
     }
 
     private var statusText: String {

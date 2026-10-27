@@ -34,8 +34,14 @@ final class MacBridge {
     /// Increases with every successful (re)connection.
     private(set) var generation = 0
 
-    /// Called for every message from the bridge (calls, phase 3).
+    /// Called for every message from the bridge.
     @ObservationIgnored var onMessage: ((SignalingMessage) -> Void)?
+    /// Called after every successful (re)connection.
+    @ObservationIgnored var onConnected: (() -> Void)?
+
+    /// Receives the bridge's binary audio; calls set a handler while their
+    /// audio runs.
+    nonisolated let audio = AudioRouter()
 
     @ObservationIgnored private let store: any CredentialStore
     @ObservationIgnored private let keyStore: any DeviceKeyStore
@@ -69,6 +75,12 @@ final class MacBridge {
                 self?.handle(event)
             }
         }
+        // Audio stays off the main actor; the stream ends with the client.
+        Task.detached { [audio] in
+            for await message in client.audio {
+                audio.deliver(message)
+            }
+        }
         let path = lastPath
         Task {
             if let path { await client.networkPathChanged(path) }
@@ -85,6 +97,16 @@ final class MacBridge {
         }
         Task { await client.refreshConnection() }
     }
+
+    func ensureConnected(timeout: Duration = .seconds(10)) async throws -> Welcome {
+        if client == nil { start() }
+        guard let client else { throw SignalingClientError.notConnected }
+        return try await client.waitUntilConnected(timeout: timeout)
+    }
+
+    /// The signaling client for sending WebSocket audio; `sendAudio` runs
+    /// off the main actor.
+    var audioClient: SignalingClient? { client }
 
     func send(_ message: SignalingMessage) async throws {
         guard let client else { throw SignalingClientError.notConnected }
@@ -194,6 +216,7 @@ final class MacBridge {
                 problem = nil
                 status = .online(sipRegistered: welcome.sipRegistered)
                 generation += 1
+                onConnected?()
                 logger.info("Connected to \(welcome.bridgeName, privacy: .public) \(welcome.bridgeVersion, privacy: .public)")
             case .connecting:
                 if case .online = status {} else { status = .connecting }
