@@ -76,6 +76,7 @@ const (
 const (
 	PlatformIOS     = "ios"
 	PlatformWatchOS = "watchos"
+	PlatformMacOS   = "macos"
 )
 
 // Push environments.

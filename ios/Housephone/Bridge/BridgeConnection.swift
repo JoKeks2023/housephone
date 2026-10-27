@@ -448,19 +448,3 @@ final class BridgeConnection {
         }
     }
 }
-
-/// Hands binary audio messages to whoever plays them right now. Thread
-/// safe: the network delivers on a background task.
-final class AudioRouter: @unchecked Sendable {
-    private let lock = NSLock()
-    private var handler: (@Sendable (Data) -> Void)?
-
-    func setHandler(_ handler: (@Sendable (Data) -> Void)?) {
-        lock.withLock { self.handler = handler }
-    }
-
-    func deliver(_ message: Data) {
-        let handler = lock.withLock { self.handler }
-        handler?(message)
-    }
-}

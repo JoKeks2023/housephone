@@ -104,6 +104,22 @@ jobs:
           # Not embedded until Apple grants the entitlement (ADR-0005).
           test ! -e DerivedData/Build/Products/Debug-iphoneos/Housephone.app/PlugIns/HousephoneLocalPush.appex
 
+      - name: Build Mac app
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Housephone.xcodeproj \
+            -scheme HousephoneMac \
+            -configuration Debug \
+            -destination 'generic/platform=macOS' \
+            -clonedSourcePackagesDirPath .spm \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            | tee mac.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" mac.log
+
       - name: Check embedded watch app
         working-directory: ios
         run: |
